@@ -15,14 +15,11 @@ from tomopy_cli import config #, __version__
 from tomopy_cli import log_lib
 
 
-# LOG = logging.getLogger('ufot')
-
-
 def init(args):
     if not os.path.exists(args.config):
         config.write(args.config)
     else:
-        raise RuntimeError("{0} already exists".format(args.config))
+        log_lib.error("{0} already exists".format(args.config))
 
 
 def rec(args):
@@ -72,13 +69,13 @@ def main():
     if args.log:
         file_handler = logging.FileHandler(args.log)
         file_handler.setFormatter(logging.Formatter('%(name)s:%(levelname)s: %(message)s'))
-        # LOG.addHandler(file_handler)
+        log_lib.addHandler(file_handler)
 
     try:
         config.log_values(args)
         args._func(args)
     except RuntimeError as e:
-        # LOG.error(str(e))
+        log_lib.error(str(e))
         sys.exit(1)
 
 
