@@ -3,11 +3,11 @@ import sys
 import logging
 import configparser
 from collections import OrderedDict
-import tomopy_cli.util as util
 import numpy as np
 
+
 # LOG = logging.getLogger(__name__)
-NAME = "test.conf"
+NAME = "tomopy.conf"
 SECTIONS = OrderedDict()
 
 SECTIONS['general'] = {
@@ -25,189 +25,54 @@ SECTIONS['general'] = {
         'type': str,
         'help': "File name of optional log",
         'metavar': 'FILE'}}
- 
+
+
 SECTIONS['file-io'] = {
-    'projection-start': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the first projection"},
-    'projection-end': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the last projection"},
-    'projection-number': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Number of projections"},
-    'projection-min': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the first projection"},
-    'projection-max': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the last projection"},
-    'dark-start': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the first dark field"},
-    'dark-end': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the last dark field"},
-    'dark-min': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the first dark field"},
-    'dark-max': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the last dark field"},
-    'flat-start': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the first white field"},
-    'flat-end': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the last white field"},
-    'flat-min': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the first white field"},
-    'flat-max': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Index of the last white field"},
-    'slice-start': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Start slice to read for reconstruction"},
-    'slice-end': {
-        'type': util.positive_int,
-        'default': 1,
-        'help': "End slice to read for reconstruction"},
-    'slice-center': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Slice used to find the center of rotation"},
-    'input-path': {
-        'default': '.',
-        'type': str,
-        'help': "Path of the last used directory",
-        'metavar': 'PATH'},
     'input-file-path': {
         'default': '.',
         'type': str,
         'help': "Name of the last file used",
         'metavar': 'PATH'},
-    'output-path': {
+    'input-path': {
         'default': '.',
         'type': str,
-        'help': "Path to location or format-specified file path "
-                "for storing reconstructed slices",
-        'metavar': 'PATH'}}
-
-SECTIONS['flat-field-correction'] = {
-    'flat-field': {
-        'default': False,
-        'help': "Enable flat field correction",
-        'action': 'store_true'},
-    'flat-field-method': {
-        'default': 'default',
+        'help': "Path of the last used directory",
+        'metavar': 'PATH'},
+    'image-tag': {
+        'default': 'MAPS',
         'type': str,
-        'help': "Flat field correction method",
-        'choices': ['default', 'background', 'roi']},
-    'cut-off': {
-        'default': 1.0,
-        'type': float,
-        'help': "Permitted maximum vaue for the normalized data"},
-    'air': {
-        'type': util.positive_int,
-        'default': 1,
-        'help': "Number of pixels at each boundary to calculate the scaling factor"},
-    'roi-tx': {
+        'help': "image tag for h5 file",
+        'metavar': 'PATH'},
+    'data-tag': {
+        'default': 'XRF_roi',
         'type': str,
-        'default': '0',
-        'help': "ROI top left x pixel coordinate"},
-    'roi-ty': {
+        'help': "data tag for h5 file",
+        'metavar': 'PATH'},
+    'element-tag': {
+        'default': 'channel_names',
         'type': str,
-        'default': '0',
-        'help': "ROI top left y pixel coordinate"},
-    'roi-bx': {
+        'help': "element tag for h5 file",
+        'metavar': 'PATH'},
+    'sorted-angles': {
+        'default': 'True',
+        'type': bool,
+        'help': "sort interlaced dataset by projection angle",
+        'metavar': 'PATH'},
+    'theta-pv': {
+        'default': '2xfm:m53.VAL',
         'type': str,
-        'default': '1',
-        'help': "ROI bottom right x pixel coordinate"},
-    'roi-by': {
+        'help': "theta PV name",
+        'choices': ['2xfm:m53.VAL', '2xfm:m36.VAL','2xfm:m58.VAL','9idbTAU:SM:ST:ActPos']},
+    'selected-elements': {
+        'default': '[0,1]',
         'type': str,
-        'default': '1',
-        'help': "ROI bottom right y pixel coordinate"},
-    'num-flats': {
-        'default': 0,
-        'type': int,
-        'help': "Number of flats for ffc correction."},
-    'manual': {
-        'default': False,
-        'help': "Allow manual entry for proj, dark, white and theta ranges",
-        'action': 'store_true'}}
-
-SECTIONS['normalization'] = {
-    'nan-and-inf': {
-        'default': True,
-        'help': "Fix nan and inf"},
-    'minus-log': {
-        'default': True,
-        'help': 'Do minus log'}}
-
-SECTIONS['phase-retrieval'] = {
-    'phase-method': {
-        'default': 'none',
+        'help': "list of selected elements indexes"},
+    'quant-name': {
+        'default': 'SRcurrent',
         'type': str,
-        'help': "Phase retrieval correction method",
-        'choices': ['none', 'paganin']},
-    'energy': {
-        'default': None,
-        'type': float,
-        'help': "X-ray energy [keV]"},
-    'propagation-distance': {
-        'default': None,
-        'type': float,
-        'help': "Sample <-> detector distance [m]"},
-    'pixel-size': {
-        'default': None,
-        'type': float,
-        'help': "Pixel size [m]"},
-    'alpha': {
-        'default': 0.001,
-        'type': float,
-        'help': "Regularization parameter"},
-    'pad': {
-        'default': True,
-        'help': "If True, extend the size of the sinogram by padding with zeros"}}
-
-SECTIONS['ring-removal'] = {
-    'ring-removal-method': {
-        'default': 'none',
-        'type': str,
-        'help': "Ring removal method",
-        'choices': ['none', 'wavelet', 'titarenko', 'smoothing']},
-    'wavelet-sigma': {
-        'default': 2,
-        'type': float,
-        'help': "Damping parameter in Fourier space"},
-    'wavelet-filter': {
-        'default': 'db5',
-        'type': str,
-        'help': "Type of the wavelet filter",
-        'choices': ['haar', 'db5', 'sym5']},
-    'wavelet-level': {
-        'type': util.positive_int,
-        'default': 0,
-        'help': "Level parameter used by the Fourier-Wavelet method"},
-    'wavelet-padding': {
-        'default': False,
-        'help': "If True, extend the size of the sinogram by padding with zeros",
-        'action': 'store_true'}}
+        'help': "normalize by this detector",
+        'metavar': 'PATH'}
+        }
 
 SECTIONS['reconstruction'] = {
     'binning': {
@@ -224,32 +89,16 @@ SECTIONS['reconstruction'] = {
         'default': 1024.0,
         'type': float,
         'help': "Rotation axis position"},
-    'dry-run': {
-        'default': False,
-        'help': "Reconstruct without writing data",
-        'action': 'store_true'},
-    'full-reconstruction': {
-        'default': False,
-        'help': "Full or one slice only reconstruction",
-        'action': 'store_true'},
     'reconstruction-algorithm': {
         'default': 'gridrec',
         'type': str,
         'help': "Reconstruction algorithm",
-        'choices': ['gridrec', 'fbp', 'mlem', 'sirt', 'sirtfbp']},
-    'theta-start': {
-        'default': 0,
-        'type': float,
-        'help': "Angle of the first projection in radians"},
-    'theta-end': {
-        'default': np.pi,
-        'type': float,
-        'help': "Angle of the last projection in radians"}}
+        'choices': ['gridrec', 'fbp', 'mlem', 'sirt', 'sirtfbp']}}
 
 SECTIONS['ir'] = {
     'iteration-count': {
         'default': 10,
-        'type': util.positive_int,
+        'type': int,
         'help': "Maximum number of iterations"}}
 
 SECTIONS['sirt'] = {
@@ -268,21 +117,10 @@ SECTIONS['sirtfbp'] = {
         'type': float,
         'help': "mu (sirtfbp)"}}
 
-SECTIONS['processing'] = {
-    'sino-pass': {
-        'type': util.positive_int,
-        'default': 16,
-        'help': 'Number of sinograms to process per pass'},
-    'ncore': {
-        'default': None,
-        'help': "Number of cores that will be assigned to jobs"},
-    'nchunk': {
-        'default': None,
-        'help': "Chunk size for each core"}}
 
-TOMO_PARAMS = ('file-io', 'flat-field-correction', 'normalization', 'phase-retrieval', 'processing', 'ring-removal', 'reconstruction', 'ir', 'sirt', 'sirtfbp')
+TOMO_PARAMS = ('file-io', 'reconstruction', 'ir', 'sirt', 'sirtfbp')
 
-NICE_NAMES = ('General', 'Input', 'Flat field correction', 'Sinogram generation',
+NICE_NAMES = ('General', 'Input',
               'General reconstruction', 'Tomographic reconstruction',
               'Filtered backprojection',
               'Direct Fourier Inversion', 'Iterative reconstruction',
@@ -388,22 +226,17 @@ def write(config_file, args=None, sections=None):
         for name, opts in SECTIONS[section].items():
             if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
                 value = getattr(args, name.replace('-', '_'))
-                print('1')
                 if isinstance(value, list):
+                    print(type(value), value)
                     value = ', '.join(value)
             else:
                 value = opts['default'] if opts['default'] is not None else ''
-                print('2', value)
+
             prefix = '# ' if value is '' else ''
 
             if name != 'config':
-                print('3')
-                config.set(section, prefix + name, value)
-
-
-    print('xxxxxxxxxxxxxxxxxxxx', config_file)
-    with open(config_file, 'wb') as f:
-        print('4')
+                config.set(section, prefix + name, str(value))
+    with open(config_file, 'w') as f:
         config.write(f)
 
 
