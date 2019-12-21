@@ -23,15 +23,15 @@ def init(args):
 
 
 def rec(args):
-    from recon import reco
-    reco.tomo(args)
+    from tomopy_cli import recon
+    recon.tomo(args)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', **config.SECTIONS['general']['config'])
     tomo_params = config.TOMO_PARAMS
-    gui_params = tomo_params + ('gui', )
+    # gui_params = tomo_params + ('gui', )
 
     cmd_parsers = [
         ('init',        init,           (),                             "Create configuration file"),
@@ -48,28 +48,18 @@ def main():
         cmd_parser.set_defaults(_func=func)
 
     args = config.parse_known_args(parser, subparser=True)
-    # log_level = logging.DEBUG if args.verbose else logging.INFO
-    # LOG.setLevel(log_level)
-    # create logger
 
+    # create logger
     home = str(pathlib.Path.home())
     logs_home = home + '/logs/'
+
     # make sure logs directory exists
     if not os.path.exists(logs_home):
         os.makedirs(logs_home)
-    lfname = logs_home + 'rec_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H:%M:%S") + '.log'
+
+    lfname = logs_home + 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H:%M:%S") + '.log'
     log_lib.setup_logger(lfname)
-
-    log_lib.info("logger is ready")   
-
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
-    # LOG.addHandler(stream_handler)
-
-    if args.log:
-        file_handler = logging.FileHandler(args.log)
-        file_handler.setFormatter(logging.Formatter('%(name)s:%(levelname)s: %(message)s'))
-        log_lib.addHandler(file_handler)
+    log_lib.info("Saving log at %s" % lfname)
 
     try:
         config.log_values(args)
