@@ -4,7 +4,8 @@ import logging
 import configparser
 from collections import OrderedDict
 import numpy as np
-from tomopy_cli import log_lib
+
+from tomopy_cli import log
 from tomopy_cli import util
 
 # LOG = logging.getLogger(__name__)
@@ -274,11 +275,11 @@ def log_values(args):
 
         if entries:
             # LOG.debug(name)
-            log_lib.info(name)
+            log.info(name)
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
-                log_lib.info("  {:<16} {}".format(entry, value))
+                log.info("  {:<16} {}".format(entry, value))
 
 
 
