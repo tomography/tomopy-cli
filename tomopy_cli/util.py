@@ -34,3 +34,10 @@ def range_list(value):
         return (lst[0], lst[1], lst[2])
 
     raise argparse.ArgumentTypeError("Cannot parse {}".format(value))
+
+def restricted_float(x):
+
+    x = float(x)
+    if x < 0.0 or x >= 1.0:
+        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
+    return x
