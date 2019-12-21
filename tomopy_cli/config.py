@@ -4,7 +4,8 @@ import logging
 import configparser
 from collections import OrderedDict
 import numpy as np
-
+from tomopy_cli import log_lib
+from tomopy_cli import util
 
 # LOG = logging.getLogger(__name__)
 NAME = "tomopy.conf"
@@ -19,12 +20,8 @@ SECTIONS['general'] = {
     'verbose': {
         'default': False,
         'help': 'Verbose output',
-        'action': 'store_true'},
-    'log': {
-        'default': None,
-        'type': str,
-        'help': "File name of optional log",
-        'metavar': 'FILE'}}
+        'action': 'store_true'}
+        }
 
 
 SECTIONS['file-io'] = {
@@ -37,42 +34,66 @@ SECTIONS['file-io'] = {
         'default': '.',
         'type': str,
         'help': "Path of the last used directory",
-        'metavar': 'PATH'},
-    'image-tag': {
-        'default': 'MAPS',
-        'type': str,
-        'help': "image tag for h5 file",
-        'metavar': 'PATH'},
-    'data-tag': {
-        'default': 'XRF_roi',
-        'type': str,
-        'help': "data tag for h5 file",
-        'metavar': 'PATH'},
-    'element-tag': {
-        'default': 'channel_names',
-        'type': str,
-        'help': "element tag for h5 file",
-        'metavar': 'PATH'},
-    'sorted-angles': {
-        'default': 'True',
-        'type': bool,
-        'help': "sort interlaced dataset by projection angle",
-        'metavar': 'PATH'},
-    'theta-pv': {
-        'default': '2xfm:m53.VAL',
-        'type': str,
-        'help': "theta PV name",
-        'choices': ['2xfm:m53.VAL', '2xfm:m36.VAL','2xfm:m58.VAL','9idbTAU:SM:ST:ActPos']},
-    'selected-elements': {
-        'default': '[0,1]',
-        'type': str,
-        'help': "list of selected elements indexes"},
-    'quant-name': {
-        'default': 'SRcurrent',
-        'type': str,
-        'help': "normalize by this detector",
         'metavar': 'PATH'}
         }
+
+SECTIONS['normalization'] = {
+    'nan-and-inf': {
+        'default': True,
+        'help': "Fix nan and inf"},
+    'minus-log': {
+        'default': True,
+        'help': 'Do minus log'}}
+
+SECTIONS['phase-retrieval'] = {
+    'phase-method': {
+        'default': 'none',
+        'type': str,
+        'help': "Phase retrieval correction method",
+        'choices': ['none', 'paganin']},
+    'energy': {
+        'default': None,
+        'type': float,
+        'help': "X-ray energy [keV]"},
+    'propagation-distance': {
+        'default': None,
+        'type': float,
+        'help': "Sample <-> detector distance [m]"},
+    'pixel-size': {
+        'default': None,
+        'type': float,
+        'help': "Pixel size [m]"},
+    'alpha': {
+        'default': 0.001,
+        'type': float,
+        'help': "Regularization parameter"},
+    'pad': {
+        'default': True,
+        'help': "If True, extend the size of the sinogram by padding with zeros"}}
+
+SECTIONS['ring-removal'] = {
+    'ring-removal-method': {
+        'default': 'none',
+        'type': str,
+        'help': "Ring removal method",
+        'choices': ['none', 'wavelet', 'titarenko', 'smoothing']},
+    'wavelet-sigma': {
+        'default': 2,
+        'type': float,
+        'help': "Damping parameter in Fourier space"},
+    'wavelet-filter': {
+        'default': 'db5',
+        'type': str,
+        'help': "Type of the wavelet filter",
+        'choices': ['haar', 'db5', 'sym5']},
+    'wavelet-level': {
+        'type': util.positive_int,
+        'default': 0,
+        'help': "Level parameter used by the Fourier-Wavelet method"},
+    'wavelet-padding': {
+        'default': False,
+        'help': "If True, extend the size of the sinogram by padding with zeros",
+        'action': 'store_true'}}
 
 SECTIONS['reconstruction'] = {
     'binning': {
@@ -118,7 +139,7 @@ SECTIONS['sirtfbp'] = {
         'help': "mu (sirtfbp)"}}
 
 
-TOMO_PARAMS = ('file-io', 'reconstruction', 'ir', 'sirt', 'sirtfbp')
+TOMO_PARAMS = ('file-io', 'normalization', 'phase-retrieval', 'reconstruction', 'ir', 'sirt', 'sirtfbp')
 
 NICE_NAMES = ('General', 'Input',
               'General reconstruction', 'Tomographic reconstruction',
@@ -227,7 +248,7 @@ def write(config_file, args=None, sections=None):
             if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
                 value = getattr(args, name.replace('-', '_'))
                 if isinstance(value, list):
-                    print(type(value), value)
+                    # print(type(value), value)
                     value = ', '.join(value)
             else:
                 value = opts['default'] if opts['default'] is not None else ''
@@ -253,8 +274,15 @@ def log_values(args):
 
         if entries:
             # LOG.debug(name)
-            print(name)
+            log_lib.info(name)
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
-                # LOG.debug("  {:<16} {}".format(entry, value))
+                log_lib.info("  {:<16} {}".format(entry, value))
+
+
+
+
+
+
+

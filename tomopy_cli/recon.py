@@ -7,7 +7,7 @@ import numpy as np
 import tomopy
 import dxchange
 
-LOG = logging.getLogger(__name__)
+# LOG = logging.getLogger(__name__)
 
 def tomo(params):
     fname = str(params.input_file_path)
