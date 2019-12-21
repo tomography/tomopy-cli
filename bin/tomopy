@@ -12,14 +12,14 @@ import pathlib
 from datetime import datetime
 
 from tomopy_cli import config #, __version__
-from tomopy_cli import log_lib
+from tomopy_cli import log
 
 
 def init(args):
     if not os.path.exists(args.config):
         config.write(args.config)
     else:
-        log_lib.error("{0} already exists".format(args.config))
+        log.error("{0} already exists".format(args.config))
 
 
 def rec(args):
@@ -58,14 +58,14 @@ def main():
         os.makedirs(logs_home)
 
     lfname = logs_home + 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H:%M:%S") + '.log'
-    log_lib.setup_logger(lfname)
-    log_lib.info("Saving log at %s" % lfname)
+    log.setup_logger(lfname)
+    log.info("Saving log at %s" % lfname)
 
     try:
         config.log_values(args)
         args._func(args)
     except RuntimeError as e:
-        log_lib.error(str(e))
+        log.error(str(e))
         sys.exit(1)
 
 
