@@ -7,9 +7,17 @@ import numpy as np
 import tomopy
 import dxchange
 
+from tomopy_cli import config #, __version__
+
 # LOG = logging.getLogger(__name__)
 
 def tomo(params):
+
+    # update config file
+    sections = config.TOMO_PARAMS
+    config.write(params.config, args=params, sections=sections)
+    return
+
     fname = str(params.input_file_path)
 
     start = params.slice_start
