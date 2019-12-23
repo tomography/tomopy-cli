@@ -8,7 +8,6 @@ import numpy as np
 from tomopy_cli import log
 from tomopy_cli import util
 
-# LOG = logging.getLogger(__name__)
 NAME = "tomopy.conf"
 SECTIONS = OrderedDict()
 
@@ -24,34 +23,40 @@ SECTIONS['general'] = {
         'action': 'store_true'}
         }
 
-
 SECTIONS['file-io'] = {
-    'input-file-path': {
+    'last-dir': {
+        'default': '.',
+        'type': str,
+        'help': "Path of the last used directory",
+        'metavar': 'PATH'},
+    'last-file': {
         'default': '.',
         'type': str,
         'help': "Name of the last file used",
         'metavar': 'PATH'},
-    'input-path': {
-        'default': '.',
+    'last-file-type': {
+        'default': 'standard',
         'type': str,
-        'help': "Path of the last used directory",
-        'metavar': 'PATH'}
+        'help': "Input file type",
+        'choices': ['standard', 'blocked_views', 'flip_and_stich']}
         }
 
-SECTIONS['normalization'] = {
-    'normalize-cutoff': {
+SECTIONS['flat-correction'] = {
+    'normalization-cutoff': {
         'default': 1.0,
         'type': float,
         'help': 'Permitted maximum vaue for the normalized data'},
-    'nan-and-inf': {
+    'fix-nan-and-inf': {
         'default': True,
-        'help': "When set, fix nan and inf"},
+        'help': "Fix nan and inf",
+        'action': 'store_true'},
     'minus-log': {
         'default': True,
-        'help': 'When set, do minus log'}
+        'help': "Minus log",
+        'action': 'store_true'},
         }
 
-SECTIONS['phase-retrieval'] = {
+SECTIONS['retrieve-phase'] = {
     'phase-retrieval-method': {
         'default': 'none',
         'type': str,
@@ -75,7 +80,8 @@ SECTIONS['phase-retrieval'] = {
         'help': "Regularization parameter"},
     'pad': {
         'default': True,
-        'help': "When set, extend the size of the sinogram by padding with zeros"}}
+        'help': "When set, extend the size of the sinogram by padding with zeros"}
+        }
 
 SECTIONS['stripe-removal'] = {
     'stripe-removal-method': {
@@ -140,14 +146,13 @@ SECTIONS['reconstruction'] = {
         'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
         }
 
+TOMO_PARAMS = ('file-io', 'flat-correction', 'retrieve-phase', 'reconstruction')
 
-TOMO_PARAMS = ('file-io', 'normalization', 'phase-retrieval', 'reconstruction')
+PREPROC_PARAMS = ('flat-correction', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'Input',
-              'General reconstruction', 'Tomographic reconstruction',
-              'Filtered backprojection',
-              'Direct Fourier Inversion', 'Iterative reconstruction',
-              'SIRT', 'SBTV', 'GUI settings', 'Estimation', 'Performance')
+NICE_NAMES = ('General', 'File io', 'Flat correction', 
+              'Retrieve phase', 'Stripe removal', 
+              'Reconstruction')
 
 def get_config_name():
     """Get the command line --config option."""
@@ -271,16 +276,20 @@ def log_values(args):
     """
     args = args.__dict__
 
+    # print('SECTIONS', SECTIONS)
+    # print('NICE_NAMES', NICE_NAMES)
+
     for section, name in zip(SECTIONS, NICE_NAMES):
         entries = sorted((k for k in args.keys() if k in SECTIONS[section]))
 
         if entries:
-            # LOG.debug(name)
             log.info(name)
+            # print('1')
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
                 log.info("  {:<16} {}".format(entry, value))
+                # print('2')
 
 
 
