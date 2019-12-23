@@ -39,62 +39,80 @@ SECTIONS['file-io'] = {
         }
 
 SECTIONS['normalization'] = {
+    'normalize-cutoff': {
+        'default': 1.0,
+        'type': float,
+        'help': 'Permitted maximum vaue for the normalized data'},
     'nan-and-inf': {
         'default': True,
-        'help': "Fix nan and inf"},
+        'help': "When set, fix nan and inf"},
     'minus-log': {
         'default': True,
-        'help': 'Do minus log'}}
+        'help': 'When set, do minus log'}
+        }
 
 SECTIONS['phase-retrieval'] = {
-    'phase-method': {
+    'phase-retrieval-method': {
         'default': 'none',
         'type': str,
         'help': "Phase retrieval correction method",
         'choices': ['none', 'paganin']},
     'energy': {
-        'default': None,
+        'default': 20,
         'type': float,
         'help': "X-ray energy [keV]"},
     'propagation-distance': {
-        'default': None,
+        'default': 60,
         'type': float,
-        'help': "Sample <-> detector distance [m]"},
+        'help': "Sample detector distance [mm]"},
     'pixel-size': {
-        'default': None,
+        'default': 1.17,
         'type': float,
-        'help': "Pixel size [m]"},
+        'help': "Pixel size [microns]"},
     'alpha': {
         'default': 0.001,
         'type': float,
         'help': "Regularization parameter"},
     'pad': {
         'default': True,
-        'help': "If True, extend the size of the sinogram by padding with zeros"}}
+        'help': "When set, extend the size of the sinogram by padding with zeros"}}
 
-SECTIONS['ring-removal'] = {
-    'ring-removal-method': {
+SECTIONS['stripe-removal'] = {
+    'stripe-removal-method': {
         'default': 'none',
         'type': str,
-        'help': "Ring removal method",
-        'choices': ['none', 'wavelet', 'titarenko', 'smoothing']},
-    'wavelet-sigma': {
+        'help': "Stripe removal method",
+        'choices': ['none', 'fourier-wavelet', 'titarenko', 'smoothing-filter']},
+    'fourier-wavelet-sigma': {
         'default': 2,
         'type': float,
         'help': "Damping parameter in Fourier space"},
-    'wavelet-filter': {
+    'fourier-wavelet-filter': {
         'default': 'db5',
         'type': str,
-        'help': "Type of the wavelet filter",
+        'help': "Type of the fourier-wavelet filter",
         'choices': ['haar', 'db5', 'sym5']},
-    'wavelet-level': {
+    'fourier-wavelet-level': {
         'type': util.positive_int,
         'default': 0,
-        'help': "Level parameter used by the Fourier-Wavelet method"},
-    'wavelet-padding': {
-        'default': False,
-        'help': "If True, extend the size of the sinogram by padding with zeros",
-        'action': 'store_true'}}
+        'help': "Level parameter used by the fourier-wavelet method"},
+    'fourier-wavelet-pad': {
+        'default': True,
+        'help': "When set, extend the size of the sinogram by padding with zeros",
+        'action': 'store_true'},
+    'titarenko-alpha': {
+        'default': 1.5,
+        'type': float,
+        'help': "Damping factor"},
+    'titarenko-nblock': {
+        'default': 0,
+        'type': util.positive_int,
+        'help': "Number of blocks"},
+    'smoothing-filter-size': {
+        'default': 5,
+        'type': util.positive_int,
+        'help': "Size of the smoothing filter."}
+        }
 
 SECTIONS['reconstruction'] = {
     'binning': {
@@ -110,37 +128,20 @@ SECTIONS['reconstruction'] = {
     'center': {
         'default': 1024.0,
         'type': float,
-        'help': "Rotation axis position"},
+        'help': "Location of rotation axis"},
+    'iteration-count': {
+        'default': 10,
+        'type': util.positive_int,
+        'help': "Maximum number of iterations"},
     'reconstruction-algorithm': {
         'default': 'gridrec',
         'type': str,
         'help': "Reconstruction algorithm",
-        'choices': ['gridrec', 'fbp', 'mlem', 'sirt', 'sirtfbp']}}
-
-SECTIONS['ir'] = {
-    'iteration-count': {
-        'default': 10,
-        'type': int,
-        'help': "Maximum number of iterations"}}
-
-SECTIONS['sirt'] = {
-    'relaxation-factor': {
-        'default': 0.25,
-        'type': float,
-        'help': "Relaxation factor"}}
-
-SECTIONS['sirtfbp'] = {
-    'lambda': {
-        'default': 0.1,
-        'type': float,
-        'help': "lambda (sirtfbp)"},
-    'mu': {
-        'default': 0.5,
-        'type': float,
-        'help': "mu (sirtfbp)"}}
+        'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
+        }
 
 
-TOMO_PARAMS = ('file-io', 'normalization', 'phase-retrieval', 'reconstruction', 'ir', 'sirt', 'sirtfbp')
+TOMO_PARAMS = ('file-io', 'normalization', 'phase-retrieval', 'reconstruction')
 
 NICE_NAMES = ('General', 'Input',
               'General reconstruction', 'Tomographic reconstruction',
