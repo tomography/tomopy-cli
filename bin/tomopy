@@ -1,5 +1,3 @@
-#!/local/decarlo/conda/anaconda/bin/python
-#!/Users/decarlo/anaconda2/bin/python
 #!/usr/bin/env python
 
 import os
@@ -11,8 +9,9 @@ import re
 import pathlib
 from datetime import datetime
 
-from tomopy_cli import config #, __version__
+from tomopy_cli import config, __version__
 from tomopy_cli import log
+from tomopy_cli import recon
 
 
 def init(args):
@@ -22,22 +21,24 @@ def init(args):
         log.error("{0} already exists".format(args.config))
 
 
-def rec(args):
-    from tomopy_cli import recon
-    log.info('testing .... ')
+def run_rec(args):
+    # from tomopy_cli import recon
+    log.info('rec(args)')
     recon.tomo(args)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', **config.SECTIONS['general']['config'])
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {}'.format(__version__))
+    # reco_params = ('flat-correction', 'reconstruction')
     tomo_params = config.TOMO_PARAMS
     # print('XXXXXXX', tomo_params)
-    # gui_params = tomo_params + ('gui', )
 
     cmd_parsers = [
         ('init',        init,           (),                             "Create configuration file"),
-        ('rec',         rec,            tomo_params,                    "Run tomographic reconstruction"),
+        ('rec',         run_rec,        tomo_params,                    "Run tomographic reconstruction"),
     ]
 
     subparsers = parser.add_subparsers(title="Commands", metavar='')
