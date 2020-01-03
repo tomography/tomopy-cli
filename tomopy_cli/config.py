@@ -23,7 +23,7 @@ SECTIONS['general'] = {
         'action': 'store_true'}
         }
 
-SECTIONS['file-io'] = {
+SECTIONS['reading'] = {
     'last-dir': {
         'default': '.',
         'type': str,
@@ -38,20 +38,25 @@ SECTIONS['file-io'] = {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
-        'choices': ['standard', 'blocked_views', 'flip_and_stich']}
+        'choices': ['standard', 'blocked_views', 'flip_and_stich', 'mosaic']}
         }
 
 SECTIONS['flat-correction'] = {
+    'flat-correction-method': {
+        'default': 'normal',
+        'type': str,
+        'help': "Flat correction method",
+        'choices': ['normal', 'air']},
     'normalization-cutoff': {
         'default': 1.0,
         'type': float,
         'help': 'Permitted maximum vaue for the normalized data'},
     'fix-nan-and-inf': {
-        'default': True,
+        'default': False,
         'help': "Fix nan and inf",
         'action': 'store_true'},
     'minus-log': {
-        'default': True,
+        'default': False,
         'help': "Minus log",
         'action': 'store_true'},
         }
@@ -103,7 +108,7 @@ SECTIONS['stripe-removal'] = {
         'default': 0,
         'help': "Level parameter used by the fourier-wavelet method"},
     'fourier-wavelet-pad': {
-        'default': True,
+        'default': False,
         'help': "When set, extend the size of the sinogram by padding with zeros",
         'action': 'store_true'},
     'titarenko-alpha': {
@@ -127,7 +132,7 @@ SECTIONS['reconstruction'] = {
         'help': "Reconstruction binning factor as power(2, choice)",
         'choices': ['0', '1', '2', '3']},
     'filter': {
-        'default': 'none',
+        'default': 'parzen',
         'type': str,
         'help': "Reconstruction filter",
         'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
@@ -146,11 +151,11 @@ SECTIONS['reconstruction'] = {
         'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
         }
 
-TOMO_PARAMS = ('file-io', 'flat-correction', 'retrieve-phase', 'reconstruction')
+TOMO_PARAMS = ('reading', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
 
-PREPROC_PARAMS = ('flat-correction', 'retrieve-phase')
+# PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'File io', 'Flat correction', 
+NICE_NAMES = ('General', 'Reading', 'Flat correction', 
               'Retrieve phase', 'Stripe removal', 
               'Reconstruction')
 
@@ -276,20 +281,16 @@ def log_values(args):
     """
     args = args.__dict__
 
-    # print('SECTIONS', SECTIONS)
-    # print('NICE_NAMES', NICE_NAMES)
-
     for section, name in zip(SECTIONS, NICE_NAMES):
-        entries = sorted((k for k in args.keys() if k in SECTIONS[section]))
+        entries = sorted((k for k in args.keys() if k.replace('_', '-') in SECTIONS[section]))
 
+        # print('log_values', section, name, entries)
         if entries:
             log.info(name)
-            # print('1')
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
                 log.info("  {:<16} {}".format(entry, value))
-                # print('2')
 
 
 
