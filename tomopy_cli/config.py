@@ -84,8 +84,9 @@ SECTIONS['retrieve-phase'] = {
         'type': float,
         'help': "Regularization parameter"},
     'pad': {
-        'default': True,
-        'help': "When set, extend the size of the sinogram by padding with zeros"}
+        'default': False,
+        'help': "When set, extend the size of the sinogram by padding with zeros",
+        'action': 'store_true'}
         }
 
 SECTIONS['stripe-removal'] = {
@@ -281,6 +282,7 @@ def log_values(args):
     """
     args = args.__dict__
 
+    log.warning('tomopy-cli status start')
     for section, name in zip(SECTIONS, NICE_NAMES):
         entries = sorted((k for k in args.keys() if k.replace('_', '-') in SECTIONS[section]))
 
@@ -292,6 +294,7 @@ def log_values(args):
                 value = args[entry] if args[entry] is not None else "-"
                 log.info("  {:<16} {}".format(entry, value))
 
+    log.warning('tomopy-cli status end')
 
 
 
