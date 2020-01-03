@@ -10,7 +10,7 @@ Installation
 
 ::
 
-    python setup.py install
+    $ python setup.py install
 
 in a prepared virtualenv or as root for system-wide installation.
 
@@ -56,15 +56,11 @@ To automatically find the rotation axis location of all tomographic hdf data set
     $ tomopy find_center --hdf-dir /local/data/
 
 
-this generates in the /local/data/ directory a file:
-        
-        rotation_axis.json 
+this generates in the /local/data/ directory a **rotation_axis.json** file containing all the automatically calculated centers::
 
-        containing all the automatically calculated centers
             {"0": {"proj_0000.hdf": 1287.25}, "1": {"proj_0001.hdf": 1297.75},
             {"2": {"proj_0002.hdf": 1287.25}, "3": {"proj_0003.hdf": 1297.75},
             {"4": {"proj_0004.hdf": 1287.25}, "5": {"proj_0005.hdf": 1297.75}}
-
 
 to list of all available options::
 
