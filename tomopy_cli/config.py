@@ -8,12 +8,13 @@ import numpy as np
 from tomopy_cli import log
 from tomopy_cli import util
 
-NAME = "tomopy.conf"
+CONFIG_FILE_NAME = "tomopy.conf"
+
 SECTIONS = OrderedDict()
 
 SECTIONS['general'] = {
     'config': {
-        'default': NAME,
+        'default': CONFIG_FILE_NAME,
         'type': str,
         'help': "File name of configuration",
         'metavar': 'FILE'},
@@ -23,18 +24,24 @@ SECTIONS['general'] = {
         'action': 'store_true'}
         }
 
-SECTIONS['reading'] = {
-    'last-dir': {
+SECTIONS['find-center-reading'] = {
+    'hdf-dir': {
         'default': '.',
         'type': str,
-        'help': "Path of the last used directory",
-        'metavar': 'PATH'},
-    'last-file': {
+        'help': "Path of the last used directory"},
+    'nsino': {
+        'default': 0.5,
+        'type': float,
+        'help': 'Location of the sinogram used to find center (0 top, 1 bottom)'},
+        }
+
+SECTIONS['rec-reading'] = {
+    'hdf-file': {
         'default': '.',
         'type': str,
         'help': "Name of the last file used",
         'metavar': 'PATH'},
-    'last-file-type': {
+    'hdf-file-type': {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
@@ -152,17 +159,19 @@ SECTIONS['reconstruction'] = {
         'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
         }
 
-TOMO_PARAMS = ('reading', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
+RECON_PARAMS = ('rec-reading', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
+# FIND_CENTER_PARAMS = ('find-center-reading', 'flat-correction')
+FIND_CENTER_PARAMS = ('find-center-reading', )
 
 # PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'Reading', 'Flat correction', 
+NICE_NAMES = ('General', 'Rec reading', 'Find reading', 'Flat correction', 
               'Retrieve phase', 'Stripe removal', 
               'Reconstruction')
 
 def get_config_name():
     """Get the command line --config option."""
-    name = NAME
+    name = CONFIG_FILE_NAME
     for i, arg in enumerate(sys.argv):
         if arg.startswith('--config'):
             if arg == '--config':
@@ -193,7 +202,7 @@ def parse_known_args(parser, subparser=False):
     return parser.parse_known_args(values)[0]
 
 
-def config_to_list(config_name=NAME):
+def config_to_list(config_name=CONFIG_FILE_NAME):
     """
     Read arguments from config file and convert them to a list of keys and
     values as sys.argv does when they are specified on the command line.
