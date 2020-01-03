@@ -37,7 +37,7 @@ To do a tomographic reconstruction::
 from the command line. To get correct results, you may need to append
 options such as `--center` to set the rotation axis position::
 
-    $ tomopy rec --center=1024.0 --hdf-file /local/data.h5
+    $ tomopy rec --center 1024.0 --hdf-file /local/data.h5
 
 to list of all available options::
 
