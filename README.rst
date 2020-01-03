@@ -2,7 +2,7 @@
 tomopy-cli
 ==========
 
-tomopy command line interface **tomopy** is commad-line-interface for [tomopy](https://github.com/tomopy/tomopy) an open-source Python package for tomographic data processing and image reconstruction. 
+**tomopy** is commad-line-interface for `tomopy <https://github.com/tomopy/tomopy>`_ an open-source Python package for tomographic data processing and image reconstruction. 
 
 
 Installation
@@ -32,12 +32,12 @@ Reconstruction
 
 To do a tomographic reconstruction::
 
-    $ tomopy rec --hdf-file $PATH_TO_DATA_EXCHANGE_FILE
+    $ tomopy rec --hdf-file /local/data.h5
 
 from the command line. To get correct results, you may need to append
 options such as `--center` to set the rotation axis position::
 
-    $ tomopy tomo --center=1024.0 --hdf-file /local/data.h5
+    $ tomopy rec --center=1024.0 --hdf-file /local/data.h5
 
 You can get a help for all options by running::
 
