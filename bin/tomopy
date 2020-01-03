@@ -23,8 +23,9 @@ def init(args):
 
 def run_rec(args):
     # from tomopy_cli import recon
-    log.info('rec(args)')
+    log.warning('reconstruction start')
     recon.tomo(args)
+    log.warning('reconstruction end')
 
 
 def main():

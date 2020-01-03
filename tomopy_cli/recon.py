@@ -15,8 +15,8 @@ from tomopy_cli import log
 def tomo(params):
 
     # update config file
-    log.info('recon.tomo(param)')
-    print(params)
+    log.warning('reconstruction start')
+    # print(params)
     sections = config.TOMO_PARAMS
     config.write(params.config, args=params, sections=sections)
     return
