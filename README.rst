@@ -39,11 +39,10 @@ options such as `--center` to set the rotation axis position::
 
     $ tomopy rec --center=1024.0 --hdf-file /local/data.h5
 
-You can get a help for all options by running::
+to list of all available options::
 
     $ tomopy rec -h
 
-You can also load reconstruction parameters from a configuration file called
-`tomopy.conf`. You can create a template with::
+reconstruction parameters are stored in **tomopy.conf**. You can create a template with::
 
     $ tomopy init
