@@ -67,7 +67,7 @@ to list of all available options::
     $ tomopy find_center -h
 
 
-After using **Find Center**, to do a tomographic reconstruction of all tomographic hdf data sets in a folder (/local/data/)::
+After using **find_center**, to do a tomographic reconstruction of all tomographic hdf data sets in a folder (/local/data/)::
 
     $ tomopy recon --hdf-dir /local/data/
 
