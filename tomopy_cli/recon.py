@@ -10,14 +10,13 @@ import dxchange
 from tomopy_cli import config #, __version__
 from tomopy_cli import log
 
-# LOG = logging.getLogger(__name__)
 
 def tomo(params):
 
-    # update config file
-    log.warning('reconstruction start')
     # print(params)
-    sections = config.TOMO_PARAMS
+
+    # update config file
+    sections = config.RECON_PARAMS
     config.write(params.config, args=params, sections=sections)
     return
 

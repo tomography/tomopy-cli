@@ -12,6 +12,7 @@ from datetime import datetime
 from tomopy_cli import config, __version__
 from tomopy_cli import log
 from tomopy_cli import recon
+from tomopy_cli import find_center
 
 
 def init(args):
@@ -19,6 +20,13 @@ def init(args):
         config.write(args.config)
     else:
         log.error("{0} already exists".format(args.config))
+
+
+def run_find_center(args):
+    # from tomopy_cli import recon
+    log.warning('find center start')
+    find_center.auto(args)
+    log.warning('find center end')
 
 
 def run_rec(args):
@@ -34,12 +42,14 @@ def main():
     parser.add_argument('--version', action='version',
                         version='%(prog)s {}'.format(__version__))
     # reco_params = ('flat-correction', 'reconstruction')
-    tomo_params = config.TOMO_PARAMS
+    tomo_params = config.RECON_PARAMS
+    find_center_params = config.FIND_CENTER_PARAMS
     # print('XXXXXXX', tomo_params)
 
     cmd_parsers = [
-        ('init',        init,           (),                             "Create configuration file"),
-        ('rec',         run_rec,        tomo_params,                    "Run tomographic reconstruction"),
+        ('init',        init,            (),                             "Create configuration file"),
+        ('recon',       run_rec,         tomo_params,                    "Run tomographic reconstruction"),
+        ('find_center', run_find_center, find_center_params,             "Find rotation axis location for all hdf files in a directory"),
     ]
 
     subparsers = parser.add_subparsers(title="Commands", metavar='')

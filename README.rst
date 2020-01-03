@@ -32,17 +32,48 @@ Reconstruction
 
 To do a tomographic reconstruction::
 
-    $ tomopy rec --hdf-file /local/data.h5
+    $ tomopy recon --hdf-file /local/data.h5
 
 from the command line. To get correct results, you may need to append
 options such as `--center` to set the rotation axis position::
 
-    $ tomopy rec --center 1024.0 --hdf-file /local/data.h5
+    $ tomopy recon --center 1024.0 --hdf-file /local/data.h5
 
 to list of all available options::
 
-    $ tomopy rec -h
+    $ tomopy recon -h
 
 reconstruction parameters are stored in **tomopy.conf**. You can create a template with::
 
     $ tomopy init
+
+
+Find Center
+-----------
+
+To automatically find the rotation axis location of all tomographic hdf data sets in a folder (/local/data/)::
+
+    $ tomopy find_center --hdf-dir /local/data/
+
+
+    this generates in the /local/data/ directory a file:
+        
+            rotation_axis.json 
+
+        containing all the automatically calculated centers
+            {"0": {"proj_0000.hdf": 1287.25}, "1": {"proj_0001.hdf": 1297.75},
+            {"2": {"proj_0002.hdf": 1287.25}, "3": {"proj_0003.hdf": 1297.75},
+            {"4": {"proj_0004.hdf": 1287.25}, "5": {"proj_0005.hdf": 1297.75}}
+
+
+to list of all available options::
+
+    $ tomopy find_center -h
+
+
+After using **Find Center**, to do a tomographic reconstruction of all tomographic hdf data sets in a folder (/local/data/)::
+
+    $ tomopy recon --hdf-dir /local/data/
+
+
+
