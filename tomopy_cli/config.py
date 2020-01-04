@@ -50,6 +50,17 @@ SECTIONS['file-reading'] = {
         'choices': ['standard', 'blocked_views', 'flip_and_stich', 'mosaic']}
         }
 
+SECTIONS['zinger-removal'] = {
+    'zinger-level-projections': {
+        'default': 800.0,
+        'type': float,
+        'help': 'Expected difference value between outlier value and the median value of the array'},
+    'zinger-level-white': {
+        'default': 1000.0,
+        'type': float,
+        'help': 'Expected difference value between outlier value and the median value of the array'},
+        }
+
 SECTIONS['flat-correction'] = {
     'flat-correction-method': {
         'default': 'normal',
@@ -161,12 +172,12 @@ SECTIONS['reconstruction'] = {
         'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
         }
 
-RECON_PARAMS = ('file-reading', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
+RECON_PARAMS = ('file-reading', 'zinger-removal', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
 FIND_CENTER_PARAMS = ('file-reading', 'find-center')
 
 # PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'Find center', 'File reading', 'Flat correction', 'Retrieve phase', 
+NICE_NAMES = ('General', 'Find center', 'File reading', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Stripe removal', 'Reconstruction')
 
 def get_config_name():
