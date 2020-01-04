@@ -19,7 +19,7 @@ in a prepared virtualenv or as root for system-wide installation.
 Dependencies
 ============
 
-Install the following packages::
+Install the following package::
 
     $ conda install -c conda-forge tomopy
 
@@ -46,6 +46,11 @@ to list of all available options::
 reconstruction parameters are stored in **tomopy.conf**. You can create a template with::
 
     $ tomopy init
+
+**tomopy.conf** is constantly updated to keep track of the last stored parameters, as initalized by **init** or modified
+by setting a new option value. For example to re-run the last reconstrusction with identical parameters just use::
+
+    $ tomopy recon
 
 
 Find Center
