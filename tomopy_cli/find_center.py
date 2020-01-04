@@ -13,7 +13,7 @@ from tomopy_cli import log
 
 def auto(params):
 
-    # print(params)
+    print(params)
 
     # update config file
     sections = config.FIND_CENTER_PARAMS
