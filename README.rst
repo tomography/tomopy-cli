@@ -65,7 +65,7 @@ Find Center
 
 To automatically find the rotation axis location of all tomographic hdf data sets in a folder (/local/data/)::
 
-    $ tomopy find_center --hdf-dir /local/data/
+    $ tomopy find_center --hdf-file /local/data/
 
 
 this generates in the /local/data/ directory a **rotation_axis.json** file containing all the automatically calculated centers::
@@ -81,7 +81,7 @@ to list of all available options::
 
 After using **find_center**, to do a tomographic reconstruction of all tomographic hdf data sets in a folder (/local/data/)::
 
-    $ tomopy recon --hdf-dir /local/data/
+    $ tomopy recon --hdf-file /local/data/
 
 
 
