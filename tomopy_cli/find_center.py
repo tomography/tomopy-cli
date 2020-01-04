@@ -8,20 +8,22 @@ from tomopy_cli import util
 
 def auto(params):
 
-    # print(params)
     fname = params.hdf_file
     nsino = float(params.nsino)
-    ra_fname = params.rotation_axis
+    ra_fname = params.rotation_axis_file
 
-    if os.path.isfile(fname):       
+    if os.path.isfile(fname):  
         rot_center = util.find_rotation_axis(fname, nsino)
         
     elif os.path.isdir(fname):
         # Add a trailing slash if missing
         top = os.path.join(fname, '')
-    
+        print(fname)
+        print(top)
+        print(ra_fname)
         # Set the file name that will store the rotation axis positions.
         jfname = top + ra_fname
+
         # log.info(os.listdir(top))
         h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf')), os.listdir(top)))
         h5_file_list.sort()
@@ -33,7 +35,7 @@ def auto(params):
         i=0
         for fname in h5_file_list:
             h5fname = top + fname
-            rot_center = find_rotation_axis(h5fname, nsino)
+            rot_center = util.find_rotation_axis(h5fname, nsino)
             case =  {fname : rot_center}
             log.info(case)
             dic_centers[i] = case

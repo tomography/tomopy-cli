@@ -35,9 +35,9 @@ To do a tomographic reconstruction::
     $ tomopy recon --hdf-file /local/data.h5
 
 from the command line. To get correct results, you may need to append
-options such as `--center` to set the rotation axis position::
+options such as `--rotation-axis` to set the rotation axis position::
 
-    $ tomopy recon --center 1024.0 --hdf-file /local/data.h5
+    $ tomopy recon --rotation-axis 1024.0 --hdf-file /local/data.h5
 
 to list of all available options::
 
