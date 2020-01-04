@@ -9,6 +9,7 @@ from tomopy_cli import log
 from tomopy_cli import util
 
 CONFIG_FILE_NAME = "tomopy.conf"
+ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
 
@@ -24,22 +25,23 @@ SECTIONS['general'] = {
         'action': 'store_true'}
         }
 
-SECTIONS['find-center-reading'] = {
-    'hdf-dir': {
-        'default': '.',
+SECTIONS['find-center'] = {
+    'rotation-axis': {
+        'default': ROTATION_AXIS_FILE_NAME,
         'type': str,
-        'help': "Path of the last used directory"},
+        'help': "File name of configuration",
+        'metavar': 'FILE'},
     'nsino': {
         'default': 0.5,
         'type': float,
         'help': 'Location of the sinogram used to find center (0 top, 1 bottom)'},
         }
 
-SECTIONS['rec-reading'] = {
+SECTIONS['file-reading'] = {
     'hdf-file': {
         'default': '.',
         'type': str,
-        'help': "Name of the last file used",
+        'help': "Name of the last used hdf file or directory containing multiple hdf files",
         'metavar': 'PATH'},
     'hdf-file-type': {
         'default': 'standard',
@@ -159,15 +161,13 @@ SECTIONS['reconstruction'] = {
         'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
         }
 
-RECON_PARAMS = ('rec-reading', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
-# FIND_CENTER_PARAMS = ('find-center-reading', 'flat-correction')
-FIND_CENTER_PARAMS = ('find-center-reading', )
+RECON_PARAMS = ('file-reading', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
+FIND_CENTER_PARAMS = ('file-reading', 'find-center')
 
 # PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'Rec reading', 'Find reading', 'Flat correction', 
-              'Retrieve phase', 'Stripe removal', 
-              'Reconstruction')
+NICE_NAMES = ('General', 'Find center', 'File reading', 'Flat correction', 'Retrieve phase', 
+              'Stripe removal', 'Reconstruction')
 
 def get_config_name():
     """Get the command line --config option."""

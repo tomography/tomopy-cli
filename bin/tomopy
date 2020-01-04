@@ -16,6 +16,7 @@ from tomopy_cli import find_center
 
 
 def init(args):
+
     if not os.path.exists(args.config):
         config.write(args.config)
     else:
@@ -23,28 +24,28 @@ def init(args):
 
 
 def run_find_center(args):
-    # from tomopy_cli import recon
+
     log.warning('find center start')
     find_center.auto(args)
     log.warning('find center end')
 
 
 def run_rec(args):
-    # from tomopy_cli import recon
+
     log.warning('reconstruction start')
     recon.tomo(args)
     log.warning('reconstruction end')
 
 
 def main():
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', **config.SECTIONS['general']['config'])
     parser.add_argument('--version', action='version',
                         version='%(prog)s {}'.format(__version__))
-    # reco_params = ('flat-correction', 'reconstruction')
+
     tomo_params = config.RECON_PARAMS
     find_center_params = config.FIND_CENTER_PARAMS
-    # print('XXXXXXX', tomo_params)
 
     cmd_parsers = [
         ('init',        init,            (),                             "Create configuration file"),
@@ -55,7 +56,6 @@ def main():
     subparsers = parser.add_subparsers(title="Commands", metavar='')
 
     for cmd, func, sections, text in cmd_parsers:
-        #print(cmd, func, sections, text)
         cmd_params = config.Params(sections=sections)
         cmd_parser = subparsers.add_parser(cmd, help=text, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         cmd_parser = cmd_params.add_arguments(cmd_parser)
