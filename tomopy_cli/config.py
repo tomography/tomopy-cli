@@ -171,7 +171,7 @@ NICE_NAMES = ('General', 'Rec reading', 'Find reading', 'Flat correction',
 
 def get_config_name():
     """Get the command line --config option."""
-    name = CONFIG_FILE_NAME
+    name = ''
     for i, arg in enumerate(sys.argv):
         if arg.startswith('--config'):
             if arg == '--config':

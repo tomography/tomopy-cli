@@ -43,14 +43,21 @@ to list of all available options::
 
     $ tomopy recon -h
 
-reconstruction parameters are stored in **tomopy.conf**. You can create a template with::
+
+Configuration File
+------------------
+
+Reconstruction parameters are stored in **tomopy.conf**. You can create a template with::
 
     $ tomopy init
 
-**tomopy.conf** is constantly updated to keep track of the last stored parameters, as initalized by **init** or modified
-by setting a new option value. For example to re-run the last reconstrusction with identical parameters just use::
+**tomopy.conf** is constantly updated to keep track of the last stored parameters, as initalized by **init** or modified by setting a new option value. For example to re-run the last reconstrusction with identical parameters just use::
 
     $ tomopy recon
+
+To run a reconstruction with a different and previously stored configuration file **old_tomopy.conf** just use::
+
+    $ tomopy recon --config old_tomopy.conf
 
 
 Find Center
