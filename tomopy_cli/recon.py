@@ -13,8 +13,6 @@ from tomopy_cli import log
 
 def tomo(params):
 
-    # print(params)
-
     # update config file
     sections = config.RECON_PARAMS
     config.write(params.config, args=params, sections=sections)

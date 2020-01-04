@@ -1,4 +1,5 @@
 import tomopy
+import dxchange
 
 from tomopy_cli import log
 from tomopy_cli import file_io
@@ -47,7 +48,7 @@ def restricted_float(x):
 
 def find_rotation_axis(fname, nsino):
     
-    log_lib.info("  *** calculating automatic center")
+    log.info("  *** calculating automatic center")
     data_size = file_io.get_dx_dims(fname, 'data')
     ssino = int(data_size[1] * nsino)
 
@@ -67,5 +68,5 @@ def find_rotation_axis(fname, nsino):
 
     # find rotation center
     rot_center = tomopy.find_center_vo(data)   
-    log_lib.info("  *** automatic center: %f" % rot_center)
+    log.info("  *** automatic center: %f" % rot_center)
     return rot_center

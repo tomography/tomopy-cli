@@ -25,16 +25,12 @@ SECTIONS['general'] = {
         'action': 'store_true'}
         }
 
-SECTIONS['find-center'] = {
-    'rotation-axis': {
+SECTIONS['find-rotation-axis'] = {
+    'rotation-axis-file': {
         'default': ROTATION_AXIS_FILE_NAME,
         'type': str,
-        'help': "File name of configuration",
+        'help': "File name of rataion axis locations",
         'metavar': 'FILE'},
-    'nsino': {
-        'default': 0.5,
-        'type': float,
-        'help': 'Location of the sinogram used to find center (0 top, 1 bottom)'},
         }
 
 SECTIONS['file-reading'] = {
@@ -47,7 +43,20 @@ SECTIONS['file-reading'] = {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
-        'choices': ['standard', 'blocked_views', 'flip_and_stich', 'mosaic']}
+        'choices': ['standard', 'blocked_views', 'flip_and_stich', 'mosaic']},
+    'nsino': {
+        'default': 0.5,
+        'type': float,
+        'help': 'Location of the sinogram used for slice reconstruction and find axis (0 top, 1 bottom)'},
+    'binning': {
+        'type': str,
+        'default': '0',
+        'help': "Reconstruction binning factor as power(2, choice)",
+        'choices': ['0', '1', '2', '3']},
+    'rotation-axis': {
+        'default': 1024.0,
+        'type': float,
+        'help': "Location of rotation axis"},
         }
 
 SECTIONS['zinger-removal'] = {
@@ -115,6 +124,9 @@ SECTIONS['stripe-removal'] = {
         'type': str,
         'help': "Stripe removal method",
         'choices': ['none', 'fourier-wavelet', 'titarenko', 'smoothing-filter']},
+        }
+
+SECTIONS['fourier-wavelet'] = {
     'fourier-wavelet-sigma': {
         'default': 2,
         'type': float,
@@ -132,6 +144,9 @@ SECTIONS['stripe-removal'] = {
         'default': False,
         'help': "When set, extend the size of the sinogram by padding with zeros",
         'action': 'store_true'},
+    }
+
+SECTIONS['titarenko'] = {
     'titarenko-alpha': {
         'default': 1.5,
         'type': float,
@@ -140,6 +155,9 @@ SECTIONS['stripe-removal'] = {
         'default': 0,
         'type': util.positive_int,
         'help': "Number of blocks"},
+    }
+
+SECTIONS['smoothing-filter'] = {
     'smoothing-filter-size': {
         'default': 5,
         'type': util.positive_int,
@@ -147,24 +165,16 @@ SECTIONS['stripe-removal'] = {
         }
 
 SECTIONS['reconstruction'] = {
-    'binning': {
-        'type': str,
-        'default': '0',
-        'help': "Reconstruction binning factor as power(2, choice)",
-        'choices': ['0', '1', '2', '3']},
     'filter': {
         'default': 'parzen',
         'type': str,
         'help': "Reconstruction filter",
         'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
-    'center': {
-        'default': 1024.0,
-        'type': float,
-        'help': "Location of rotation axis"},
-    'iteration-count': {
-        'default': 10,
-        'type': util.positive_int,
-        'help': "Maximum number of iterations"},
+    'reconstruction-type': {
+        'default': 'try',
+        'type': str,
+        'help': "Reconstruct slice or full data set. For  option (try) & (phase): multiple reconstruction of the same slice with different (rotation axis) & (alpha coefficient) are generated",
+        'choices': ['slice', 'full', 'try', 'phase']},
     'reconstruction-algorithm': {
         'default': 'gridrec',
         'type': str,
@@ -172,13 +182,21 @@ SECTIONS['reconstruction'] = {
         'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
         }
 
-RECON_PARAMS = ('file-reading', 'zinger-removal', 'flat-correction', 'stripe-removal', 'retrieve-phase', 'reconstruction')
-FIND_CENTER_PARAMS = ('file-reading', 'find-center')
+SECTIONS['iterative'] = {
+    'iteration-count': {
+        'default': 10,
+        'type': util.positive_int,
+        'help': "Maximum number of iterations"},
+    }
+
+RECON_PARAMS = ('file-reading', 'zinger-removal', 'flat-correction', 'stripe-removal', 'fourier-wavelet', 
+                'titarenko', 'smoothing-filter', 'retrieve-phase', 'reconstruction', 'iterative')
+FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'Find center', 'File reading', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Stripe removal', 'Reconstruction')
+NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
+              'Stripe removal','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Isterative')
 
 def get_config_name():
     """Get the command line --config option."""
