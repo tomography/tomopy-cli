@@ -122,3 +122,4 @@ ptycho.py
 *.autotools
 *.cproject
 *.conf
+*.json
