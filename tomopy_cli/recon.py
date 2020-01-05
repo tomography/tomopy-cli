@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import pathlib
 import numpy as np
 import tomopy
@@ -118,10 +119,11 @@ def rec_slice(params):
 
     rec = reconstruct(params, sino)
 
+    tail = os.sep + 'slice_rec' + os.sep + 'recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
     if os.path.dirname(params.hdf_file) is not '':
-       fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
+       fname = os.path.dirname(params.hdf_file) + '_rec' + tail
     else:
-       fname = './slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
+       fname = '.' + tail
     dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
     log.info("  *** rec: %s" % fname)
     log.info("  *** slice: %d" % start)
@@ -130,6 +132,7 @@ def rec_slice(params):
 def reconstruct(params, sino):
     # Read APS 32-BM raw data.
     proj, flat, dark, theta = file_io.read_tomo(params, sino)
+
     # zinger_removal
     proj = tomopy.misc.corr.remove_outlier(proj, params.zinger_level_projections, size=15, axis=0)
     flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=15, axis=0)
@@ -168,12 +171,13 @@ def reconstruct(params, sino):
 
     rot_center = params.rotation_axis / np.power(2, float(params.binning))
     log.info("  *** rotation center: %f" % rot_center)
+
     data = tomopy.downsample(data, level=int(params.binning)) 
     data = tomopy.downsample(data, level=int(params.binning), axis=1)
 
     data, N, rot_center = util.padding(data, params) 
 
-    # Reconstruct object.
+    # Reconstruct object
     log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
     if params.reconstruction_algorithm == 'astrasirt':
         extra_options ={'MinConstraint':0}
@@ -187,9 +191,11 @@ def reconstruct(params, sino):
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
-    else:        
+    elif params.reconstruction_algorithm == 'gridrec':
         rec = tomopy.recon(data, theta, center=rot_center, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
-
+    else:
+        log.info("  *** algorithm: %s is not supported" % params.reconstruction_algorithm)
+        return
 
     rec = rec[:,N//4:5*N//4,N//4:5*N//4]
 
@@ -231,12 +237,21 @@ def rec_full(params):
             break
 
         sino = (int(sino_chunk_start), int(sino_chunk_end))
-        # Reconstruct.
+
+        # Reconstruct
         rec = reconstruct(params, sino)
-        if os.path.dirname(params.hdf_file) is not '':
-            fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec/' + 'recon'
-        else:
-            fname = '.' + os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec/' + 'recon'
+
+
+        tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
+        fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
+        log_fname = os.path.dirname(params.hdf_file) + '_rec' + tail + os.path.split(params.config)[1]
+
+        # tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep + 'recon'
+        # if os.path.dirname(params.hdf_file) is not '':
+        #     fname = os.path.dirname(params.hdf_file) + '_rec' + tail 
+        #     log_fname = 
+        # else:
+        #     fname = '.' + tail
 
         log.info("  *** reconstructions: %s" % fname)
 
@@ -250,24 +265,32 @@ def rec_full(params):
             
         dxchange.write_tiff_stack(rec, fname=fname, start=strt)
         strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+    
+    try:
+        shutil.copy(params.config, log_fname)
+        log.info('  *** %s copy to %s ' % (params.config, log_fname))
+    except:
+        pass
+        # log.error("{0} already exists".format(log_fname))
+        # log.error('  *** %s copy to %s failed' % (params.config, log_fname))
 
-    rec_log_msg = "\n" + "tomopy recon --rotation-axis " + str(params.rotation_axis) + " --reconstruction-type full " + params.hdf_file
-    if (int(params.binning) > 0):
-        rec_log_msg = rec_log_msg + " --bin " + params.binning
+    # rec_log_msg = "\n" + "tomopy recon --rotation-axis " + str(params.rotation_axis) + " --reconstruction-type full " + params.hdf_file
+    # if (int(params.binning) > 0):
+    #     rec_log_msg = rec_log_msg + " --bin " + params.binning
 
-    if (params.phase_retrieval_method == 'paganin'):
-        rec_log_msg = rec_log_msg + \
-        " --phase-retrieval-method " + params.params.phase_retrieval_method + \
-        " --propagation-distance " + str(params.propagation_distance) + \
-        " ----pixel-size " + str(params.pixel_size) + \
-        " --energy " + str(params.energy) + \
-        " --alpha " + str(params.alpha)
+    # if (params.phase_retrieval_method == 'paganin'):
+    #     rec_log_msg = rec_log_msg + \
+    #     " --phase-retrieval-method " + params.params.phase_retrieval_method + \
+    #     " --propagation-distance " + str(params.propagation_distance) + \
+    #     " ----pixel-size " + str(params.pixel_size) + \
+    #     " --energy " + str(params.energy) + \
+    #     " --alpha " + str(params.alpha)
 
-    # log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
+    # # log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
 
-    p = pathlib.Path(fname)
-    lfname = os.path.join(params.logs_home, p.parts[-3] + '.log')
-    log.info('  *** command added to %s ' % lfname)
-    with open(lfname, "a") as myfile:
-        myfile.write(rec_log_msg)
+    # p = pathlib.Path(fname)
+    # lfname = os.path.join(params.logs_home, p.parts[-3] + '.log')
+    # log.info('  *** command added to %s ' % lfname)
+    # with open(lfname, "a") as myfile:
+    #     myfile.write(rec_log_msg)
 
