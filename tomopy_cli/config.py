@@ -104,6 +104,11 @@ SECTIONS['missing-angles'] = {
         }
 
 SECTIONS['zinger-removal'] = {
+    'zinger-removal-method': {
+        'default': 'none',
+        'type': str,
+        'help': "Zinger removal correction method",
+        'choices': ['none', 'standard']},
     'zinger-level-projections': {
         'default': 800.0,
         'type': float,
@@ -112,6 +117,10 @@ SECTIONS['zinger-removal'] = {
         'default': 1000.0,
         'type': float,
         'help': 'Expected difference value between outlier value and the median value of the array'},
+    'zinger-size': {
+        'type': util.positive_int,
+        'default': 3,
+        'help': "Size of the median filter"},
         }
 
 SECTIONS['flat-correction'] = {

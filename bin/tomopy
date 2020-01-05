@@ -43,7 +43,7 @@ def run_rec(args):
         if args.reconstruction_type == "try":            
             recon.try_center(args)
         elif (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
-            recon.reconstruct(args)
+            recon.rec_full(args)
         else:
             log.error("Option: %s is not supported " % args.reconstruction_type)   
 
