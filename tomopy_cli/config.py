@@ -63,7 +63,8 @@ SECTIONS['file-reading'] = {
     'nsino-per-chunk': {     
         'type': util.positive_int,
         'default': 32,
-        'help': "Number of sinagram per chunk. Use 8, 16, 32 ... and higher memory machines"},
+        'help': "Number of sinagram per chunk. Use larger numbers with computers with larger memory",
+        'choices': [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]},
     'binning': {
         'type': str,
         'default': '0',
@@ -81,11 +82,15 @@ SECTIONS['file-reading'] = {
         'default': False,
         'help': 'When set, the data set was collected in reverse (180-0)',
         'action': 'store_true'},
-    'blocked_views': {
+    'blocked-views': {
         'default': False,
         'help': 'When set, the missing-angles options are used',
+        'action': 'store_true'},
+    'dark-zero': {
+        'default': False,
+        'help': 'When set, the the dark field is set to zero',
         'action': 'store_true'}        
-        }
+       }
 
 SECTIONS['missing-angles'] = {
     'missing-angles-start': {
@@ -114,7 +119,7 @@ SECTIONS['flat-correction'] = {
         'default': 'normal',
         'type': str,
         'help': "Flat correction method",
-        'choices': ['normal', 'air']},
+        'choices': ['none', 'normal', 'air']},
     'normalization-cutoff': {
         'default': 1.0,
         'type': float,
