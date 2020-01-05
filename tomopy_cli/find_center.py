@@ -18,9 +18,7 @@ def auto(params):
     elif os.path.isdir(fname):
         # Add a trailing slash if missing
         top = os.path.join(fname, '')
-        print(fname)
-        print(top)
-        print(ra_fname)
+
         # Set the file name that will store the rotation axis positions.
         jfname = top + ra_fname
 

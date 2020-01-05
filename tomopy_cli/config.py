@@ -1,14 +1,16 @@
-import argparse
+import os
 import sys
-import logging
+import pathlib
+import argparse
 import configparser
+
 from collections import OrderedDict
-import numpy as np
 
 from tomopy_cli import log
 from tomopy_cli import util
 
-CONFIG_FILE_NAME = "tomopy.conf"
+LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
+CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
 ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
@@ -17,7 +19,12 @@ SECTIONS['general'] = {
     'config': {
         'default': CONFIG_FILE_NAME,
         'type': str,
-        'help': "File name of configuration",
+        'help': "File name of configuration file",
+        'metavar': 'FILE'},
+    'logs-home': {
+        'default': LOGS_HOME,
+        'type': str,
+        'help': "Log file directory",
         'metavar': 'FILE'},
     'verbose': {
         'default': False,
@@ -31,6 +38,10 @@ SECTIONS['find-rotation-axis'] = {
         'type': str,
         'help': "File name of rataion axis locations",
         'metavar': 'FILE'},
+    'center-search-width': {
+        'type': util.positive_int,
+        'default': 10,
+        'help': "+/- center search width (pixel). Search is in 0.5 pixel increments"},
         }
 
 SECTIONS['file-reading'] = {
@@ -43,7 +54,7 @@ SECTIONS['file-reading'] = {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
-        'choices': ['standard', 'blocked_views', 'flip_and_stich', 'mosaic']},
+        'choices': ['standard', 'reverse', 'blocked_views', 'flip_and_stich', 'mosaic']},
     'nsino': {
         'default': 0.5,
         'type': float,
@@ -57,6 +68,17 @@ SECTIONS['file-reading'] = {
         'default': 1024.0,
         'type': float,
         'help': "Location of rotation axis"},
+        }
+
+SECTIONS['missing-angles'] = {
+    'missing-angles-start': {
+        'type': util.positive_int,
+        'default': 0,
+        'help': "Projection number of the first blocked view"},
+    'missing-angles-end': {
+        'type': util.positive_int,
+        'default': 1,
+        'help': "Projection number of the first blocked view"},
         }
 
 SECTIONS['zinger-removal'] = {
@@ -189,13 +211,13 @@ SECTIONS['iterative'] = {
         'help': "Maximum number of iterations"},
     }
 
-RECON_PARAMS = ('file-reading', 'zinger-removal', 'flat-correction', 'stripe-removal', 'fourier-wavelet', 
+RECON_PARAMS = ('file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'stripe-removal', 'fourier-wavelet', 
                 'titarenko', 'smoothing-filter', 'retrieve-phase', 'reconstruction', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
+NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Stripe removal','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Isterative')
 
 def get_config_name():
