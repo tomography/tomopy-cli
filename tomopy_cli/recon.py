@@ -1,8 +1,6 @@
 import os
-import logging
-import glob
-import tempfile
 import sys
+import pathlib
 import numpy as np
 import tomopy
 import dxchange
@@ -128,9 +126,6 @@ def rec_slice(params):
     log.info("  *** rec: %s" % fname)
     log.info("  *** slice: %d" % start)
 
-def rec_full(params):
-    log.info("  *** rec_full")
-
 
 def reconstruct(params, sino):
     # Read APS 32-BM raw data.
@@ -225,7 +220,8 @@ def rec_full(params):
     log.info("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % ((sino_end - sino_start), sino_start, sino_end, chunks, nSino_per_chunk))            
 
     strt = 0
-    for iChunk in range(0,chunks):
+    for iChunk in range(0,1):
+    # for iChunk in range(0,chunks):
         log.info('chunk # %i' % (iChunk))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
@@ -256,10 +252,10 @@ def rec_full(params):
         strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
 
     rec_log_msg = "\n" + "tomopy recon --rotation-axis " + str(params.rotation_axis) + " --reconstruction-type full " + params.hdf_file
-    if (params.binning > 0):
-        rec_log_msg = rec_log_msg + " --bin " + str(params.binning)
+    if (int(params.binning) > 0):
+        rec_log_msg = rec_log_msg + " --bin " + params.binning
 
-    if (variableDict['phase']):
+    if (params.phase_retrieval_method == 'paganin'):
         rec_log_msg = rec_log_msg + \
         " --phase-retrieval-method " + params.params.phase_retrieval_method + \
         " --propagation-distance " + str(params.propagation_distance) + \
@@ -269,7 +265,7 @@ def rec_full(params):
 
     # log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
 
-    p = pathlog.Path(fname)
+    p = pathlib.Path(fname)
     lfname = os.path.join(params.logs_home, p.parts[-3] + '.log')
     log.info('  *** command added to %s ' % lfname)
     with open(lfname, "a") as myfile:
