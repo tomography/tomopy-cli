@@ -31,7 +31,7 @@ def padding(data, params):
     data = data_pad
     rot_center = params.rotation_axis + N//4
 
-    return data, N, rot_center
+    return data, rot_center
 
 def remove_nan_neg_inf(data, params):
 
@@ -46,6 +46,21 @@ def remove_nan_neg_inf(data, params):
         log.warning('  *** *** none')
 
     return data
+
+def zinger_removal(proj, flat, params):
+
+    log.info("  *** zinger removal")
+    if (params.zinger_removal_method == 'standard'):
+        log.info('  *** *** standard')
+        log.info("  *** *** zinger level projections: %d" % params.zinger_level_projections)
+        log.info("  *** *** zinger level white: %s" % params.zinger_level_white)
+        log.info("  *** *** zinger_size: %d" % params.zinger_size)
+        proj = tomopy.misc.corr.remove_outlier(proj, params.zinger_level_projections, size=params.zinger_size, axis=0)
+        flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=params.zinger_size, axis=0)
+    elif(params.phase_retrieval_method == 'none'):
+        log.warning('  *** *** none')
+
+    return proj, flat
 
 
 def flat_correction(proj, flat, dark, params):

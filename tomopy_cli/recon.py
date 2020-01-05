@@ -11,7 +11,7 @@ from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
 from tomopy_cli import util
-from tomopy_cli import corr
+from tomopy_cli import proc
 
 
 def try_center(params):
@@ -58,7 +58,11 @@ def try_center(params):
         stack[index] = data[:, 0, :]
         index = index + 1
 
-    stack, N, rot_center = prep.padding(stark, params) 
+    # original shape
+    N = stack.shape[2]
+
+    # padding
+    stack, rot_center = prep.padding(stack, params) 
 
     # Reconstruct the same slice with a range of centers. 
     log.info('  *** reconstruct slice %d with rotation axis ranging from %.2f to %.2f in %.2f pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
@@ -68,10 +72,10 @@ def try_center(params):
     # Mask each reconstructed slice with a circle.
     #rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
 
-    index = 0
     # Save images to a temporary folder.
-    # variableDict['rec_dir'] = os.path.dirname(params.hdf_file) + '_rec'
     fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.hdf_file) + os.sep + 'recon_' ##+ os.path.splitext(os.path.basename(params.hdf_file))[0]    
+
+    index = 0
     for axis in np.arange(*center_range):
         rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
         dxchange.write_tiff(rec[index], fname=rfname, overwrite=True)
@@ -80,12 +84,12 @@ def try_center(params):
 
 
 def rec_chunk(sino, params):
+
     # Read APS 32-BM raw data.
     proj, flat, dark, theta = file_io.read_tomo(sino, params)
 
     # zinger_removal
-    proj = tomopy.misc.corr.remove_outlier(proj, params.zinger_level_projections, size=15, axis=0)
-    flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=15, axis=0)
+    proj, flat = prep.zinger_removal(proj, flat, params)
 
     if (params.dark_zero):
         dark *= 0
@@ -102,45 +106,31 @@ def rec_chunk(sino, params):
     # minus log
     data = prep.minus_log(data, params)
 
-
     # remove outlier
     data = prep.remove_nan_neg_inf(data, params)
 
     # binning
     data, rotation_center = prep.binning(data, params)
 
+    # original shape
+    N = data.shape[2]
+
     # padding
-    data, N, rot_center = prep.padding(data, params) 
+    data, rot_center = prep.padding(data, params) 
 
     # Reconstruct object
-    log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
-    if params.reconstruction_algorithm == 'astrasirt':
-        extra_options ={'MinConstraint':0}
-        options = {'proj_type':'cuda', 'method':'SIRT_CUDA', 'num_iter':200, 'extra_options':extra_options}
-        shift = (int((data.shape[2]/2 - rot_center)+.5))
-        data = np.roll(data, shift, axis=2)
-        rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
-    elif params.reconstruction_algorithm == 'astracgls':
-        extra_options ={'MinConstraint':0}
-        options = {'proj_type':'cuda', 'method':'CGLS_CUDA', 'num_iter':15, 'extra_options':extra_options}
-        shift = (int((data.shape[2]/2 - rot_center)+.5))
-        data = np.roll(data, shift, axis=2)
-        rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
-    elif params.reconstruction_algorithm == 'gridrec':
-        rec = tomopy.recon(data, theta, center=rot_center, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
-    else:
-        log.info("  *** algorithm: %s is not supported" % params.reconstruction_algorithm)
-        return
+    rec = proc.reconstruct(data, theta, rot_center, params)
 
+    # restore shape 
     rec = rec[:,N//4:5*N//4,N//4:5*N//4]
 
     # Mask each reconstructed slice with a circle
-    rec = corr.mask(rec, params)
+    rec = proc.mask(rec, params)
 
     return rec
 
 
-def reconstruct(params):
+def rec_full(params):
     
     data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
 
