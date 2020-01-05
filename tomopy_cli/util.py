@@ -1,5 +1,6 @@
 import tomopy
 import dxchange
+import numpy as np
 
 from tomopy_cli import log
 from tomopy_cli import file_io
@@ -109,8 +110,22 @@ def patch_projection(data, miss_angles):
     slider(np.log(np.abs(fdatanew.swapaxes(0,1))), axis=0)
     a = np.real(np.fft.ifft(fdatanew,axis=2))
     b = np.imag(np.fft.ifft(fdatanew,axis=2))
-    print(a.shape)
+    # print(a.shape)
     slider(a.swapaxes(0,1), axis=0)
     slider(b.swapaxes(0,1), axis=0)
     return np.real(np.fft.ifft(fdatanew,axis=2))
-    
+
+
+def padding(data, params):
+
+    log.info("  *** padding")
+    N = data.shape[2]
+    data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
+    data_pad[:,:,N//4:5*N//4] = data
+    data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
+    data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
+
+    data = data_pad
+    rot_center = params.rotation_axis + N//4
+
+    return data, N, rot_center

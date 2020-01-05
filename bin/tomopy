@@ -17,7 +17,10 @@ from tomopy_cli import find_center
 
 def init(args):
 
-    if not os.path.exists(args.config):
+    # print('args.config', args.config)
+    # print('args.config exists', os.path.exists(str(args.config))) 
+
+    if not os.path.exists(str(args.config)):
         config.write(args.config)
     else:
         log.error("{0} already exists".format(args.config))
@@ -31,7 +34,6 @@ def run_find_center(args):
 
 
 def run_rec(args):
-
     log.warning('reconstruction start')
     recon.tomo(args)
     log.warning('reconstruction end')
