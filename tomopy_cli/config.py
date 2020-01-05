@@ -44,6 +44,7 @@ SECTIONS['find-rotation-axis'] = {
         'help': "+/- center search width (pixel). Search is in 0.5 pixel increments"},
         }
 
+
 SECTIONS['file-reading'] = {
     'hdf-file': {
         'default': '.',
@@ -54,7 +55,7 @@ SECTIONS['file-reading'] = {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
-        'choices': ['standard', 'reverse', 'blocked_views', 'flip_and_stich', 'mosaic']},
+        'choices': ['standard', 'flip_and_stich', 'mosaic']},
     'nsino': {
         'default': 0.5,
         'type': float,
@@ -68,6 +69,18 @@ SECTIONS['file-reading'] = {
         'default': 1024.0,
         'type': float,
         'help': "Location of rotation axis"},
+    'rotation-axis-flip': {
+        'default': 1024.0,
+        'type': float,
+        'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
+    'reverse': {
+        'default': False,
+        'help': 'When set, the data set was collected in reverse (180-0)',
+        'action': 'store_true'},
+    'blocked_views': {
+        'default': False,
+        'help': 'When set, the missing-angles options are used',
+        'action': 'store_true'}        
         }
 
 SECTIONS['missing-angles'] = {
@@ -154,17 +167,17 @@ SECTIONS['stripe-removal'] = {
 
 SECTIONS['fourier-wavelet'] = {
     'fourier-wavelet-sigma': {
-        'default': 2,
+        'default': 1,
         'type': float,
         'help': "Damping parameter in Fourier space"},
     'fourier-wavelet-filter': {
-        'default': 'db5',
+        'default': 'sym16',
         'type': str,
         'help': "Type of the fourier-wavelet filter",
-        'choices': ['haar', 'db5', 'sym5']},
+        'choices': ['haar', 'db5', 'sym5', 'sym16']},
     'fourier-wavelet-level': {
         'type': util.positive_int,
-        'default': 0,
+        'default': 7,
         'help': "Level parameter used by the fourier-wavelet method"},
     'fourier-wavelet-pad': {
         'default': False,
@@ -205,7 +218,7 @@ SECTIONS['reconstruction'] = {
         'default': 'gridrec',
         'type': str,
         'help': "Reconstruction algorithm",
-        'choices': ['art', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
+        'choices': ['art', 'astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
         }
 
 SECTIONS['iterative'] = {

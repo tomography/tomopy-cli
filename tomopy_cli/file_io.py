@@ -61,20 +61,37 @@ def read_rot_centers(fname):
         exit()
 
 def read_tomo(params, sino):
-    # Read APS 32-BM raw data.
-    proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
 
-    if params.hdf_file_type == 'reverse':
+    if params.hdf_file_type == 'flip_and_stich':
+        log.info("   *** loading a 360 deg flipped data set")
+        proj360, flat360, dark360, theta360 = dxchange.read_aps_32id(params.hdf_file, sino=sino)
+        proj, flat, dark = util.flip_and_stitch(variableDict, proj360, flat360, dark360)
+        theta = theta360[:len(theta360)//2] # take first half
+    else:
+        # Read APS 32-BM raw data.
+        log.info("  *** loading a stardard data set")
+        proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
+
+
+    if params.reverse:
+        log.info("  *** correcting for 180-0 data collection")
         step_size = (theta[1] - theta[0]) 
         theta_size = dxreader.read_dx_dims(params.hdf_file, 'data')[0]
         theta = np.linspace(np.pi , (0+step_size), theta_size)   
-        log.warning("  *** overwrite theta")
 
-    if params.hdf_file_type == 'blocked_views':
+    if params.blocked_views:
+        log.info("  *** correcting for blocked view data collection")
         miss_angles = [params.missing_angles_start, params.missing_angle_end]
         
         # Manage the missing angles:
         proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
         theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
+ 
+    # new missing projection handling
+    # if params.blocked_views:
+    #     log.warning("  *** new missing angle handling")
+    #     miss_angles = [params.missing_angles_start, params.missing_angle_end]
+    #     data = util.patch_projection(data, miss_angles)
+
 
     return proj, flat, dark, theta
