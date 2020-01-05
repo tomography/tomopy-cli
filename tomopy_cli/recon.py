@@ -143,7 +143,6 @@ def reconstruct(params, sino):
     # normalize
     data = tomopy.normalize(proj, flat, dark)
 
-
     # remove stripes
     data = tomopy.remove_stripe_fw(data,level=params.fourier_wavelet_level,wname=params.fourier_wavelet_filter,sigma=params.fourier_wavelet_sigma,pad=params.fourier_wavelet_pad)
 
@@ -222,15 +221,14 @@ def rec_full(params):
 
     chunks = int(np.ceil(data_shape[1]/nSino_per_chunk))    
 
-    # Select sinogram range to reconstruct.
+    # Select sinogram range to reconstruct
     sino_start = 0
     sino_end = chunks*nSino_per_chunk
     
     log.info("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % ((sino_end - sino_start), sino_start, sino_end, chunks, nSino_per_chunk))            
 
     strt = 0
-    for iChunk in range(0,1):
-    # for iChunk in range(0,chunks):
+    for iChunk in range(0,chunks):
         log.info('chunk # %i' % (iChunk))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
@@ -244,17 +242,9 @@ def rec_full(params):
         # Reconstruct
         rec = reconstruct(params, sino)
 
-
         tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
         fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
         log_fname = os.path.dirname(params.hdf_file) + '_rec' + tail + os.path.split(params.config)[1]
-
-        # tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep + 'recon'
-        # if os.path.dirname(params.hdf_file) is not '':
-        #     fname = os.path.dirname(params.hdf_file) + '_rec' + tail 
-        #     log_fname = 
-        # else:
-        #     fname = '.' + tail
 
         log.info("  *** reconstructions: %s" % fname)
 
@@ -268,32 +258,15 @@ def rec_full(params):
             
         dxchange.write_tiff_stack(rec, fname=fname, start=strt)
         strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
-    
+
+    # make a copy of the tomopy.conf in the reconstructed data directory path
+    # in this way you can reproduce the reconstruction by simply running:
+    #
+    # tomopy recon --config /path/tomopy.conf    
+    #
     try:
         shutil.copy(params.config, log_fname)
         log.info('  *** copied %s to %s ' % (params.config, log_fname))
     except:
         pass
-        # log.error("{0} already exists".format(log_fname))
-        # log.error('  *** %s copy to %s failed' % (params.config, log_fname))
-
-    # rec_log_msg = "\n" + "tomopy recon --rotation-axis " + str(params.rotation_axis) + " --reconstruction-type full " + params.hdf_file
-    # if (int(params.binning) > 0):
-    #     rec_log_msg = rec_log_msg + " --bin " + params.binning
-
-    # if (params.phase_retrieval_method == 'paganin'):
-    #     rec_log_msg = rec_log_msg + \
-    #     " --phase-retrieval-method " + params.params.phase_retrieval_method + \
-    #     " --propagation-distance " + str(params.propagation_distance) + \
-    #     " ----pixel-size " + str(params.pixel_size) + \
-    #     " --energy " + str(params.energy) + \
-    #     " --alpha " + str(params.alpha)
-
-    # # log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
-
-    # p = pathlib.Path(fname)
-    # lfname = os.path.join(params.logs_home, p.parts[-3] + '.log')
-    # log.info('  *** command added to %s ' % lfname)
-    # with open(lfname, "a") as myfile:
-    #     myfile.write(rec_log_msg)
 
