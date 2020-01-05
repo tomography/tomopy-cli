@@ -38,77 +38,6 @@ def tomo(params):
     else:
         log.error("Directory or File Name does not exist: %s" % fname)
 
-    # update config file
-    sections = config.RECON_PARAMS
-    config.write(params.config, args=params, sections=sections)
-    return
-
-    fname = str(params.input_file_path)
-
-    start = params.slice_start
-    end = params.slice_end
-
-   # Read raw data.
-    if  (params.full_reconstruction == False) : 
-        end = start + 1
-    
-
-#    LOG.info('Slice start/end: %s', end)
-
-    proj, flat, dark, theta = dxchange.read_aps_32id(fname, sino=(start, end))
-    # LOG.info('Slice start/end: %s, %s', start, end)
-    # LOG.info('Data successfully imported: %s', fname)
-    # LOG.info('Projections: %s', proj.shape)
-    # LOG.info('Flat: %s', flat.shape)
-    # LOG.info('Dark: %s', dark.shape)
-
-    # Flat-field correction of raw data.
-    data = tomopy.normalize(proj, flat, dark)
-    # LOG.info('Normalization completed')
-
-    data = tomopy.downsample(data, level=int(params.binning))
-    # LOG.info('Binning: %s', params.binning)
-
-    # remove stripes
-    data = tomopy.remove_stripe_fw(data,level=5,wname='sym16',sigma=1,pad=True)
-    # LOG.info('Ring removal completed')    
-
-    # phase retrieval
-    #data = tomopy.prep.phase.retrieve_phase(data,pixel_size=detector_pixel_size_x,dist=sample_detector_distance,energy=monochromator_energy,alpha=8e-3,pad=True)
-
-    # Find rotation center
-    #rot_center = tomopy.find_center(proj, theta, init=290, ind=0, tol=0.5)
-
-    # Set rotation center.
-    rot_center = params.center/np.power(2, float(params.binning))
-    # LOG.info('Rotation center: %s', rot_center)
-
-    data = tomopy.minus_log(data)
-    # LOG.info('Minus log compled')
-
-    # Reconstruct object using Gridrec algorithm.
-    # LOG.info('Reconstruction started using %s', params.reconstruction_algorithm)
-    if (str(params.reconstruction_algorithm) == 'sirt'):
-        # LOG.info('Iteration: %s', params.iteration_count)
-        rec = tomopy.recon(data, theta,  center=rot_center, algorithm='sirt', num_iter=params.iteration_count)
-    else:
-        # LOG.info('Filter: %s', params.filter)
-        rec = tomopy.recon(data, theta, center=rot_center, algorithm='gridrec', filter_name=params.filter)
-
-    # LOG.info('Reconstrion of %s completed', rec.shape)
-
-    # Mask each reconstructed slice with a circle.
-    rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
-
-    
-    if (params.dry_run == False):
-         # Write data as stack of TIFs.
-        fname = str(params.output_path) + 'reco'
-        dxchange.write_tiff_stack(rec, fname=fname, overwrite=True)
-        # LOG.info('Reconstrcution saved: %s', fname)
-
-    if  (params.full_reconstruction == False) :
-        return rec
 
 def try_center(params):
 
@@ -285,3 +214,76 @@ def reconstruct(params, sino):
     # Mask each reconstructed slice with a circle.
     #rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
     return rec
+
+
+def rec_full(params):
+    
+    data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
+
+    nSino_per_chunk = params.nsino_per_chunk                # number of sinogram chunks to reconstruct
+                                                            # always power of 2               
+                                                            # number of sinogram chunks to reconstruct
+                                                            # only one chunk at the time is reconstructed
+                                                            # allowing for limited RAM machines to complete a full reconstruction
+                                                            #
+                                                            # set this number based on how much memory your computer has
+                                                            # if it cannot complete a full size reconstruction lower it
+
+    chunks = int(np.ceil(data_shape[1]/nSino_per_chunk))    
+
+    # Select sinogram range to reconstruct.
+    sino_start = 0
+    sino_end = chunks*nSino_per_chunk
+    
+    log.info("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % ((sino_end - sino_start), sino_start, sino_end, chunks, nSino_per_chunk))            
+
+    strt = 0
+    for iChunk in range(0,chunks):
+        log.info('chunk # %i' % (iChunk))
+        sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
+        sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
+        log.info('  *** [%i, %i]' % (sino_chunk_start, sino_chunk_end))
+                
+        if sino_chunk_end > sino_end: 
+            break
+
+        sino = (int(sino_chunk_start), int(sino_chunk_end))
+        # Reconstruct.
+        rec = reconstruct(params, sino)
+        if os.path.dirname(params.hdf_file) is not '':
+            fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec/' + 'recon'
+        else:
+            fname = '.' + os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec/' + 'recon'
+
+        log.info("  *** reconstructions: %s" % fname)
+
+        if(iChunk == chunks-1):
+            log.info("handling of the last chunk %d " % iChunk)
+            log.info("  *** data_shape %d" % (data_shape[1]))
+            log.info("  *** chunks # %d" % (chunks))
+            log.info("  *** nSino_per_chunk %d" % (nSino_per_chunk))
+            log.info("  *** last rec size %d" % (data_shape[1]-(chunks-1)*nSino_per_chunk))
+            rec = rec[0:data_shape[1]-(chunks-1)*nSino_per_chunk,:,:]
+            
+        dxchange.write_tiff_stack(rec, fname=fname, start=strt)
+        strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+
+    rec_log_msg = "\n" + "tomopy recon --rotation-axis " + str(params.rotation_axis) + " --reconstruction-type full " + params.hdf_file
+    if (params.binning > 0):
+        rec_log_msg = rec_log_msg + " --bin " + str(params.binning)
+
+    if (variableDict['phase']):
+        rec_log_msg = rec_log_msg + \
+        " --phase-retrieval-method " + params.params.phase_retrieval_method + \
+        " --propagation-distance " + str(params.propagation_distance) + \
+        " ----pixel-size " + str(params.pixel_size) + \
+        " --energy " + str(params.energy) + \
+        " --alpha " + str(params.alpha)
+
+    # log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
+
+    p = pathlog.Path(fname)
+    lfname = os.path.join(params.logs_home, p.parts[-3] + '.log')
+    log.info('  *** command added to %s ' % lfname)
+    with open(lfname, "a") as myfile:
+        myfile.write(rec_log_msg)
