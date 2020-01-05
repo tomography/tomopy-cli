@@ -60,16 +60,16 @@ def read_rot_centers(fname):
         log.error("ERROR: run: python find_center.py to create one first")
         exit()
 
-def read_tomo(params, sino):
+def read_tomo(sino, params):
 
     if params.hdf_file_type == 'flip_and_stich':
-        log.info("   *** loading a 360 deg flipped data set")
+        log.info("   *** loading a 360 deg flipped data set: %s" % params.hdf_file)
         proj360, flat360, dark360, theta360 = dxchange.read_aps_32id(params.hdf_file, sino=sino)
         proj, flat, dark = util.flip_and_stitch(variableDict, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
     else:
         # Read APS 32-BM raw data.
-        log.info("  *** loading a stardard data set")
+        log.info("  *** loading a stardard data set: %s" % params.hdf_file)
         proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
 
 

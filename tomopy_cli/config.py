@@ -66,10 +66,10 @@ SECTIONS['file-reading'] = {
         'help': "Number of sinagram per chunk. Use larger numbers with computers with larger memory",
         'choices': [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]},
     'binning': {
-        'type': str,
-        'default': '0',
+        'type': util.positive_int,
+        'default': 0,
         'help': "Reconstruction binning factor as power(2, choice)",
-        'choices': ['0', '1', '2', '3']},
+        'choices': [0, 1, 2, 3]},
     'rotation-axis': {
         'default': 1024.0,
         'type': float,
@@ -116,18 +116,26 @@ SECTIONS['zinger-removal'] = {
 
 SECTIONS['flat-correction'] = {
     'flat-correction-method': {
-        'default': 'normal',
+        'default': 'standard',
         'type': str,
         'help': "Flat correction method",
-        'choices': ['none', 'normal', 'air']},
+        'choices': ['standard', 'air', 'none']},
     'normalization-cutoff': {
         'default': 1.0,
         'type': float,
         'help': 'Permitted maximum vaue for the normalized data'},
+    'air': {
+        'type': util.positive_int,
+        'default': 10,
+        'help': "Number of pixels at each boundary to calculate the scaling factor"},
     'fix-nan-and-inf': {
         'default': False,
         'help': "Fix nan and inf",
         'action': 'store_true'},
+    'fix-nan-and-inf-value': {
+        'default': 0.0,
+        'type': float,
+        'help': "Values to be replaced with negative values in array"},
     'minus-log': {
         'default': False,
         'help': "Minus log",
@@ -230,8 +238,12 @@ SECTIONS['reconstruction'] = {
         'choices': ['art', 'astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
     'reconstruction-mask': {
         'default': False,
-        'help': "When set, applies tomopy.circ_mask(rec, axis=0, ratio=0.95) to the reconstructed slices",
+        'help': "When set, applies circular mask to the reconstructed slices",
         'action': 'store_true'},
+    'reconstruction-mask-ratio': {
+        'default': 1.0,
+        'type': float,
+        'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
         }
 
 SECTIONS['iterative'] = {
