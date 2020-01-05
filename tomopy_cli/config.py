@@ -15,6 +15,7 @@ ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
 
+
 SECTIONS['general'] = {
     'config': {
         'default': CONFIG_FILE_NAME,
@@ -242,7 +243,7 @@ NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles',
 
 def get_config_name():
     """Get the command line --config option."""
-    name = ''
+    name = CONFIG_FILE_NAME
     for i, arg in enumerate(sys.argv):
         if arg.startswith('--config'):
             if arg == '--config':
@@ -334,7 +335,6 @@ def write(config_file, args=None, sections=None):
     *args* only to those sections, use the defaults on the remaining ones.
     """
     config = configparser.ConfigParser()
-
     for section in SECTIONS:
         config.add_section(section)
         for name, opts in SECTIONS[section].items():

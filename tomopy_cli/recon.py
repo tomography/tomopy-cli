@@ -10,6 +10,7 @@ import dxchange
 from tomopy_cli import config #, __version__
 from tomopy_cli import log
 from tomopy_cli import file_io
+from tomopy_cli import util
 
 
 def tomo(params):
@@ -18,8 +19,6 @@ def tomo(params):
     fname = params.hdf_file
     nsino = float(params.nsino)
     ra_fname = params.rotation_axis_file
-
-    # print(params)
 
     if os.path.isfile(fname):    
         log.info("Reconstructing a single file: %s" % fname)   
@@ -38,6 +37,10 @@ def tomo(params):
     else:
         log.error("Directory or File Name does not exist: %s" % fname)
 
+    # update config file
+    sections = config.RECON_PARAMS
+    config.write(params.config, args=params, sections=sections)
+
 
 def try_center(params):
 
@@ -45,13 +48,6 @@ def try_center(params):
 
     log.info(data_shape)
     ssino = int(data_shape[1] * params.nsino)
-
-    # downsample
-    params.rotation_axis = params.rotation_axis/np.power(2, float(params.binning))
-    params.center_search_width = params.center_search_width/np.power(2, float(params.binning))
-
-    center_range = (params.rotation_axis-params.center_search_width, params.rotation_axis+params.center_search_width, 0.5)
-    log.info('  *** reconstruct slice %d with rotation axis ranging from %.2f to %.2f in %.2f pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
 
     # Select sinogram range to reconstruct
     start = ssino
@@ -67,9 +63,6 @@ def try_center(params):
     # remove stripes
     data = tomopy.remove_stripe_fw(data,level=7,wname='sym16',sigma=1,pad=True)
 
-    log.info("  *** raw data: %s" % params.hdf_file)
-    log.info("  *** center: %f" % params.rotation_axis)
-
     data = tomopy.minus_log(data)
 
     data = tomopy.remove_nan(data, val=0.0)
@@ -77,8 +70,12 @@ def try_center(params):
     data[np.where(data == np.inf)] = 0.00
 
     # downsample
-    data = tomopy.downsample(data, level=int(params.binning))
+    params.rotation_axis = params.rotation_axis/np.power(2, float(params.binning))
+    params.center_search_width = params.center_search_width/np.power(2, float(params.binning))
 
+    center_range = (params.rotation_axis-params.center_search_width, params.rotation_axis+params.center_search_width, 0.5)
+
+    data = tomopy.downsample(data, level=int(params.binning))
     data_shape2 = data_shape[2]
     data_shape2 = data_shape2 / np.power(2, float(params.binning))
 
@@ -89,15 +86,10 @@ def try_center(params):
         stack[index] = data[:, 0, :]
         index = index + 1
 
-    # padding 
-    N = stack.shape[2]
-    stack_pad = np.zeros([stack.shape[0],stack.shape[1],3*N//2],dtype = "float32")
-    stack_pad[:,:,N//4:5*N//4] = stack
-    stack_pad[:,:,0:N//4] = np.reshape(stack[:,:,0],[stack.shape[0],stack.shape[1],1])
-    stack_pad[:,:,5*N//4:] = np.reshape(stack[:,:,-1],[stack.shape[0],stack.shape[1],1])
-    stack = stack_pad
+    stack, N, rot_center = util.padding(stack, params) 
 
     # Reconstruct the same slice with a range of centers. 
+    log.info('  *** reconstruct slice %d with rotation axis ranging from %.2f to %.2f in %.2f pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
     rec = tomopy.recon(stack, theta, center=np.arange(*center_range)+N//4, sinogram_order=True, algorithm=params.reconstruction_algorithm, filter_name=params.filter, nchunk=1)
     rec = rec[:,N//4:5*N//4,N//4:5*N//4]
  
@@ -112,7 +104,8 @@ def try_center(params):
         rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
         dxchange.write_tiff(rec[index], fname=rfname, overwrite=True)
         index = index + 1
-    log.info("  *** reconstructions: %s" % fname)
+    log.info("  *** reconstructions at: %s" % fname)
+
 
 def rec_slice(params):
 
@@ -182,14 +175,8 @@ def reconstruct(params, sino):
     log.info("  *** rotation center: %f" % rot_center)
     data = tomopy.downsample(data, level=int(params.binning)) 
     data = tomopy.downsample(data, level=int(params.binning), axis=1)
-    # padding 
-    N = data.shape[2]
-    data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
-    data_pad[:,:,N//4:5*N//4] = data
-    data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
-    data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
-    data = data_pad
-    rot_center = rot_center + N//4
+
+    data, N, rot_center = util.padding(data, params) 
 
     # Reconstruct object.
     log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
@@ -287,3 +274,4 @@ def rec_full(params):
     log.info('  *** command added to %s ' % lfname)
     with open(lfname, "a") as myfile:
         myfile.write(rec_log_msg)
+
