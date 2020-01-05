@@ -40,8 +40,8 @@ SECTIONS['general'] = {
 
 SECTIONS['find-rotation-axis'] = {
     'center-search-width': {
-        'type': util.positive_int,
-        'default': 10,
+        'type': float,
+        'default': 10.0,
         'help': "+/- center search width (pixel). Search is in 0.5 pixel increments"},
         }
 
