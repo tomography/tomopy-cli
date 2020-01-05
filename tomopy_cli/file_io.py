@@ -1,5 +1,9 @@
 import os
 import h5py
+import dxchange
+import dxchange.reader as dxreader
+import numpy as np
+
 from tomopy_cli import log
 
 def get_dx_dims(fname, dataset):
@@ -55,3 +59,22 @@ def read_rot_centers(fname):
         log.error("ERROR: the json file containing the rotation axis locations is missing")
         log.error("ERROR: run: python find_center.py to create one first")
         exit()
+
+def read_tomo(params, sino):
+    # Read APS 32-BM raw data.
+    proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
+
+    if params.hdf_file_type == 'reverse':
+        step_size = (theta[1] - theta[0]) 
+        theta_size = dxreader.read_dx_dims(params.hdf_file, 'data')[0]
+        theta = np.linspace(np.pi , (0+step_size), theta_size)   
+        log.warning("  *** overwrite theta")
+
+    if params.hdf_file_type == 'blocked_views':
+        miss_angles = [params.missing_angles_start, params.missing_angle_end]
+        
+        # Manage the missing angles:
+        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
+        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
+
+    return proj, flat, dark, theta

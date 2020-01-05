@@ -26,6 +26,11 @@ SECTIONS['general'] = {
         'type': str,
         'help': "Log file directory",
         'metavar': 'FILE'},
+    'rotation-axis-file': {
+        'default': ROTATION_AXIS_FILE_NAME,
+        'type': str,
+        'help': "File name of rataion axis locations",
+        'metavar': 'FILE'},
     'verbose': {
         'default': False,
         'help': 'Verbose output',
@@ -33,11 +38,6 @@ SECTIONS['general'] = {
         }
 
 SECTIONS['find-rotation-axis'] = {
-    'rotation-axis-file': {
-        'default': ROTATION_AXIS_FILE_NAME,
-        'type': str,
-        'help': "File name of rataion axis locations",
-        'metavar': 'FILE'},
     'center-search-width': {
         'type': util.positive_int,
         'default': 10,
@@ -134,6 +134,10 @@ SECTIONS['retrieve-phase'] = {
         'default': 0.001,
         'type': float,
         'help': "Regularization parameter"},
+    'alpha-try': {
+        'default': False,
+        'help': "When set, multiple reconstruction of the same slice with different alpha coefficient are generated",
+        'action': 'store_true'},
     'pad': {
         'default': False,
         'help': "When set, extend the size of the sinogram by padding with zeros",
@@ -195,8 +199,8 @@ SECTIONS['reconstruction'] = {
     'reconstruction-type': {
         'default': 'try',
         'type': str,
-        'help': "Reconstruct slice or full data set. For  option (try) & (phase): multiple reconstruction of the same slice with different (rotation axis) & (alpha coefficient) are generated",
-        'choices': ['slice', 'full', 'try', 'phase']},
+        'help': "Reconstruct slice or full data set. For  option (try): multiple reconstruction of the same slice with different (rotation axis) are generated",
+        'choices': ['try', 'slice', 'full']},
     'reconstruction-algorithm': {
         'default': 'gridrec',
         'type': str,
@@ -211,7 +215,7 @@ SECTIONS['iterative'] = {
         'help': "Maximum number of iterations"},
     }
 
-RECON_PARAMS = ('file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'stripe-removal', 'fourier-wavelet', 
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'stripe-removal', 'fourier-wavelet', 
                 'titarenko', 'smoothing-filter', 'retrieve-phase', 'reconstruction', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 

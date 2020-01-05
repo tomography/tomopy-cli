@@ -64,14 +64,14 @@ def main():
     args = config.parse_known_args(parser, subparser=True)
 
     # create logger
-    home = str(pathlib.Path.home())
-    logs_home = home + '/logs/'
+    logs_home = args.logs_home
 
     # make sure logs directory exists
     if not os.path.exists(logs_home):
         os.makedirs(logs_home)
 
-    lfname = logs_home + 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H:%M:%S") + '.log'
+    lfname = os.path.join(logs_home, 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H:%M:%S") + '.log')
+ 
     log.setup_logger(lfname)
     log.info("Saving log at %s" % lfname)
 
