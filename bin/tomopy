@@ -34,8 +34,28 @@ def run_find_center(args):
 
 
 def run_rec(args):
+
     log.warning('reconstruction start')
-    recon.tomo(args)
+    if os.path.isfile(args.hdf_file):    
+
+        log.info("Reconstructing a single file: %s" % args.hdf_file)   
+
+        if args.reconstruction_type == "try":            
+            recon.try_center(args)
+        elif (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+            recon.reconstruct(args)
+        else:
+            log.error("Option: %s is not supported " % args.reconstruction_type)   
+
+    elif os.path.isdir(args.hdf_file):
+        log.info("Reconstructing a folder containing multiple files")   
+
+    else:
+        log.error("Directory or File Name does not exist: %s" % args.hdf_file)
+
+    # update config file
+    sections = config.RECON_PARAMS
+    config.write(args.config, args=args, sections=sections)
     log.warning('reconstruction end')
 
 

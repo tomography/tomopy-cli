@@ -12,33 +12,33 @@ from tomopy_cli import file_io
 from tomopy_cli import util
 
 
-def tomo(params):
+# def tomo(params):
 
-    # print(params)
-    fname = params.hdf_file
-    nsino = float(params.nsino)
-    ra_fname = params.rotation_axis_file
+#     # print(params)
+#     # fname = params.hdf_file
+#     # nsino = float(params.nsino)
+#     # ra_fname = params.rotation_axis_file
 
-    if os.path.isfile(fname):    
-        log.info("Reconstructing a single file: %s" % fname)   
-        if params.reconstruction_type == "try":            
-            try_center(params)
-        elif params.reconstruction_type == "slice":
-            rec_slice(params)
-        elif params.reconstruction_type == "full":
-            rec_full(params)
-        else:
-            log.error("Option: %s is not supported " % params.reconstruction_type)   
+#     if os.path.isfile(params.hdf_file):    
+#         log.info("Reconstructing a single file: %s" % params.hdf_file)   
+#         if params.reconstruction_type == "try":            
+#             try_center(params)
+#         elif params.reconstruction_type == "slice":
+#             rec_slice(params)
+#         elif params.reconstruction_type == "full":
+#             reconstruct(params)
+#         else:
+#             log.error("Option: %s is not supported " % params.reconstruction_type)   
 
-    elif os.path.isdir(fname):
-        log.info("Reconstructing a folder containing multiple files")   
+#     elif os.path.isdir(params.hdf_file):
+#         log.info("Reconstructing a folder containing multiple files")   
 
-    else:
-        log.error("Directory or File Name does not exist: %s" % fname)
+#     else:
+#         log.error("Directory or File Name does not exist: %s" % params.hdf_file)
 
-    # update config file
-    sections = config.RECON_PARAMS
-    config.write(params.config, args=params, sections=sections)
+#     # update config file
+#     sections = config.RECON_PARAMS
+#     config.write(params.config, args=params, sections=sections)
 
 
 def try_center(params):
@@ -106,30 +106,30 @@ def try_center(params):
     log.info("  *** reconstructions at: %s" % fname)
 
 
-def rec_slice(params):
+# def rec_slice(params):
 
-    log.info("  *** rec_slice")
-    data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
-    ssino = int(data_shape[1] * params.nsino)
+#     log.info("  *** rec_slice")
+#     data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
+#     ssino = int(data_shape[1] * params.nsino)
 
-    # Select sinogram range to reconstruct       
-    start = ssino
-    end = start + pow(2, int(params.binning))
-    sino = (start, end)
+#     # Select sinogram range to reconstruct       
+#     start = ssino
+#     end = start + pow(2, int(params.binning))
+#     sino = (start, end)
 
-    rec = reconstruct(params, sino)
+#     rec = rec_chunk(params, sino)
 
-    tail = os.sep + 'slice_rec' + os.sep + 'recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
-    if os.path.dirname(params.hdf_file) is not '':
-       fname = os.path.dirname(params.hdf_file) + '_rec' + tail
-    else:
-       fname = '.' + tail
-    dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
-    log.info("  *** rec: %s" % fname)
-    log.info("  *** slice: %d" % start)
+#     tail = os.sep + 'slice_rec' + os.sep + 'recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
+#     if os.path.dirname(params.hdf_file) is not '':
+#        fname = os.path.dirname(params.hdf_file) + '_rec' + tail
+#     else:
+#        fname = '.' + tail
+#     dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
+#     log.info("  *** rec: %s" % fname)
+#     log.info("  *** slice: %d" % start)
 
 
-def reconstruct(params, sino):
+def rec_chunk(params, sino):
     # Read APS 32-BM raw data.
     proj, flat, dark, theta = file_io.read_tomo(params, sino)
 
@@ -206,28 +206,29 @@ def reconstruct(params, sino):
     return rec
 
 
-def rec_full(params):
+def reconstruct(params):
     
     data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
 
-    nSino_per_chunk = params.nsino_per_chunk                # number of sinogram chunks to reconstruct
-                                                            # always power of 2               
-                                                            # number of sinogram chunks to reconstruct
-                                                            # only one chunk at the time is reconstructed
-                                                            # allowing for limited RAM machines to complete a full reconstruction
-                                                            #
-                                                            # set this number based on how much memory your computer has
-                                                            # if it cannot complete a full size reconstruction lower it
-
-    chunks = int(np.ceil(data_shape[1]/nSino_per_chunk))    
-
     # Select sinogram range to reconstruct
-    sino_start = 0
-    sino_end = chunks*nSino_per_chunk
+    if (params.reconstruction_type == "full"):
+        nSino_per_chunk = params.nsino_per_chunk
+        chunks = int(np.ceil(data_shape[1]/nSino_per_chunk))    
+        sino_start = 0
+        sino_end = chunks*nSino_per_chunk
+    else:         
+        # full data set reconstruction
+        nSino_per_chunk = 1
+        chunks = 1
+        ssino = int(data_shape[1] * params.nsino)
+        sino_start = ssino
+        sino_end = sino_start + pow(2, int(params.binning)) # not sure the binning actually works ...
+        # sino = (start, end)
     
     log.info("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % ((sino_end - sino_start), sino_start, sino_end, chunks, nSino_per_chunk))            
 
     strt = 0
+    # for iChunk in range(0,1):
     for iChunk in range(0,chunks):
         log.info('chunk # %i' % (iChunk))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
@@ -240,7 +241,7 @@ def rec_full(params):
         sino = (int(sino_chunk_start), int(sino_chunk_end))
 
         # Reconstruct
-        rec = reconstruct(params, sino)
+        rec = rec_chunk(params, sino)
 
         tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
         fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
