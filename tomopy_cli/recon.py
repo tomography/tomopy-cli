@@ -199,8 +199,11 @@ def reconstruct(params, sino):
 
     rec = rec[:,N//4:5*N//4,N//4:5*N//4]
 
-    # Mask each reconstructed slice with a circle.
-    #rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
+    # Mask each reconstructed slice with a circle
+    if(params.reconstruction_mask):
+        log.info("  *** Apply reconstruction mask")
+        rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
+
     return rec
 
 
@@ -268,7 +271,7 @@ def rec_full(params):
     
     try:
         shutil.copy(params.config, log_fname)
-        log.info('  *** %s copy to %s ' % (params.config, log_fname))
+        log.info('  *** copied %s to %s ' % (params.config, log_fname))
     except:
         pass
         # log.error("{0} already exists".format(log_fname))

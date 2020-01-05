@@ -60,7 +60,7 @@ SECTIONS['file-reading'] = {
         'default': 0.5,
         'type': float,
         'help': 'Location of the sinogram used for slice reconstruction and find axis (0 top, 1 bottom)'},
-    'nsino_per_chunk': {     
+    'nsino-per-chunk': {     
         'type': util.positive_int,
         'default': 32,
         'help': "Number of sinagram per chunk. Use 8, 16, 32 ... and higher memory machines"},
@@ -222,7 +222,11 @@ SECTIONS['reconstruction'] = {
         'default': 'gridrec',
         'type': str,
         'help': "Reconstruction algorithm",
-        'choices': ['art', 'astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']}
+        'choices': ['art', 'astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
+    'reconstruction-mask': {
+        'default': False,
+        'help': "When set, applies tomopy.circ_mask(rec, axis=0, ratio=0.95) to the reconstructed slices",
+        'action': 'store_true'},
         }
 
 SECTIONS['iterative'] = {
