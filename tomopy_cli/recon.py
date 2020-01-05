@@ -9,36 +9,9 @@ import dxchange
 from tomopy_cli import config #, __version__
 from tomopy_cli import log
 from tomopy_cli import file_io
+from tomopy_cli import prep
 from tomopy_cli import util
-
-
-# def tomo(params):
-
-#     # print(params)
-#     # fname = params.hdf_file
-#     # nsino = float(params.nsino)
-#     # ra_fname = params.rotation_axis_file
-
-#     if os.path.isfile(params.hdf_file):    
-#         log.info("Reconstructing a single file: %s" % params.hdf_file)   
-#         if params.reconstruction_type == "try":            
-#             try_center(params)
-#         elif params.reconstruction_type == "slice":
-#             rec_slice(params)
-#         elif params.reconstruction_type == "full":
-#             reconstruct(params)
-#         else:
-#             log.error("Option: %s is not supported " % params.reconstruction_type)   
-
-#     elif os.path.isdir(params.hdf_file):
-#         log.info("Reconstructing a folder containing multiple files")   
-
-#     else:
-#         log.error("Directory or File Name does not exist: %s" % params.hdf_file)
-
-#     # update config file
-#     sections = config.RECON_PARAMS
-#     config.write(params.config, args=params, sections=sections)
+from tomopy_cli import corr
 
 
 def try_center(params):
@@ -54,7 +27,7 @@ def try_center(params):
     sino = (start, end)
 
     # Read APS 32-BM raw data.
-    proj, flat, dark, theta = file_io.read_tomo(params, sino)
+    proj, flat, dark, theta = file_io.read_tomo(sino, params)
 
     # Flat-field correction of raw data.
     data = tomopy.normalize(proj, flat, dark, cutoff=1.4)
@@ -85,7 +58,7 @@ def try_center(params):
         stack[index] = data[:, 0, :]
         index = index + 1
 
-    stack, N, rot_center = util.padding(stack, params) 
+    stack, N, rot_center = prep.padding(stark, params) 
 
     # Reconstruct the same slice with a range of centers. 
     log.info('  *** reconstruct slice %d with rotation axis ranging from %.2f to %.2f in %.2f pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
@@ -106,75 +79,38 @@ def try_center(params):
     log.info("  *** reconstructions at: %s" % fname)
 
 
-# def rec_slice(params):
-
-#     log.info("  *** rec_slice")
-#     data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
-#     ssino = int(data_shape[1] * params.nsino)
-
-#     # Select sinogram range to reconstruct       
-#     start = ssino
-#     end = start + pow(2, int(params.binning))
-#     sino = (start, end)
-
-#     rec = rec_chunk(params, sino)
-
-#     tail = os.sep + 'slice_rec' + os.sep + 'recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
-#     if os.path.dirname(params.hdf_file) is not '':
-#        fname = os.path.dirname(params.hdf_file) + '_rec' + tail
-#     else:
-#        fname = '.' + tail
-#     dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
-#     log.info("  *** rec: %s" % fname)
-#     log.info("  *** slice: %d" % start)
-
-
-def rec_chunk(params, sino):
+def rec_chunk(sino, params):
     # Read APS 32-BM raw data.
-    proj, flat, dark, theta = file_io.read_tomo(params, sino)
+    proj, flat, dark, theta = file_io.read_tomo(sino, params)
 
     # zinger_removal
     proj = tomopy.misc.corr.remove_outlier(proj, params.zinger_level_projections, size=15, axis=0)
     flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=15, axis=0)
 
-    # temporary for 2017-07 val Loon samples
-    #dark *= 0
+    if (params.dark_zero):
+        dark *= 0
 
     # normalize
-    data = tomopy.normalize(proj, flat, dark)
+    data = prep.flat_correction(proj, flat, dark, params)
 
     # remove stripes
-    data = tomopy.remove_stripe_fw(data,level=params.fourier_wavelet_level,wname=params.fourier_wavelet_filter,sigma=params.fourier_wavelet_sigma,pad=params.fourier_wavelet_pad)
-
-    #data = tomopy.remove_stripe_ti(data, 1.5)
-    #data = tomopy.remove_stripe_sf(data, size=150)
+    data = prep.remove_stripe(data, params)
 
     # phase retrieval
-    if (params.phase_retrieval_method == 'paganin'):
-        log.info("  *** phase retrieval is ON")
-        log.info("  *** *** pixel size: %s" % params.pixel_size)
-        log.info("  *** *** sample detector distance: %s" % params.propagation_distance)
-        log.info("  *** *** energy: %s" % params.energy)
-        log.info("  *** *** alpha: %s" % params.alpha)
-        data = tomopy.prep.phase.retrieve_phase(data,pixel_size=(params.pixel_size*1e-4),dist=(params.propagation_distance/10.0),energy=params.energy, alpha=params.alpha,pad=True)
+    data = prep.phase_retrieval(data, params)
 
-    log.info("  *** raw data: %s" % params.hdf_file)
+    # minus log
+    data = prep.minus_log(data, params)
 
-    # if (variableDict['phase'] == False):
-    #     data = tomopy.minus_log(data)
-    data = tomopy.minus_log(data)
 
-    data = tomopy.remove_nan(data, val=0.0)
-    data = tomopy.remove_neg(data, val=0.00)
-    data[np.where(data == np.inf)] = 0.00
+    # remove outlier
+    data = prep.remove_nan_neg_inf(data, params)
 
-    rot_center = params.rotation_axis / np.power(2, float(params.binning))
-    log.info("  *** rotation center: %f" % rot_center)
+    # binning
+    data, rotation_center = prep.binning(data, params)
 
-    data = tomopy.downsample(data, level=int(params.binning)) 
-    data = tomopy.downsample(data, level=int(params.binning), axis=1)
-
-    data, N, rot_center = util.padding(data, params) 
+    # padding
+    data, N, rot_center = prep.padding(data, params) 
 
     # Reconstruct object
     log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
@@ -199,9 +135,7 @@ def rec_chunk(params, sino):
     rec = rec[:,N//4:5*N//4,N//4:5*N//4]
 
     # Mask each reconstructed slice with a circle
-    if(params.reconstruction_mask):
-        log.info("  *** Apply reconstruction mask")
-        rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
+    rec = corr.mask(rec, params)
 
     return rec
 
@@ -217,7 +151,7 @@ def reconstruct(params):
         sino_start = 0
         sino_end = chunks*nSino_per_chunk
     else:         
-        # full data set reconstruction
+        # slice reconstruction
         nSino_per_chunk = 1
         chunks = 1
         ssino = int(data_shape[1] * params.nsino)
@@ -228,8 +162,7 @@ def reconstruct(params):
     log.info("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % ((sino_end - sino_start), sino_start, sino_end, chunks, nSino_per_chunk))            
 
     strt = 0
-    # for iChunk in range(0,1):
-    for iChunk in range(0,chunks):
+    for iChunk in range(0, chunks):
         log.info('chunk # %i' % (iChunk))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
@@ -241,7 +174,7 @@ def reconstruct(params):
         sino = (int(sino_chunk_start), int(sino_chunk_end))
 
         # Reconstruct
-        rec = rec_chunk(params, sino)
+        rec = rec_chunk(sino, params)
 
         tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
         fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
@@ -249,13 +182,14 @@ def reconstruct(params):
 
         log.info("  *** reconstructions: %s" % fname)
 
-        if(iChunk == chunks-1):
-            log.info("handling of the last chunk %d " % iChunk)
-            log.info("  *** data_shape %d" % (data_shape[1]))
-            log.info("  *** chunks # %d" % (chunks))
-            log.info("  *** nSino_per_chunk %d" % (nSino_per_chunk))
-            log.info("  *** last rec size %d" % (data_shape[1]-(chunks-1)*nSino_per_chunk))
-            rec = rec[0:data_shape[1]-(chunks-1)*nSino_per_chunk,:,:]
+        if (params.reconstruction_type == "full"):
+            if(iChunk == chunks-1):
+                log.info("handling of the last chunk %d " % iChunk)
+                log.info("  *** data_shape %d" % (data_shape[1]))
+                log.info("  *** chunks # %d" % (chunks))
+                log.info("  *** nSino_per_chunk %d" % (nSino_per_chunk))
+                log.info("  *** last rec size %d" % (data_shape[1]-(chunks-1)*nSino_per_chunk))
+                rec = rec[0:data_shape[1]-(chunks-1)*nSino_per_chunk,:,:]
             
         dxchange.write_tiff_stack(rec, fname=fname, start=strt)
         strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
