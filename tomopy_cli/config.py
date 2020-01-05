@@ -44,7 +44,6 @@ SECTIONS['find-rotation-axis'] = {
         'help': "+/- center search width (pixel). Search is in 0.5 pixel increments"},
         }
 
-
 SECTIONS['file-reading'] = {
     'hdf-file': {
         'default': '.',
@@ -60,6 +59,10 @@ SECTIONS['file-reading'] = {
         'default': 0.5,
         'type': float,
         'help': 'Location of the sinogram used for slice reconstruction and find axis (0 top, 1 bottom)'},
+    'nsino_per_chunk': {     
+        'type': util.positive_int,
+        'default': 32,
+        'help': "Number of sinagram per chunk. Use 8, 16, 32 ... and higher memory machines"},
     'binning': {
         'type': str,
         'default': '0',
