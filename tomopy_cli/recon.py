@@ -147,9 +147,7 @@ def try_center(params):
     data = tomopy.remove_neg(data, val=0.00)
     data[np.where(data == np.inf)] = 0.00
 
-
     # downsample
-    # params.rotation_axis = params.rotation_axis/np.power(2, float(params.binning))
     data = tomopy.downsample(data, level=int(params.binning))
 
     data_shape2 = data_shape[2]
@@ -170,7 +168,6 @@ def try_center(params):
     stack_pad[:,:,5*N//4:] = np.reshape(stack[:,:,-1],[stack.shape[0],stack.shape[1],1])
     stack = stack_pad
 
-
     # Reconstruct the same slice with a range of centers. 
     rec = tomopy.recon(stack, theta, center=np.arange(*center_range)+N//4, sinogram_order=True, algorithm=params.reconstruction_algorithm, filter_name=params.filter, nchunk=1)
     rec = rec[:,N//4:5*N//4,N//4:5*N//4]
@@ -189,7 +186,102 @@ def try_center(params):
     log.info("  *** reconstructions: %s" % fname)
 
 def rec_slice(params):
+
     log.info("  *** rec_slice")
+    data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
+    ssino = int(data_shape[1] * params.nsino)
+
+    # Select sinogram range to reconstruct       
+    start = ssino
+    end = start + pow(2, int(params.binning))
+    sino = (start, end)
+
+    rec = reconstruct(params, sino)
+
+    if os.path.dirname(params.hdf_file) is not '':
+       fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
+    else:
+       fname = './slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
+    dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
+    log.info("  *** rec: %s" % fname)
+    log.info("  *** slice: %d" % start)
 
 def rec_full(params):
     log.info("  *** rec_full")
+
+
+def reconstruct(params, sino):
+    # Read APS 32-BM raw data.
+    proj, flat, dark, theta = file_io.read_tomo(params, sino)
+    # zinger_removal
+    proj = tomopy.misc.corr.remove_outlier(proj, params.zinger_level_projections, size=15, axis=0)
+    flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=15, axis=0)
+
+    # temporary for 2017-07 val Loon samples
+    #dark *= 0
+
+    # normalize
+    data = tomopy.normalize(proj, flat, dark)
+
+
+    # remove stripes
+    data = tomopy.remove_stripe_fw(data,level=params.fourier_wavelet_level,wname=params.fourier_wavelet_filter,sigma=params.fourier_wavelet_sigma,pad=params.fourier_wavelet_pad)
+
+    #data = tomopy.remove_stripe_ti(data, 1.5)
+    #data = tomopy.remove_stripe_sf(data, size=150)
+
+    # phase retrieval
+    if (params.phase_retrieval_method == 'paganin'):
+        log.info("  *** phase retrieval is ON")
+        log.info("  *** *** pixel size: %s" % params.pixel_size)
+        log.info("  *** *** sample detector distance: %s" % params.propagation_distance)
+        log.info("  *** *** energy: %s" % params.energy)
+        log.info("  *** *** alpha: %s" % params.alpha)
+        data = tomopy.prep.phase.retrieve_phase(data,pixel_size=(params.pixel_size*1e-4),dist=(params.propagation_distance/10.0),energy=params.energy, alpha=params.alpha,pad=True)
+
+    log.info("  *** raw data: %s" % params.hdf_file)
+
+    # if (variableDict['phase'] == False):
+    #     data = tomopy.minus_log(data)
+    data = tomopy.minus_log(data)
+
+    data = tomopy.remove_nan(data, val=0.0)
+    data = tomopy.remove_neg(data, val=0.00)
+    data[np.where(data == np.inf)] = 0.00
+
+    rot_center = params.rotation_axis / np.power(2, float(params.binning))
+    log.info("  *** rotation center: %f" % rot_center)
+    data = tomopy.downsample(data, level=int(params.binning)) 
+    data = tomopy.downsample(data, level=int(params.binning), axis=1)
+    # padding 
+    N = data.shape[2]
+    data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
+    data_pad[:,:,N//4:5*N//4] = data
+    data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
+    data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
+    data = data_pad
+    rot_center = rot_center + N//4
+
+    # Reconstruct object.
+    log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
+    if params.reconstruction_algorithm == 'astrasirt':
+        extra_options ={'MinConstraint':0}
+        options = {'proj_type':'cuda', 'method':'SIRT_CUDA', 'num_iter':200, 'extra_options':extra_options}
+        shift = (int((data.shape[2]/2 - rot_center)+.5))
+        data = np.roll(data, shift, axis=2)
+        rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+    elif params.reconstruction_algorithm == 'astracgls':
+        extra_options ={'MinConstraint':0}
+        options = {'proj_type':'cuda', 'method':'CGLS_CUDA', 'num_iter':15, 'extra_options':extra_options}
+        shift = (int((data.shape[2]/2 - rot_center)+.5))
+        data = np.roll(data, shift, axis=2)
+        rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+    else:        
+        rec = tomopy.recon(data, theta, center=rot_center, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
+
+
+    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
+
+    # Mask each reconstructed slice with a circle.
+    #rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
+    return rec
