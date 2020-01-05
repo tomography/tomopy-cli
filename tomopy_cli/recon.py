@@ -83,52 +83,6 @@ def try_center(params):
     log.info("  *** reconstructions at: %s" % fname)
 
 
-def rec_chunk(sino, params):
-
-    # Read APS 32-BM raw data.
-    proj, flat, dark, theta = file_io.read_tomo(sino, params)
-
-    # zinger_removal
-    proj, flat = prep.zinger_removal(proj, flat, params)
-
-    if (params.dark_zero):
-        dark *= 0
-
-    # normalize
-    data = prep.flat_correction(proj, flat, dark, params)
-
-    # remove stripes
-    data = prep.remove_stripe(data, params)
-
-    # phase retrieval
-    data = prep.phase_retrieval(data, params)
-
-    # minus log
-    data = prep.minus_log(data, params)
-
-    # remove outlier
-    data = prep.remove_nan_neg_inf(data, params)
-
-    # binning
-    data, rotation_center = prep.binning(data, params)
-
-    # original shape
-    N = data.shape[2]
-
-    # padding
-    data, rot_center = prep.padding(data, params) 
-
-    # Reconstruct object
-    rec = proc.reconstruct(data, theta, rot_center, params)
-
-    # restore shape 
-    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-
-    # Mask each reconstructed slice with a circle
-    rec = proc.mask(rec, params)
-
-    return rec
-
 
 def rec_full(params):
     
@@ -194,4 +148,41 @@ def rec_full(params):
         log.info('  *** copied %s to %s ' % (params.config, log_fname))
     except:
         pass
+
+
+def rec_chunk(sino, params):
+
+    # Read APS 32-BM raw data.
+    proj, flat, dark, theta = file_io.read_tomo(sino, params)
+    # zinger_removal
+    proj, flat = prep.zinger_removal(proj, flat, params)
+
+    if (params.dark_zero):
+        dark *= 0
+    # normalize
+    data = prep.flat_correction(proj, flat, dark, params)
+    # remove stripes
+    data = prep.remove_stripe(data, params)
+    # phase retrieval
+    data = prep.phase_retrieval(data, params)
+    # minus log
+    data = prep.minus_log(data, params)
+    # remove outlier
+    data = prep.remove_nan_neg_inf(data, params)
+    # binning
+    data, rotation_center = prep.binning(data, params)
+    # original shape
+    N = data.shape[2]
+    # padding
+    data, rot_center = prep.padding(data, params) 
+    # Reconstruct object
+    rec = proc.reconstruct(data, theta, rot_center, params)
+    # restore shape 
+    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
+    # Mask each reconstructed slice with a circle
+    rec = proc.mask(rec, params)
+
+    return rec
+
+
 
