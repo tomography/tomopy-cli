@@ -8,7 +8,14 @@ import numpy as np
 
 from tomopy_cli import log
 
-def get_dx_dims(fname, dataset):
+
+
+def get_dx_dims(params):
+
+    return _get_dx_dims(params.hdf_file)
+
+
+def _get_dx_dims(fname, dataset='data'):
     """
     Read array size of a specific group of Data Exchange file.
     Parameters
