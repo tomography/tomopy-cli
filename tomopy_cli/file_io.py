@@ -35,33 +35,40 @@ def get_dx_dims(fname, dataset):
 
     return shape
 
-def file_base_name(file_name):
-    if '.' in file_name:
-        separator_index = file_name.index('.')
-        base_name = file_name[:separator_index]
+def file_base_name(fname):
+    if '.' in fname:
+        separator_index = fname.index('.')
+        base_name = fname[:separator_index]
         return base_name
     else:
-        return file_name
+        return fname
 
 def path_base_name(path):
-    file_name = os.path.basename(path)
-    return file_base_name(file_name)
+    fname = os.path.basename(path)
+    return file_base_name(fname)
 
 
-def read_rot_centers(fname):
+def read_rot_centers(params):
 
+    # Add a trailing slash if missing
+    top = os.path.join(params.hdf_file, '')
+
+    # Load the the rotation axis positions.
+    jfname = top + "rotation_axis.json"
+    
     try:
-        with open(fname) as json_file:
+        with open(jfname) as json_file:
             json_string = json_file.read()
             dictionary = json.loads(json_string)
 
         return collections.OrderedDict(sorted(dictionary.items()))
 
     except Exception as error: 
-        log.error("ERROR: the json %s file containing the rotation axis locations is missing" % fname)
-        log.error("ERROR: run: python find_center.py to create one first")
+        log.error("ERROR: the json %s file containing the rotation axis locations is missing" % jfname)
+        log.error("ERROR: to create one run:")
+        log.error("ERROR: $ tomopy find_center --hdf-file %s" % top)
         exit()
-
+ 
 def read_tomo(sino, params):
 
     if params.hdf_file_type == 'flip_and_stich':

@@ -12,6 +12,7 @@ def auto(params):
     nsino = float(params.nsino)
     ra_fname = params.rotation_axis_file
 
+    print(fname)
     if os.path.isfile(fname):  
         rot_center = util.find_rotation_axis(fname, nsino)
         

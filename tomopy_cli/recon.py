@@ -47,7 +47,6 @@ def try_center(params):
 
     data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
 
-    log.info(data_shape)
     ssino = int(data_shape[1] * params.nsino)
 
     # Select sinogram range to reconstruct
