@@ -16,6 +16,11 @@ def mask(data, params):
 
 def reconstruct(data, theta, rot_center, params):
 
+    if(params.reconstruction_type == "try"):
+        sinogram_order = True
+    else:
+        sinogram_order = False
+               
     log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
     if params.reconstruction_algorithm == 'astrasirt':
         extra_options ={'MinConstraint':0}
@@ -30,11 +35,13 @@ def reconstruct(data, theta, rot_center, params):
         data = np.roll(data, shift, axis=2)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'gridrec':
-        rec = tomopy.recon(data, theta, center=rot_center, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
+        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
     else:
         log.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
         params.reconstruction_algorithm = 'gridrec'
         log.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
-        rec = tomopy.recon(data, theta, center=rot_center, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
+        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
 
     return rec

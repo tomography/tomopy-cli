@@ -1,5 +1,7 @@
 import os
 import h5py
+import json
+import collections
 import dxchange
 import dxchange.reader as dxreader
 import numpy as np
@@ -56,7 +58,7 @@ def read_rot_centers(fname):
         return collections.OrderedDict(sorted(dictionary.items()))
 
     except Exception as error: 
-        log.error("ERROR: the json file containing the rotation axis locations is missing")
+        log.error("ERROR: the json %s file containing the rotation axis locations is missing" % fname)
         log.error("ERROR: run: python find_center.py to create one first")
         exit()
 
