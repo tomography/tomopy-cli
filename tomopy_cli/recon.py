@@ -14,6 +14,35 @@ from tomopy_cli import util
 from tomopy_cli import proc
 
 
+def rec_chunk(sino, params):
+
+    # Read APS 32-BM raw data.
+    proj, flat, dark, theta = file_io.read_tomo(sino, params)
+
+    # apply all preprocessing functions
+    data = prep.data(proj, flat, dark, params)
+
+    # binning
+    data, rotation_center = prep.binning(data, params)
+
+    # original shape
+    N = data.shape[2]
+
+    # padding
+    data, rot_center = prep.padding(data, params) 
+
+    # Reconstruct object
+    rec = proc.reconstruct(data, theta, rot_center, params)
+
+    # restore shape 
+    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
+
+    # Mask each reconstructed slice with a circle
+    rec = proc.mask(rec, params)
+
+    return rec
+
+
 def try_center(params):
 
     data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
@@ -29,62 +58,55 @@ def try_center(params):
     # Read APS 32-BM raw data.
     proj, flat, dark, theta = file_io.read_tomo(sino, params)
 
-    # Flat-field correction of raw data.
-    data = tomopy.normalize(proj, flat, dark, cutoff=1.4)
+    # apply all preprocessing functions
+    data = prep.data(proj, flat, dark, params)
 
-    # remove stripes
-    data = tomopy.remove_stripe_fw(data,level=7,wname='sym16',sigma=1,pad=True)
-
-    data = tomopy.minus_log(data)
-
-    data = tomopy.remove_nan(data, val=0.0)
-    data = tomopy.remove_neg(data, val=0.00)
-    data[np.where(data == np.inf)] = 0.00
-
-    # downsample
-    params.rotation_axis = params.rotation_axis/np.power(2, float(params.binning))
-    params.center_search_width = params.center_search_width/np.power(2, float(params.binning))
-
-    center_range = (params.rotation_axis-params.center_search_width, params.rotation_axis+params.center_search_width, 0.5)
-
+    # binning
+    rotation_axis = params.rotation_axis/np.power(2, float(params.binning))
     data = tomopy.downsample(data, level=int(params.binning))
     data_shape2 = data_shape[2]
     data_shape2 = data_shape2 / np.power(2, float(params.binning))
 
+    center_search_width = params.center_search_width/np.power(2, float(params.binning))
+    center_range = (rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
+
     stack = np.empty((len(np.arange(*center_range)), data_shape[0], int(data_shape2)))
+
+    # original shape
+    N = stack.shape[2]
 
     index = 0
     for axis in np.arange(*center_range):
         stack[index] = data[:, 0, :]
         index = index + 1
 
-    # original shape
-    N = stack.shape[2]
-
     # padding
     stack, rot_center = prep.padding(stack, params) 
 
-    # Reconstruct the same slice with a range of centers. 
     log.info('  *** reconstruct slice %d with rotation axis ranging from %.2f to %.2f in %.2f pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
-    rec = tomopy.recon(stack, theta, center=np.arange(*center_range)+N//4, sinogram_order=True, algorithm=params.reconstruction_algorithm, filter_name=params.filter, nchunk=1)
+
+    # Reconstruct object
+    rec = proc.reconstruct(stack, theta, np.arange(*center_range)+N//4, params)
+
+    # restore shape 
     rec = rec[:,N//4:5*N//4,N//4:5*N//4]
- 
-    # Mask each reconstructed slice with a circle.
-    #rec = tomopy.circ_mask(rec, axis=0, ratio=0.95)
+
+    # Mask each reconstructed slice with a circle
+    rec = proc.mask(rec, params)
 
     # Save images to a temporary folder.
-    fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.hdf_file) + os.sep + 'recon_' ##+ os.path.splitext(os.path.basename(params.hdf_file))[0]    
+    fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.hdf_file) + os.sep + 'recon_'
 
     index = 0
     for axis in np.arange(*center_range):
         rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
         dxchange.write_tiff(rec[index], fname=rfname, overwrite=True)
         index = index + 1
+
     log.info("  *** reconstructions at: %s" % fname)
 
 
-
-def rec_full(params):
+def rec(params):
     
     data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
 
@@ -140,49 +162,11 @@ def rec_full(params):
 
     # make a copy of the tomopy.conf in the reconstructed data directory path
     # in this way you can reproduce the reconstruction by simply running:
-    #
-    # tomopy recon --config /path/tomopy.conf    
-    #
+    # $ tomopy recon --config /path/tomopy.conf
     try:
         shutil.copy(params.config, log_fname)
         log.info('  *** copied %s to %s ' % (params.config, log_fname))
     except:
         pass
-
-
-def rec_chunk(sino, params):
-
-    # Read APS 32-BM raw data.
-    proj, flat, dark, theta = file_io.read_tomo(sino, params)
-    # zinger_removal
-    proj, flat = prep.zinger_removal(proj, flat, params)
-
-    if (params.dark_zero):
-        dark *= 0
-    # normalize
-    data = prep.flat_correction(proj, flat, dark, params)
-    # remove stripes
-    data = prep.remove_stripe(data, params)
-    # phase retrieval
-    data = prep.phase_retrieval(data, params)
-    # minus log
-    data = prep.minus_log(data, params)
-    # remove outlier
-    data = prep.remove_nan_neg_inf(data, params)
-    # binning
-    data, rotation_center = prep.binning(data, params)
-    # original shape
-    N = data.shape[2]
-    # padding
-    data, rot_center = prep.padding(data, params) 
-    # Reconstruct object
-    rec = proc.reconstruct(data, theta, rot_center, params)
-    # restore shape 
-    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-    # Mask each reconstructed slice with a circle
-    rec = proc.mask(rec, params)
-
-    return rec
-
 
 

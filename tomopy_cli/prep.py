@@ -4,6 +4,26 @@ import numpy as np
 from tomopy_cli import log
 
 
+def data(proj, flat, dark, params):
+    # zinger_removal
+    proj, flat = zinger_removal(proj, flat, params)
+
+    if (params.dark_zero):
+        dark *= 0
+    # normalize
+    data = flat_correction(proj, flat, dark, params)
+    # remove stripes
+    data = remove_stripe(data, params)
+    # phase retrieval
+    data = phase_retrieval(data, params)
+    # minus log
+    data = minus_log(data, params)
+    # remove outlier
+    data = remove_nan_neg_inf(data, params)
+
+    return data
+
+
 def binning(data, params):
 
     rot_center = params.rotation_axis / np.power(2, float(params.binning))
@@ -111,7 +131,7 @@ def phase_retrieval(data, params):
         log.info("  *** *** sample detector distance: %s" % params.propagation_distance)
         log.info("  *** *** energy: %s" % params.energy)
         log.info("  *** *** alpha: %s" % params.alpha)
-        data = tomopy.prep.phase.retrieve_phase(data,pixel_size=(params.pixel_size*1e-4),dist=(params.propagation_distance/10.0),energy=params.energy, alpha=params.alpha,pad=True)
+        data = tomopy.phase.retrieve_phase(data,pixel_size=(params.pixel_size*1e-4),dist=(params.propagation_distance/10.0),energy=params.energy, alpha=params.alpha,pad=True)
     elif(params.phase_retrieval_method == 'none'):
         log.warning('  *** *** none')
 

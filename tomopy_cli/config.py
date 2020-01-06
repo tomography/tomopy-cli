@@ -71,11 +71,11 @@ SECTIONS['file-reading'] = {
         'help': "Reconstruction binning factor as power(2, choice)",
         'choices': [0, 1, 2, 3]},
     'rotation-axis': {
-        'default': 1024.0,
+        'default': 1224.0,
         'type': float,
         'help': "Location of rotation axis"},
     'rotation-axis-flip': {
-        'default': 1024.0,
+        'default': 1224.0,
         'type': float,
         'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
     'reverse': {

@@ -12,6 +12,7 @@ from datetime import datetime
 from tomopy_cli import config, __version__
 from tomopy_cli import log
 from tomopy_cli import recon
+from tomopy_cli import file_io
 from tomopy_cli import find_center
 
 
@@ -43,12 +44,32 @@ def run_rec(args):
         if args.reconstruction_type == "try":            
             recon.try_center(args)
         elif (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
-            recon.rec_full(args)
+            recon.rec(args)
         else:
             log.error("Option: %s is not supported " % args.reconstruction_type)   
 
     elif os.path.isdir(args.hdf_file):
-        log.info("Reconstructing a folder containing multiple files")   
+        log.info("Reconstructing a folder containing multiple files:")   
+        # Add a trailing slash if missing
+        top = os.path.join(args.hdf_file, '')
+        
+        # Load the the rotation axis positions.
+        jfname = top + "rotation_axis.json"
+        
+        dictionary = file_io.read_rot_centers(jfname)
+        for key in dictionary:
+            dict2 = dictionary[key]
+            for h5fname in dict2:
+                args.rotation_axis = dict2[h5fname]
+                fname = top + h5fname
+                args.hdf_file = fname
+                log.info("   *** file: %s center: %f" % (args.hdf_file, args.rotation_axis))
+                if args.reconstruction_type == "try":            
+                    recon.try_center(args)
+                elif (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+                    recon.rec(args)
+                else:
+                    log.error("Option: %s is not supported " % args.reconstruction_type)   
 
     else:
         log.error("Directory or File Name does not exist: %s" % args.hdf_file)
