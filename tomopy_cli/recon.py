@@ -45,7 +45,7 @@ def rec_chunk(sino, params):
 
 def try_center(params):
 
-    data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
+    data_shape = file_io.get_dx_dims(params)
 
     ssino = int(data_shape[1] * params.nsino)
 
@@ -107,7 +107,7 @@ def try_center(params):
 
 def rec(params):
     
-    data_shape = file_io.get_dx_dims(params.hdf_file, 'data')
+    data_shape = file_io.get_dx_dims(params)
 
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):
