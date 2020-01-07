@@ -44,51 +44,7 @@ def restricted_float(x):
     if x < 0.0 or x >= 1.0:
         raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
     return x
-
-
-def flip_and_stitch(params, img360, flat360, dark360):
-
-    center = int(params.rotation_axis_flip)
-    img = np.zeros([img360.shape[0]//2,img360.shape[1],2*img360.shape[2]-2*center],dtype=img360.dtype)
-    flat = np.zeros([flat360.shape[0],flat360.shape[1],2*flat360.shape[2]-2*center],dtype=img360.dtype)
-    dark = np.zeros([dark360.shape[0],dark360.shape[1],2*dark360.shape[2]-2*center],dtype=img360.dtype)
-    img[:,:,img360.shape[2]-2*center:] = img360[:img360.shape[0]//2,:,:]
-    img[:,:,:img360.shape[2]] = img360[img360.shape[0]//2:,:,::-1]
-    flat[:,:,flat360.shape[2]-2*center:] = flat360
-    flat[:,:,:flat360.shape[2]] = flat360[:,:,::-1]
-    dark[:,:,dark360.shape[2]-2*center:] = dark360
-    dark[:,:,:dark360.shape[2]] = dark360[:,:,::-1]
-
-    params.rotation_axis = img.shape[2]//2
-
-    return img, flat, dark
-
-
-def patch_projection(data, miss_angles):
-
-    fdatanew = np.fft.fft(data,axis=2)
-
-    w = int((miss_angles[1]-miss_angles[0]) * 0.3)
-
-
-    fdatanew[miss_angles[0]:miss_angles[0]+w,:,:] = np.fft.fft(data[miss_angles[0]-1,:,:],axis=1)
-    fdatanew[miss_angles[0]:miss_angles[0]+w,:,:] *= np.reshape(np.cos(np.pi/2*np.linspace(0,1,w)),[w,1,1])
-
-    fdatanew[miss_angles[1]-w:miss_angles[1],:,:] = np.fft.fft(data[miss_angles[1]+1,:,:],axis=1)
-    fdatanew[miss_angles[1]-w:miss_angles[1],:,:] *= np.reshape(np.sin(np.pi/2*np.linspace(0,1,w)),[w,1,1])
-
-    fdatanew[miss_angles[0]+w:miss_angles[1]-w,:,:] = 0
-    # lib.warning("  *** %d, %d, %d " % (datanew.shape[0], datanew.shape[1], datanew.shape[2]))
-
-    lib.warning("  *** patch_projection")
-    slider(np.log(np.abs(fdatanew.swapaxes(0,1))), axis=0)
-    a = np.real(np.fft.ifft(fdatanew,axis=2))
-    b = np.imag(np.fft.ifft(fdatanew,axis=2))
-    # print(a.shape)
-    slider(a.swapaxes(0,1), axis=0)
-    slider(b.swapaxes(0,1), axis=0)
-    return np.real(np.fft.ifft(fdatanew,axis=2))
-
+    
 
 def guess_center(first_projection, last_projection):
     """

@@ -3,6 +3,15 @@ import numpy as np
 
 from tomopy_cli import log
 
+
+def binning(data, params):
+
+    data = tomopy.downsample(data, level=int(params.binning), axis=2) 
+    data = tomopy.downsample(data, level=int(params.binning), axis=1)
+
+    return data
+
+
 def mask(data, params):
     
     if(params.reconstruction_mask):
