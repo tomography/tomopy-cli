@@ -94,7 +94,7 @@ def rec(params):
         sino_end = chunks*nSino_per_chunk
     else:         
         # slice reconstruction
-        nSino_per_chunk = 1
+        nSino_per_chunk = pow(2, int(params.binning))
         chunks = 1
         ssino = int(data_shape[1] * params.nsino)
         sino_start = ssino
@@ -149,19 +149,16 @@ def rec(params):
 def rec_chunk(sino, params):
 
     # Read APS 32-BM raw data.
-    proj, flat, dark, theta = file_io.read_tomo(sino, params)
+    proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
 
     # apply all preprocessing functions
     data = prep.data(proj, flat, dark, params)
-
-    # binning
-    data, rotation_center = prep.binning(data, params)
 
     # original shape
     N = data.shape[2]
 
     # padding
-    data, rot_center = prep.padding(data, params) 
+    data, rot_center = prep.padding(data, rotation_axis) 
 
     # Reconstruct object
     rec = proc.reconstruct(data, theta, rot_center, params)
