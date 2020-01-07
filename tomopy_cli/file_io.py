@@ -39,6 +39,7 @@ def _get_dx_dims(params, dataset='data'):
         except KeyError:
             return None
 
+        # data = binning(data, params)
         shape = data.shape
 
     return shape

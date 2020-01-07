@@ -37,13 +37,7 @@ def run_rec(args):
     if os.path.isfile(args.hdf_file):    
 
         log.info("Reconstructing a single file: %s" % args.hdf_file)   
-
-        if args.reconstruction_type == "try":            
-            recon.try_center(args)
-        elif (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
-            recon.rec(args)
-        else:
-            log.error("Option: %s is not supported " % args.reconstruction_type)   
+        recon.rec(args)
 
     elif os.path.isdir(args.hdf_file):
         log.info("Reconstructing a folder containing multiple files:")   
