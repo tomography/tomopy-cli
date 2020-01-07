@@ -53,13 +53,7 @@ def run_rec(args):
                 fname = top + h5fname
                 args.hdf_file = fname
                 log.info("   *** file: %s center: %f" % (args.hdf_file, args.rotation_axis))
-                if args.reconstruction_type == "try":            
-                    recon.try_center(args)
-                elif (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
-                    recon.rec(args)
-                else:
-                    log.error("Option: %s is not supported " % args.reconstruction_type)   
-
+                recon.rec(args)
     else:
         log.error("Directory or File Name does not exist: %s" % args.hdf_file)
 
