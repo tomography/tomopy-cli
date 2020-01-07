@@ -29,7 +29,7 @@ def try_center(params):
     sino = (start, end)
 
     # Read APS 32-BM raw data.
-    proj, flat, dark, theta = file_io.read_tomo(sino, params)
+    proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
 
     # apply all preprocessing functions
     data = prep.data(proj, flat, dark, params)
@@ -54,7 +54,7 @@ def try_center(params):
         index = index + 1
 
     # padding
-    stack, rot_center = prep.padding(stack, params) 
+    stack, rot_center = prep.padding(stack, rotation_axis) 
 
     log.info('  *** reconstruct slice %d with rotation axis ranging from %.2f to %.2f in %.2f pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
 
