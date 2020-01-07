@@ -34,6 +34,9 @@ def reconstruct(data, theta, rot_center, params):
     if params.reconstruction_algorithm == 'astrasirt':
         extra_options ={'MinConstraint':0}
         options = {'proj_type':'cuda', 'method':'SIRT_CUDA', 'num_iter':200, 'extra_options':extra_options}
+        print(data.shape[2])
+        print(data.shape[2]/2)
+        print(rot_center)
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)

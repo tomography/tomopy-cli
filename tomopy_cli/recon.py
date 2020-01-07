@@ -55,6 +55,9 @@ def rec(params):
 
         # Reconstruct
         if (params.reconstruction_type == "try"):
+            # try passes an array of rotation centers and this is only supported by gridrec
+            reconstruction_algorithm_org = params.reconstruction_algorithm
+            params.reconstruction_algorithm = 'gridrec'
 
             center_search_width = params.center_search_width/np.power(2, float(params.binning))
             center_range = (rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
@@ -75,6 +78,10 @@ def rec(params):
                 rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
                 dxchange.write_tiff(rec[index], fname=rfname, overwrite=True)
                 index = index + 1
+
+            # restore original method
+            params.reconstruction_algorithm = reconstruction_algorithm_org
+
         else: # "slice" and "full"
             log.warning("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
                        ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
