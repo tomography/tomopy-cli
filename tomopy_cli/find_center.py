@@ -1,9 +1,37 @@
 import os
 import json
+import tomopy
+import dxchange
 
 from tomopy_cli import config #, __version__
 from tomopy_cli import log
-from tomopy_cli import util
+from tomopy_cli import file_io
+
+
+def find_rotation_axis(params):
+    
+    log.info("  *** calculating automatic center")
+    data_size = file_io.get_dx_dims(params)
+    ssino = int(data_size[1] * params.nsino)
+
+    # Select sinogram range to reconstruct
+    start = ssino
+    end = start + 1
+    sino = (start, end)
+
+    # Read APS 32-BM raw data
+    proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
+        
+    # Flat-field correction of raw data
+    data = tomopy.normalize(proj, flat, dark, cutoff=1.4)
+
+    # remove stripes
+    data = tomopy.remove_stripe_fw(data,level=5,wname='sym16',sigma=1,pad=True)
+
+    # find rotation center
+    rot_center = tomopy.find_center_vo(data)   
+    log.info("  *** automatic center: %f" % rot_center)
+    return rot_center
 
 
 def auto(params):
@@ -12,9 +40,8 @@ def auto(params):
     nsino = float(params.nsino)
     ra_fname = params.rotation_axis_file
 
-    print(fname)
     if os.path.isfile(fname):  
-        rot_center = util.find_rotation_axis(fname, nsino)
+        rot_center = find_rotation_axis(params)
         
     elif os.path.isdir(fname):
         # Add a trailing slash if missing
@@ -34,7 +61,9 @@ def auto(params):
         i=0
         for fname in h5_file_list:
             h5fname = top + fname
-            rot_center = util.find_rotation_axis(h5fname, nsino)
+            params.hdf_file = h5fname
+            rot_center = find_rotation_axis(params)
+            params.hdf_file = top
             case =  {fname : rot_center}
             log.info(case)
             dic_centers[i] = case
