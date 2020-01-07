@@ -14,66 +14,6 @@ from tomopy_cli import util
 from tomopy_cli import proc
 
 
-def try_center(params):
-
-    data_shape = file_io.get_dx_dims(params)
-
-    if params.rotation_axis < 0:
-        params.rotation_axis =  data_shape[2]/2
-
-
-    # Select sinogram range to reconstruct
-    ssino = int(data_shape[1] * params.nsino)
-    sino_start = ssino
-    sino_end = sino_start + pow(2, int(params.binning)) # not sure the binning actually works ...
-    sino = (sino_start, sino_end)
-
-    # Read APS 32-BM raw data.
-    proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
-
-    # apply all preprocessing functions
-    data = prep.data(proj, flat, dark, params)
-
-
-    center_search_width = params.center_search_width/np.power(2, float(params.binning))
-    center_range = (rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
-
-    stack = np.empty((len(np.arange(*center_range)), data_shape[0], int(data_shape[2]/ np.power(2, float(params.binning)))))
-
-    index = 0
-    for axis in np.arange(*center_range):
-        stack[index] = data[:, 0, :]
-        index = index + 1
-
-    # original shape
-    N = stack.shape[2]
-
-    # padding
-    stack, rot_center = prep.padding(stack, rotation_axis) 
-
-    log.info('  *** reconstruct slice %d with rotation axis ranging from %.2f to %.2f in %.2f pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
-
-    # Reconstruct object
-    rec = proc.reconstruct(stack, theta, np.arange(*center_range)+N//4, params)
-
-    # restore shape 
-    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-
-    # Mask each reconstructed slice with a circle
-    rec = proc.mask(rec, params)
-
-    # Save images to a temporary folder.
-    fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.hdf_file) + os.sep + 'recon_'
-
-    index = 0
-    for axis in np.arange(*center_range):
-        rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
-        dxchange.write_tiff(rec[index], fname=rfname, overwrite=True)
-        index = index + 1
-
-    log.info("  *** reconstructions at: %s" % fname)
-
-
 def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
@@ -125,17 +65,8 @@ def rec(params):
                 index = index + 1
             log.warning('  Reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
 
-            # original shape
-            N = stack.shape[2]
-            # padding
-            stack, rot_center = prep.padding(stack, rotation_axis) 
-
-            # Reconstruct object
-            rec = proc.reconstruct(stack, theta, np.arange(*center_range)+N//4, params)
-            # restore shape 
-            rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-            # Mask each reconstructed slice with a circle
-            rec = proc.mask(rec, params)
+            rotation_axis = np.arange(*center_range)
+            rec = padded_rec(stack, theta, rotation_axis, params)
 
             # Save images to a temporary folder.
             fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.hdf_file) + os.sep + 'recon_'
@@ -149,17 +80,7 @@ def rec(params):
                        ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
                        chunks, nSino_per_chunk/pow(2, int(params.binning))))            
 
-            # original shape
-            N = data.shape[2]
-            # padding
-            data, rot_center = prep.padding(data, rotation_axis) 
-
-            # Reconstruct object
-            rec = proc.reconstruct(data, theta, rot_center, params)
-            # restore shape 
-            rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-            # Mask each reconstructed slice with a circle
-            rec = proc.mask(rec, params)
+            rec = padded_rec(data, theta, rotation_axis, params)
 
             # Save images to a temporary folder.
             tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
@@ -184,3 +105,19 @@ def rec(params):
         log.info('  *** copied %s to %s ' % (params.config, log_fname))
     except:
         pass
+
+
+def padded_rec(data, theta, rotation_axis, params):
+       # original shape
+      N = data.shape[2]
+      # padding
+      data, padded_rotation_axis = prep.padding(data, rotation_axis) 
+
+      # Reconstruct object
+      rec = proc.reconstruct(data, theta, padded_rotation_axis, params)
+      # restore shape 
+      rec = rec[:,N//4:5*N//4,N//4:5*N//4]
+      # Mask each reconstructed slice with a circle
+      rec = proc.mask(rec, params)
+
+      return rec
