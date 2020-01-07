@@ -2,6 +2,7 @@ import os
 import h5py
 import json
 import collections
+import tomopy
 import dxchange
 import dxchange.reader as dxreader
 import numpy as np
@@ -12,10 +13,10 @@ from tomopy_cli import log
 
 def get_dx_dims(params):
 
-    return _get_dx_dims(params.hdf_file)
+    return _get_dx_dims(params)
 
 
-def _get_dx_dims(fname, dataset='data'):
+def _get_dx_dims(params, dataset='data'):
     """
     Read array size of a specific group of Data Exchange file.
     Parameters
@@ -32,7 +33,7 @@ def _get_dx_dims(fname, dataset='data'):
 
     grp = '/'.join(['exchange', dataset])
 
-    with h5py.File(fname, "r") as f:
+    with h5py.File(params.hdf_file, "r") as f:
         try:
             data = f[grp]
         except KeyError:
@@ -41,6 +42,15 @@ def _get_dx_dims(fname, dataset='data'):
         shape = data.shape
 
     return shape
+
+
+def binning(data, params):
+
+    data = tomopy.downsample(data, level=int(params.binning), axis=2) 
+    data = tomopy.downsample(data, level=int(params.binning), axis=1)
+
+    return data
+
 
 def file_base_name(fname):
     if '.' in fname:
@@ -110,4 +120,20 @@ def read_tomo(sino, params):
     #     data = util.patch_projection(data, miss_angles)
 
 
-    return proj, flat, dark, theta
+    rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
+    if (params.binning == 0):
+        log.info("  *** rotation center: %f" % rotation_axis)
+    else:
+        log.warning("  *** binning: %d" % params.binning)
+        log.warning("  *** rotation center: %f" % rotation_axis)
+
+
+    proj = binning(proj, params)
+    flat = binning(flat, params)
+    dark = binning(dark, params)
+
+    return proj, flat, dark, theta, rotation_axis
+
+
+
+

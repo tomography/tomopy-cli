@@ -24,22 +24,7 @@ def data(proj, flat, dark, params):
     return data
 
 
-def binning(data, params):
-
-    rot_center = params.rotation_axis / np.power(2, float(params.binning))
-    if (params.binning == 0):
-        log.info("  *** rotation center: %f" % rot_center)
-    else:
-        log.warning("  *** binning: %d" % params.binning)
-        log.warning("  *** rotation center: %f" % rot_center)
-
-
-    data = tomopy.downsample(data, level=int(params.binning)) 
-    data = tomopy.downsample(data, level=int(params.binning), axis=1)
-
-    return data, rot_center
-
-def padding(data, params):
+def padding(data, rotation_axis):
 
     log.info("  *** padding")
     N = data.shape[2]
@@ -49,7 +34,7 @@ def padding(data, params):
     data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
 
     data = data_pad
-    rot_center = params.rotation_axis + N//4
+    rot_center = rotation_axis + N//4
 
     return data, rot_center
 
