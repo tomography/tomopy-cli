@@ -14,38 +14,12 @@ from tomopy_cli import util
 from tomopy_cli import proc
 
 
-def rec_chunk(sino, params):
-
-    # Read APS 32-BM raw data.
-    proj, flat, dark, theta = file_io.read_tomo(sino, params)
-
-    # apply all preprocessing functions
-    data = prep.data(proj, flat, dark, params)
-
-    # binning
-    data, rotation_center = prep.binning(data, params)
-
-    # original shape
-    N = data.shape[2]
-
-    # padding
-    data, rot_center = prep.padding(data, params) 
-
-    # Reconstruct object
-    rec = proc.reconstruct(data, theta, rot_center, params)
-
-    # restore shape 
-    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-
-    # Mask each reconstructed slice with a circle
-    rec = proc.mask(rec, params)
-
-    return rec
-
-
 def try_center(params):
 
     data_shape = file_io.get_dx_dims(params)
+
+    if params.rotation_axis < 0:
+        params.rotation_axis =  data_shape[2]/2
 
     ssino = int(data_shape[1] * params.nsino)
 
@@ -109,6 +83,9 @@ def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
 
+    if params.rotation_axis < 0:
+        params.rotation_axis =  data_shape[2]/2
+
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):
         nSino_per_chunk = params.nsino_per_chunk
@@ -168,4 +145,32 @@ def rec(params):
     except:
         pass
 
+
+def rec_chunk(sino, params):
+
+    # Read APS 32-BM raw data.
+    proj, flat, dark, theta = file_io.read_tomo(sino, params)
+
+    # apply all preprocessing functions
+    data = prep.data(proj, flat, dark, params)
+
+    # binning
+    data, rotation_center = prep.binning(data, params)
+
+    # original shape
+    N = data.shape[2]
+
+    # padding
+    data, rot_center = prep.padding(data, params) 
+
+    # Reconstruct object
+    rec = proc.reconstruct(data, theta, rot_center, params)
+
+    # restore shape 
+    rec = rec[:,N//4:5*N//4,N//4:5*N//4]
+
+    # Mask each reconstructed slice with a circle
+    rec = proc.mask(rec, params)
+
+    return rec
 
