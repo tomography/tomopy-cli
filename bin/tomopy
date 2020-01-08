@@ -79,6 +79,7 @@ def run_rec(args):
         rec_log_msg = "\n" + "tomopy recon" + " --rotation-axis " + str(args.rotation_axis) \
                                             + " --reconstruction-type " + str(args.reconstruction_type) \
                                             + " --hdf-file " + str(args.hdf_file) \
+                                            + " --binning " + str(args.binning) \
                                             + " --reconstruction-algorithm " + str(args.reconstruction_algorithm) \
                                             + " --retrieve-phase-method " + str(args.retrieve_phase_method) \
                                             + " --energy " + str(args.energy) \
