@@ -91,7 +91,6 @@ def rec(params):
             # Save images to a temporary folder.
             tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
             fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
-            log_fname = os.path.dirname(params.hdf_file) + '_rec' + tail + os.path.split(params.config)[1]
             if (params.reconstruction_type == "full"):
                 if(iChunk == chunks-1):
                     log.info("handling of the last chunk")
@@ -103,13 +102,7 @@ def rec(params):
             strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
         log.info("  *** reconstructions: %s" % fname)
 
-    # make a copy of the tomopy.conf in the reconstructed data directory path
-    # in this way you can reproduce the reconstruction by simply running:
-    # $ tomopy recon --config /path/tomopy.conf
-    try:
-        shutil.copy(params.config, log_fname)
-        log.info('  *** copied %s to %s ' % (params.config, log_fname))
-    except:
-        pass
+    
+
 
 
