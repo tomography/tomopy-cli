@@ -152,7 +152,7 @@ SECTIONS['flat-correction'] = {
         }
 
 SECTIONS['retrieve-phase'] = {
-    'phase-retrieval-method': {
+    'retrieve-phase-method': {
         'default': 'none',
         'type': str,
         'help': "Phase retrieval correction method",
@@ -169,18 +169,14 @@ SECTIONS['retrieve-phase'] = {
         'default': 1.17,
         'type': float,
         'help': "Pixel size [microns]"},
-    'alpha': {
+    'retrieve-phase-alpha': {
         'default': 0.001,
         'type': float,
         'help': "Regularization parameter"},
-    'alpha-try': {
+    'retrieve-phase-alpha-try': {
         'default': False,
         'help': "When set, multiple reconstruction of the same slice with different alpha coefficient are generated",
         'action': 'store_true'},
-    'pad': {
-        'default': False,
-        'help': "When set, extend the size of the sinogram by padding with zeros",
-        'action': 'store_true'}
         }
 
 SECTIONS['stripe-removal'] = {

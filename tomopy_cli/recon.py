@@ -10,7 +10,6 @@ from tomopy_cli import config #, __version__
 from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
-from tomopy_cli import util
 from tomopy_cli import proc
 
 
@@ -69,7 +68,7 @@ def rec(params):
             log.warning('  Reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
 
             rotation_axis = np.arange(*center_range)
-            rec = padded_rec(stack, theta, rotation_axis, params)
+            rec = proc.padded_rec(stack, theta, rotation_axis, params)
 
             # Save images to a temporary folder.
             fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.hdf_file) + os.sep + 'recon_'
@@ -87,7 +86,7 @@ def rec(params):
                        ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
                        chunks, nSino_per_chunk/pow(2, int(params.binning))))            
 
-            rec = padded_rec(data, theta, rotation_axis, params)
+            rec = proc.padded_rec(data, theta, rotation_axis, params)
 
             # Save images to a temporary folder.
             tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
@@ -114,17 +113,3 @@ def rec(params):
         pass
 
 
-def padded_rec(data, theta, rotation_axis, params):
-       # original shape
-      N = data.shape[2]
-      # padding
-      data, padded_rotation_axis = prep.padding(data, rotation_axis) 
-
-      # Reconstruct object
-      rec = proc.reconstruct(data, theta, padded_rotation_axis, params)
-      # restore shape 
-      rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-      # Mask each reconstructed slice with a circle
-      rec = proc.mask(rec, params)
-
-      return rec

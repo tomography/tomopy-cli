@@ -13,16 +13,18 @@ from tomopy_cli import proc
  
 def read_tomo(sino, params):
 
-    if params.hdf_file_type == 'flip_and_stich':
+    if params.hdf_file_type == 'standard':
+        # Read APS 32-BM raw data.
+        log.info("  *** loading a stardard data set: %s" % params.hdf_file)
+        proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
+    elif params.hdf_file_type == 'flip_and_stich':
         log.info("   *** loading a 360 deg flipped data set: %s" % params.hdf_file)
         proj360, flat360, dark360, theta360 = dxchange.read_aps_32id(params.hdf_file, sino=sino)
         proj, flat, dark = flip_and_stitch(variableDict, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
-    else:
-        # Read APS 32-BM raw data.
-        log.info("  *** loading a stardard data set: %s" % params.hdf_file)
-        proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
-
+    else: # params.hdf_file_type == 'mosaic':
+        log.error("   *** loading a mosaic data set is not supported yet")
+        exit()
 
     if params.reverse:
         log.info("  *** correcting for 180-0 data collection")
@@ -53,11 +55,19 @@ def read_tomo(sino, params):
         log.warning("  *** rotation center: %f" % rotation_axis)
 
 
-    proj = proc.binning(proj, params)
-    flat = proc.binning(flat, params)
-    dark = proc.binning(dark, params)
+    proj = binning(proj, params)
+    flat = binning(flat, params)
+    dark = binning(dark, params)
 
     return proj, flat, dark, theta, rotation_axis
+
+
+def binning(data, params):
+
+    data = tomopy.downsample(data, level=int(params.binning), axis=2) 
+    data = tomopy.downsample(data, level=int(params.binning), axis=1)
+
+    return data
 
 
 def flip_and_stitch(params, img360, flat360, dark360):
@@ -84,7 +94,6 @@ def patch_projection(data, miss_angles):
 
     w = int((miss_angles[1]-miss_angles[0]) * 0.3)
 
-
     fdatanew[miss_angles[0]:miss_angles[0]+w,:,:] = np.fft.fft(data[miss_angles[0]-1,:,:],axis=1)
     fdatanew[miss_angles[0]:miss_angles[0]+w,:,:] *= np.reshape(np.cos(np.pi/2*np.linspace(0,1,w)),[w,1,1])
 
@@ -105,11 +114,6 @@ def patch_projection(data, miss_angles):
 
 
 def get_dx_dims(params):
-
-    return _get_dx_dims(params)
-
-
-def _get_dx_dims(params, dataset='data'):
     """
     Read array size of a specific group of Data Exchange file.
     Parameters
@@ -123,6 +127,8 @@ def _get_dx_dims(params, dataset='data'):
     ndarray
         Data set size.
     """
+
+    dataset='data'
 
     grp = '/'.join(['exchange', dataset])
 

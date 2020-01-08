@@ -10,6 +10,8 @@ def data(proj, flat, dark, params):
 
     if (params.dark_zero):
         dark *= 0
+        log.warning('  *** *** dark fields are ignored')
+
     # normalize
     data = flat_correction(proj, flat, dark, params)
     # remove stripes
@@ -23,20 +25,6 @@ def data(proj, flat, dark, params):
 
     return data
 
-
-def padding(data, rotation_axis):
-
-    log.info("  *** padding")
-    N = data.shape[2]
-    data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
-    data_pad[:,:,N//4:5*N//4] = data
-    data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
-    data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
-
-    data = data_pad
-    rot_center = rotation_axis + N//4
-
-    return data, rot_center
 
 def remove_nan_neg_inf(data, params):
 
@@ -62,7 +50,7 @@ def zinger_removal(proj, flat, params):
         log.info("  *** *** zinger_size: %d" % params.zinger_size)
         proj = tomopy.misc.corr.remove_outlier(proj, params.zinger_level_projections, size=params.zinger_size, axis=0)
         flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=params.zinger_size, axis=0)
-    elif(params.phase_retrieval_method == 'none'):
+    elif(params.zinger_removal_method == 'none'):
         log.warning('  *** *** none')
 
     return proj, flat
@@ -109,15 +97,15 @@ def remove_stripe(data, params):
 
 def phase_retrieval(data, params):
     
-    log.info("  *** phase retrieval")
-    if (params.phase_retrieval_method == 'paganin'):
+    log.info("  *** retrieve phase")
+    if (params.retrieve_phase_method == 'paganin'):
         log.info('  *** *** paganin')
         log.info("  *** *** pixel size: %s" % params.pixel_size)
         log.info("  *** *** sample detector distance: %s" % params.propagation_distance)
         log.info("  *** *** energy: %s" % params.energy)
-        log.info("  *** *** alpha: %s" % params.alpha)
-        data = tomopy.phase.retrieve_phase(data,pixel_size=(params.pixel_size*1e-4),dist=(params.propagation_distance/10.0),energy=params.energy, alpha=params.alpha,pad=True)
-    elif(params.phase_retrieval_method == 'none'):
+        log.info("  *** *** alpha: %s" % params.retrieve_phase_alpha)
+        data = tomopy.retrieve_phase(data,pixel_size=(params.pixel_size*1e-4),dist=(params.propagation_distance/10.0),energy=params.energy, alpha=params.retrieve_phase_alpha,pad=True)
+    elif(params.retrieve_phase_method == 'none'):
         log.warning('  *** *** none')
 
     return data
