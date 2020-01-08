@@ -88,18 +88,25 @@ def rec(params):
 
             rec = proc.padded_rec(data, theta, rotation_axis, params)
 
-            # Save images to a temporary folder.
-            tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
-            fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
+            # handling of the last chunk 
             if (params.reconstruction_type == "full"):
                 if(iChunk == chunks-1):
                     log.info("handling of the last chunk")
                     log.info("  *** chunk # %d" % (chunks))
                     log.info("  *** last rec size %d" % ((data_shape[1]-(chunks-1)*nSino_per_chunk)/pow(2, int(params.binning))))
                     rec = rec[0:data_shape[1]-(chunks-1)*nSino_per_chunk,:,:]
-                
-            dxchange.write_tiff_stack(rec, fname=fname, start=strt)
-            strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+
+            # Save images
+            if (params.reconstruction_type == "full"):
+                tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
+                fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
+                dxchange.write_tiff_stack(rec, fname=fname, start=strt)
+                strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+            if (params.reconstruction_type == "slice"):
+                fname = os.path.dirname(params.hdf_file)  + os.sep + 'slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
+                dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
+
+
         log.info("  *** reconstructions: %s" % fname)
 
     
