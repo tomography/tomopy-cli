@@ -62,20 +62,20 @@ def run_rec(args):
     sections = config.RECON_PARAMS
     config.write(args.config, args=args, sections=sections)
 
-    # copy tomopy.conf in the reconstructed data directory path
-    # in this way you can reproduce the reconstruction by simply running:
-    # $ tomopy recon --config /path/tomopy.conf
-    tail = os.sep + os.path.splitext(os.path.basename(args.hdf_file))[0]+ '_full_rec' + os.sep 
-    log_fname = os.path.dirname(args.hdf_file) + '_rec' + tail + os.path.split(args.config)[1]
-    try:
-        shutil.copyfile(args.config, log_fname)
-        log.info('  *** copied %s to %s ' % (args.config, log_fname))
-    except:
-        log.error('  *** copied %s to %s failed' % (args.config, log_fname))
-        pass
+    if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+        # copy tomopy.conf in the reconstructed data directory path
+        # in this way you can reproduce the reconstruction by simply running:
+        # $ tomopy recon --config /path/tomopy.conf
+        tail = os.sep + os.path.splitext(os.path.basename(args.hdf_file))[0]+ '_full_rec' + os.sep 
+        log_fname = os.path.dirname(args.hdf_file) + '_rec' + tail + os.path.split(args.config)[1]
+        try:
+            shutil.copyfile(args.config, log_fname)
+            log.info('  *** copied %s to %s ' % (args.config, log_fname))
+        except:
+            log.error('  *** copied %s to %s failed' % (args.config, log_fname))
+            pass
 
     # add reconstruction command in ~/logs/user_last_name.log
-    if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
         rec_log_msg = "\n" + "tomopy recon" + " --rotation-axis " + str(args.rotation_axis) \
                                             + " --reconstruction-type " + str(args.reconstruction_type) \
                                             + " --hdf-file " + str(args.hdf_file) \
