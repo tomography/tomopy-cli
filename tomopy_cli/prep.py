@@ -74,23 +74,23 @@ def flat_correction(proj, flat, dark, params):
 def remove_stripe(data, params):
 
     log.info('  *** remove stripe:')
-    if(params.stripe_removal_method == 'fourier-wavelet'):
+    if(params.remove_stripe_method == 'fw'):
         log.info('  *** *** fourier wavelet')
-        data = tomopy.remove_stripe_fw(data,level=params.fourier_wavelet_level,wname=params.fourier_wavelet_filter,sigma=params.fourier_wavelet_sigma,pad=params.fourier_wavelet_pad)
-        log.info('  *** ***  *** level %d ' % params.fourier_wavelet_level)
-        log.info('  *** ***  *** wname %s ' % params.fourier_wavelet_filter)
-        log.info('  *** ***  *** sigma %f ' % params.fourier_wavelet_sigma)
-        log.info('  *** ***  *** pad %r ' % params.fourier_wavelet_pad)
-    elif(params.stripe_removal_method == 'titarenko'):
+        data = tomopy.remove_stripe_fw(data,level=params.fw_level,wname=params.fw_filter,sigma=params.fw_sigma,pad=params.fw_pad)
+        log.info('  *** ***  *** fw level %d ' % params.fw_level)
+        log.info('  *** ***  *** fw wname %s ' % params.fw_filter)
+        log.info('  *** ***  *** fw sigma %f ' % params.fw_sigma)
+        log.info('  *** ***  *** fw pad %r ' % params.fw_pad)
+    elif(params.remove_stripe_method == 'ti'):
         log.info('  *** *** titarenko')
-        data = tomopy.remove_stripe_ti(data, nblock=params.titarenko_nblock, alpha=params.titarenko_alpha)
-        log.info('  *** ***  *** nblock %d ' % params.titarenko_nblock)
-        log.info('  *** ***  *** alpha %f ' % params.titarenko_alpha)
-    elif(params.stripe_removal_method == 'smoothing-filter'):
+        data = tomopy.remove_stripe_ti(data, nblock=params.ti_nblock, alpha=params.ti_alpha)
+        log.info('  *** ***  *** ti nblock %d ' % params.ti_nblock)
+        log.info('  *** ***  *** ti alpha %f ' % params.ti_alpha)
+    elif(params.remove_stripe_method == 'sf'):
         log.info('  *** *** smoothing filter')
-        data = tomopy.remove_stripe_sf(data,  size==params.smoothing_filter_size)
-        log.info('  *** ***  *** size %d ' % params.smoothing_filter_size)
-    elif(params.stripe_removal_method == 'none'):
+        data = tomopy.remove_stripe_sf(data,  size==params.sf_size)
+        log.info('  *** ***  *** sf size %d ' % params.sf_size)
+    elif(params.remove_stripe_method == 'none'):
         log.warning('  *** *** none')
 
     return data
