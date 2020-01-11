@@ -179,50 +179,50 @@ SECTIONS['retrieve-phase'] = {
         'action': 'store_true'},
         }
 
-SECTIONS['stripe-removal'] = {
-    'stripe-removal-method': {
+SECTIONS['remove-stripe'] = {
+    'remove-stripe-method': {
         'default': 'none',
         'type': str,
-        'help': "Stripe removal method",
-        'choices': ['none', 'fourier-wavelet', 'titarenko', 'smoothing-filter']},
+        'help': "Stripe removal method: none, fourier-wavelet, titarenko, smoothing filter",
+        'choices': ['none', 'fw', 'ti', 'sf']},
         }
 
-SECTIONS['fourier-wavelet'] = {
-    'fourier-wavelet-sigma': {
+SECTIONS['fw'] = {
+    'fw-sigma': {
         'default': 1,
         'type': float,
-        'help': "Damping parameter in Fourier space"},
-    'fourier-wavelet-filter': {
+        'help': "Fourier-Wavelet stripe removal damping parameter"},
+    'fw-filter': {
         'default': 'sym16',
         'type': str,
-        'help': "Type of the fourier-wavelet filter",
+        'help': "Fourier-Wavelet stripe removal filter",
         'choices': ['haar', 'db5', 'sym5', 'sym16']},
-    'fourier-wavelet-level': {
+    'fw-level': {
         'type': util.positive_int,
         'default': 7,
-        'help': "Level parameter used by the fourier-wavelet method"},
-    'fourier-wavelet-pad': {
+        'help': "Fourier-Wavelet stripe removal level parameter"},
+    'fw-pad': {
         'default': False,
-        'help': "When set, extend the size of the sinogram by padding with zeros",
+        'help': "When set, Fourier-Wavelet stripe removal extend the size of the sinogram by padding with zeros",
         'action': 'store_true'},
     }
 
-SECTIONS['titarenko'] = {
-    'titarenko-alpha': {
+SECTIONS['ti'] = {
+    'ti-alpha': {
         'default': 1.5,
         'type': float,
-        'help': "Damping factor"},
-    'titarenko-nblock': {
+        'help': "Titarenko stripe removal damping factor"},
+    'ti-nblock': {
         'default': 0,
         'type': util.positive_int,
-        'help': "Number of blocks"},
+        'help': "Titarenko stripe removal number of blocks"},
     }
 
-SECTIONS['smoothing-filter'] = {
-    'smoothing-filter-size': {
+SECTIONS['sf'] = {
+    'sf-size': {
         'default': 5,
         'type': util.positive_int,
-        'help': "Size of the smoothing filter."}
+        'help': "Smoothing filter stripe removal size"}
         }
 
 SECTIONS['reconstruction'] = {
@@ -258,14 +258,14 @@ SECTIONS['iterative'] = {
         'help': "Maximum number of iterations"},
     }
 
-RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'stripe-removal', 'fourier-wavelet', 
-                'titarenko', 'smoothing-filter', 'retrieve-phase', 'reconstruction', 'iterative')
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
+                'ti', 'sf', 'retrieve-phase', 'reconstruction', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
-# PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
+# PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Stripe removal','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Iterative')
+              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Iterative')
 
 def get_config_name():
     """Get the command line --config option."""
