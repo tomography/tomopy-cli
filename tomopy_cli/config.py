@@ -183,7 +183,7 @@ SECTIONS['remove-stripe'] = {
     'remove-stripe-method': {
         'default': 'none',
         'type': str,
-        'help': "Stripe removal method: none, fourier-wavelet, titarenko, smoothing filter",
+        'help': "Remove stripe method: none, fourier-wavelet, titarenko, smoothing filter",
         'choices': ['none', 'fw', 'ti', 'sf']},
         }
 
@@ -191,19 +191,19 @@ SECTIONS['fw'] = {
     'fw-sigma': {
         'default': 1,
         'type': float,
-        'help': "Fourier-Wavelet stripe removal damping parameter"},
+        'help': "Fourier-Wavelet remove stripe damping parameter"},
     'fw-filter': {
         'default': 'sym16',
         'type': str,
-        'help': "Fourier-Wavelet stripe removal filter",
+        'help': "Fourier-Wavelet remove stripe filter",
         'choices': ['haar', 'db5', 'sym5', 'sym16']},
     'fw-level': {
         'type': util.positive_int,
         'default': 7,
-        'help': "Fourier-Wavelet stripe removal level parameter"},
+        'help': "Fourier-Wavelet remove stripe level parameter"},
     'fw-pad': {
         'default': False,
-        'help': "When set, Fourier-Wavelet stripe removal extend the size of the sinogram by padding with zeros",
+        'help': "When set, Fourier-Wavelet remove stripe extend the size of the sinogram by padding with zeros",
         'action': 'store_true'},
     }
 
@@ -211,18 +211,18 @@ SECTIONS['ti'] = {
     'ti-alpha': {
         'default': 1.5,
         'type': float,
-        'help': "Titarenko stripe removal damping factor"},
+        'help': "Titarenko remove stripe damping factor"},
     'ti-nblock': {
         'default': 0,
         'type': util.positive_int,
-        'help': "Titarenko stripe removal number of blocks"},
+        'help': "Titarenko remove stripe number of blocks"},
     }
 
 SECTIONS['sf'] = {
     'sf-size': {
         'default': 5,
         'type': util.positive_int,
-        'help': "Smoothing filter stripe removal size"}
+        'help': "Smoothing filter remove stripe size"}
         }
 
 SECTIONS['reconstruction'] = {
