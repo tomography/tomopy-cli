@@ -187,43 +187,22 @@ SECTIONS['remove-stripe'] = {
         'choices': ['none', 'fw', 'ti', 'sf']},
         }
 
-SECTIONS['fw'] = {
-    'fw-sigma': {
-        'default': 1,
-        'type': float,
-        'help': "Fourier-Wavelet remove stripe damping parameter"},
-    'fw-filter': {
-        'default': 'sym16',
-        'type': str,
-        'help': "Fourier-Wavelet remove stripe filter",
-        'choices': ['haar', 'db5', 'sym5', 'sym16']},
-    'fw-level': {
-        'type': util.positive_int,
-        'default': 7,
-        'help': "Fourier-Wavelet remove stripe level parameter"},
-    'fw-pad': {
-        'default': False,
-        'help': "When set, Fourier-Wavelet remove stripe extend the size of the sinogram by padding with zeros",
-        'action': 'store_true'},
+SECTIONS['remove-stripe-argments'] = {
+    'remove-stripe-fw-argments': {
+        # not sure how to hadle the choices for wname: ['haar', 'db5', 'sym5', 'sym16']
+        'default': {'level':None, 'wname':'db5', 'sigma':2, 'pad':True, 'ncore':None, 'nchunk':None},
+        'type': list,
+        'help': "Remove stripe fw argments"},
+    'remove-stripe-ti-argments': {
+        'default': {'nblock':0, 'alpha':1.5, 'ncore':None, 'nchunk':None},
+        'type': list,
+        'help': "Remove stripe ti argments"},
+    'remove-stripe-sf-argments': {
+        'default': {'size':5, 'ncore':None, 'nchunk':None},
+        'type': list,
+        'help': "Remove stripe sf argments"},
     }
 
-SECTIONS['ti'] = {
-    'ti-alpha': {
-        'default': 1.5,
-        'type': float,
-        'help': "Titarenko remove stripe damping factor"},
-    'ti-nblock': {
-        'default': 0,
-        'type': util.positive_int,
-        'help': "Titarenko remove stripe number of blocks"},
-    }
-
-SECTIONS['sf'] = {
-    'sf-size': {
-        'default': 5,
-        'type': util.positive_int,
-        'help': "Smoothing filter remove stripe size"}
-        }
 
 SECTIONS['reconstruction'] = {
     'filter': {
@@ -258,14 +237,13 @@ SECTIONS['iterative'] = {
         'help': "Maximum number of iterations"},
     }
 
-RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
-                'ti', 'sf', 'retrieve-phase', 'reconstruction', 'iterative')
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'remove-stripe-argments', 'retrieve-phase', 'reconstruction', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Iterative')
+              'Stripe removal','Stripe removal arguments', 'Reconstruction', 'Iterative')
 
 def get_config_name():
     """Get the command line --config option."""
@@ -398,7 +376,8 @@ def log_values(args):
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
-                log.info("  {:<16} {}".format(entry, value))
+                # log.info("  {:<16} {}".format(entry, value))
+                log.info("%s %s" % (entry, value))
 
     log.warning('tomopy-cli status end')
 

@@ -71,29 +71,31 @@ def flat_correction(proj, flat, dark, params):
 
     return data
 
-def remove_stripe(data, params):
 
-    log.info('  *** remove stripe:')
-    if(params.remove_stripe_method == 'fw'):
-        log.info('  *** *** fourier wavelet')
-        data = tomopy.remove_stripe_fw(data,level=params.fw_level,wname=params.fw_filter,sigma=params.fw_sigma,pad=params.fw_pad)
-        log.info('  *** ***  *** fw level %d ' % params.fw_level)
-        log.info('  *** ***  *** fw wname %s ' % params.fw_filter)
-        log.info('  *** ***  *** fw sigma %f ' % params.fw_sigma)
-        log.info('  *** ***  *** fw pad %r ' % params.fw_pad)
-    elif(params.remove_stripe_method == 'ti'):
-        log.info('  *** *** titarenko')
-        data = tomopy.remove_stripe_ti(data, nblock=params.ti_nblock, alpha=params.ti_alpha)
-        log.info('  *** ***  *** ti nblock %d ' % params.ti_nblock)
-        log.info('  *** ***  *** ti alpha %f ' % params.ti_alpha)
-    elif(params.remove_stripe_method == 'sf'):
-        log.info('  *** *** smoothing filter')
-        data = tomopy.remove_stripe_sf(data,  size==params.sf_size)
-        log.info('  *** ***  *** sf size %d ' % params.sf_size)
-    elif(params.remove_stripe_method == 'none'):
-        log.warning('  *** *** none')
+def remove_stripe(data, params):
+    """This simplier stripe removal function is more concise and API-change proof!
+
+    The the difference is that now params should contain another dictionary
+    which contains only the parameters for this stripe removal function.
+    """
+
+    print(params.remove_stripe_fw_argments)
+    if params.remove_stripe_method in dir(tomopy):
+        log.info(' *** remove stripe:')
+        # Here the remove_stripe_method MUST be the actual name of the tomopy function
+        log.info(' *** *** %s' % params.remove_stripe_method)
+        # If we pack all of the parameters for stripe removal into a dictionary,
+        # then we can use one parameter for any stripe removal function
+        for key in params.remove_stripe_argments:
+            log.info(' *** *** *** {} {}'.format(key, params.remove_stripe_argments[key]))
+        data = getattr(tomopy, params.remove_stripe_method)(data, **params.remove_stripe_argments)
+    else:
+       log.warning('  *** *** none')
+       # handle the case where the method is wrong
+       pass
 
     return data
+
 
 def phase_retrieval(data, params):
     
