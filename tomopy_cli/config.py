@@ -265,7 +265,7 @@ FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 # PREPROC_PARAMS = ('flat-correction', 'stripe-removal', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Stripe removal','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Isterative')
+              'Stripe removal','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Iterative')
 
 def get_config_name():
     """Get the command line --config option."""
