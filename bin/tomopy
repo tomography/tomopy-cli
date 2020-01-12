@@ -31,7 +31,11 @@ def run_find_center(args):
     find_center.auto(args)
     log.warning('find center end')
 
+    # update tomopy.conf
+    sections = config.FIND_CENTER_PARAMS
+    config.write(args.config, args=args, sections=sections)
 
+    
 def run_rec(args):
 
     log.warning('reconstruction start')
@@ -108,7 +112,8 @@ def main():
                         version='%(prog)s {}'.format(__version__))
 
     tomo_params = config.RECON_PARAMS
-    find_center_params = config.FIND_CENTER_PARAMS
+    # find_center_params = config.FIND_CENTER_PARAMS
+    find_center_params = tomo_params
 
     cmd_parsers = [
         ('init',        init,            (),                             "Create configuration file"),

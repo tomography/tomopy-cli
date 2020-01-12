@@ -6,7 +6,7 @@ import numpy as np
 import tomopy
 import dxchange
 
-from tomopy_cli import config #, __version__
+from tomopy_cli import config 
 from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
@@ -50,7 +50,7 @@ def rec(params):
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
 
         # apply all preprocessing functions
-        data = prep.data(proj, flat, dark, params)
+        data = prep.pre_process(proj, flat, dark, params)
 
         # Reconstruct
         if (params.reconstruction_type == "try"):
