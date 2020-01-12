@@ -51,13 +51,15 @@ def run_rec(args):
 
         dictionary = file_io.read_rot_centers(args)
         log.warning("reconstructing a folder containing %d files" % len(dictionary))   
+        index = 1
         for key in dictionary:
             dict2 = dictionary[key]
             for h5fname in dict2:
                 args.rotation_axis = dict2[h5fname]
                 fname = top + h5fname
                 args.hdf_file = fname
-                log.warning("file: %s/%d; %s center: %f" % (key, len(dictionary)-1, args.hdf_file, args.rotation_axis))
+                log.warning("file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.hdf_file, args.rotation_axis))
+                index += 1
                 recon.rec(args)
     else:
         log.error("Directory or File Name does not exist: %s" % args.hdf_file)
