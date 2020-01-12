@@ -20,15 +20,12 @@ def find_rotation_axis(params):
         # Add a trailing slash if missing
         top = os.path.join(fname, '')
 
-        # Set the file name that will store the rotation axis positions.
-        jfname = top + ra_fname
-
         # log.info(os.listdir(top))
         h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf')), os.listdir(top)))
         h5_file_list.sort()
 
         log.info("Found: %s" % h5_file_list)
-        log.info("Determining the rotation axis location ...")
+        log.info("Determining the rotation axis location")
         
         dic_centers = {}
         i=0
@@ -42,6 +39,8 @@ def find_rotation_axis(params):
             dic_centers[i] = case
             i += 1
 
+        # Set the json file name that will store the rotation axis positions.
+        jfname = top + ra_fname
         # Save json file containing the rotation axis
         json_dump = json.dumps(dic_centers)
         f = open(jfname,"w")
