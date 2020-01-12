@@ -13,7 +13,7 @@ from datetime import datetime
 from tomopy_cli import config, __version__
 from tomopy_cli import log
 from tomopy_cli import recon
-from tomopy_cli import prep
+from tomopy_cli import find_center
 from tomopy_cli import file_io
 
 
@@ -28,7 +28,7 @@ def init(args):
 def run_find_center(args):
 
     log.warning('find center start')
-    prep.find_rotation_axis(args)
+    find_center.find_rotation_axis(args)
     log.warning('find center end')
 
     # update tomopy.conf
