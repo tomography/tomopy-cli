@@ -57,7 +57,7 @@ def run_rec(args):
                 args.rotation_axis = dict2[h5fname]
                 fname = top + h5fname
                 args.hdf_file = fname
-                log.error("file: %s/%d; %s center: %f" % (key, len(dictionary)-1, args.hdf_file, args.rotation_axis))
+                log.warning("file: %s/%d; %s center: %f" % (key, len(dictionary)-1, args.hdf_file, args.rotation_axis))
                 recon.rec(args)
     else:
         log.error("Directory or File Name does not exist: %s" % args.hdf_file)
