@@ -4,7 +4,7 @@ import numpy as np
 from tomopy_cli import log
 
 
-def data(proj, flat, dark, params):
+def pre_process(proj, flat, dark, params):
     # zinger_removal
     proj, flat = zinger_removal(proj, flat, params)
 
