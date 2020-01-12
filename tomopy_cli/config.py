@@ -249,6 +249,10 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
+    'padding': {
+        'default': False,
+        'help': "When set, raw data are padded/unpadded before/after reconstruction",
+        'action': 'store_true'},
         }
 
 SECTIONS['iterative'] = {
