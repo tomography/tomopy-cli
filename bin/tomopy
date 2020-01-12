@@ -62,7 +62,7 @@ def run_rec(args):
 
         dictionary = file_io.read_rot_centers(args)
         log.warning("reconstructing a folder containing %d files" % len(dictionary))   
-        index = 1
+        index = 0
         for key in dictionary:
             dict2 = dictionary[key]
             for h5fname in dict2:
