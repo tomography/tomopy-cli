@@ -10,7 +10,7 @@ from tomopy_cli import log
 def segment(params):
 
     # slice/full reconstruction file location
-    tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
+    tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_rec' + os.sep 
     top = os.path.dirname(params.hdf_file) + '_rec' + tail
 
     # log.info(os.listdir(top))

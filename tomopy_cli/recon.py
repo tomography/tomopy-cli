@@ -97,7 +97,7 @@ def rec(params):
 
             # Save images
             if (params.reconstruction_type == "full"):
-                tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_full_rec' + os.sep 
+                tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_rec' + os.sep 
                 fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
                 dxchange.write_tiff_stack(rec, fname=fname, start=strt)
                 strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
