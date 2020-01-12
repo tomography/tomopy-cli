@@ -25,7 +25,7 @@ def padding(data, rotation_axis, params):
     log.info("  *** padding")
 
     if(params.padding):
-        log.info("  ***   ON")
+        log.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
         data_pad[:,:,N//4:5*N//4] = data
@@ -35,7 +35,7 @@ def padding(data, rotation_axis, params):
         data = data_pad
         rot_center = rotation_axis + N//4
     else:
-        log.warning("  ***   OFF")
+        log.warning('  *** *** OFF')
         data = data
         rot_center = rotation_axis
 
@@ -46,10 +46,10 @@ def unpadding(rec, N, params):
 
     log.info("  *** un-padding")
     if(params.padding):
-        log.info("  ***   ON")
+        log.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
-        log.warning("  ***   OFF")
+        log.warning('  *** *** OFF')
         rec = rec
     return rec
 
@@ -91,12 +91,12 @@ def mask(data, params):
 
     log.info("  *** mask")
     if(params.reconstruction_mask):
-        log.info("  ***   ON")
+        log.info('  *** *** ON')
         if 0 < params.reconstruction_mask_ratio <= 1:
             log.warning("  *** apply reconstruction mask ratio: %f " % params.reconstruction_mask_ratio)
             data = tomopy.circ_mask(data, axis=0, ratio=params.reconstruction_mask_ratio)
         else:
             log.error("  *** mask ratio must be between 0-1: %f is ignored" % params.reconstruction_mask_ratio)
     else:
-        log.warning("  ***   OFF")
+        log.warning('  *** *** OFF')
     return data

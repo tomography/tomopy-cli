@@ -36,13 +36,13 @@ def remove_nan_neg_inf(data, params):
 
     log.info('  *** remove nan, neg and inf')
     if(params.fix_nan_and_inf == True):
-        log.info('  *** *** standard')
+        log.info('  *** *** ON')
         log.info('  *** *** replacement value %f ' % params.fix_nan_and_inf_value)
         data = tomopy.remove_nan(data, val=params.fix_nan_and_inf_value)
         data = tomopy.remove_neg(data, val=params.fix_nan_and_inf_value)
         data[np.where(data == np.inf)] = params.fix_nan_and_inf_value
     else:
-        log.warning('  *** *** none')
+        log.warning('  *** *** OFF')
 
     return data
 
@@ -51,14 +51,14 @@ def zinger_removal(proj, flat, params):
 
     log.info("  *** zinger removal")
     if (params.zinger_removal_method == 'standard'):
-        log.info('  *** *** standard')
+        log.info('  *** *** ON')
         log.info("  *** *** zinger level projections: %d" % params.zinger_level_projections)
         log.info("  *** *** zinger level white: %s" % params.zinger_level_white)
         log.info("  *** *** zinger_size: %d" % params.zinger_size)
         proj = tomopy.misc.corr.remove_outlier(proj, params.zinger_level_projections, size=params.zinger_size, axis=0)
         flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=params.zinger_size, axis=0)
     elif(params.zinger_removal_method == 'none'):
-        log.warning('  *** *** none')
+        log.warning('  *** *** OFF')
 
     return proj, flat
 
@@ -68,7 +68,7 @@ def flat_correction(proj, flat, dark, params):
     log.info('  *** normalization')
     if(params.flat_correction_method == 'standard'):
         data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff)
-        log.info('  *** *** standard %f cut-off' % params.normalization_cutoff)
+        log.info('  *** *** ON %f cut-off' % params.normalization_cutoff)
     elif(params.flat_correction_method == 'air'):
         data = tomopy.normalize_bg(proj, air=params.air)
         log.info('  *** *** air %d pixels' % params.air)
@@ -99,7 +99,7 @@ def remove_stripe(data, params):
         data = tomopy.remove_stripe_sf(data,  size==params.sf_size)
         log.info('  *** ***  *** sf size %d ' % params.sf_size)
     elif(params.remove_stripe_method == 'none'):
-        log.warning('  *** *** none')
+        log.warning('  *** *** OFF')
 
     return data
 
@@ -115,7 +115,7 @@ def phase_retrieval(data, params):
         log.info("  *** *** alpha: %s" % params.retrieve_phase_alpha)
         data = tomopy.retrieve_phase(data,pixel_size=(params.pixel_size*1e-4),dist=(params.propagation_distance/10.0),energy=params.energy, alpha=params.retrieve_phase_alpha,pad=True)
     elif(params.retrieve_phase_method == 'none'):
-        log.warning('  *** *** none')
+        log.warning('  *** *** OFF')
 
     return data
    

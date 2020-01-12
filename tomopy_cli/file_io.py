@@ -46,23 +46,28 @@ def read_tomo(sino, params):
     #     miss_angles = [params.missing_angles_start, params.missing_angle_end]
     #     data = patch_projection(data, miss_angles)
 
+    proj, flat, dark = binning(proj, flat, dark, params)
 
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
-    if (params.binning == 0):
-        log.info("  *** rotation center: %f" % rotation_axis)
-    else:
-        log.warning("  *** binning: %d" % params.binning)
-        log.warning("  *** rotation center: %f" % rotation_axis)
-
-
-    proj = binning(proj, params)
-    flat = binning(flat, params)
-    dark = binning(dark, params)
+    log.info("  *** rotation center: %f" % rotation_axis)
 
     return proj, flat, dark, theta, rotation_axis
 
+def binning(proj, flat, dark, params):
 
-def binning(data, params):
+    log.info("  *** binning")
+    if(params.binning == 0):
+        log.info('  *** *** OFF')
+    else:
+        log.warning('  *** *** ON')
+        log.warning('  *** *** binning: %d' % params.binning)
+        proj = _binning(proj, params)
+        flat = _binning(flat, params)
+        dark = _binning(dark, params)
+
+    return proj, flat, dark
+
+def _binning(data, params):
 
     data = tomopy.downsample(data, level=int(params.binning), axis=2) 
     data = tomopy.downsample(data, level=int(params.binning), axis=1)
