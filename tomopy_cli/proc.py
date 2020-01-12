@@ -6,34 +6,53 @@ from tomopy_cli import log
 
 def padded_rec(data, theta, rotation_axis, params):
 
-       # original shape
-      N = data.shape[2]
-      # padding
-      data, padded_rotation_axis = padding(data, rotation_axis) 
+    # original shape
+    N = data.shape[2]
+    # padding
+    data, padded_rotation_axis = padding(data, rotation_axis, params) 
+    # reconstruct object
+    rec = reconstruct(data, theta, padded_rotation_axis, params)
+    # un-padding - restore shape 
+    rec = unpadding(rec, N, params)
+    # mask each reconstructed slice with a circle
+    rec = mask(rec, params)
 
-      # Reconstruct object
-      rec = reconstruct(data, theta, padded_rotation_axis, params)
-      # restore shape 
-      rec = rec[:,N//4:5*N//4,N//4:5*N//4]
-      # Mask each reconstructed slice with a circle
-      rec = mask(rec, params)
-
-      return rec
+    return rec
 
 
-def padding(data, rotation_axis):
+def padding(data, rotation_axis, params):
 
     log.info("  *** padding")
-    N = data.shape[2]
-    data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
-    data_pad[:,:,N//4:5*N//4] = data
-    data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
-    data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
 
-    data = data_pad
-    rot_center = rotation_axis + N//4
+    if(params.padding):
+        log.info("  ***   ON")
+        N = data.shape[2]
+        data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
+        data_pad[:,:,N//4:5*N//4] = data
+        data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
+        data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
+
+        data = data_pad
+        rot_center = rotation_axis + N//4
+    else:
+        log.warning("  ***   OFF")
+        data = data
+        rot_center = rotation_axis
 
     return data, rot_center
+
+
+def unpadding(rec, N, params):
+
+    log.info("  *** un-padding")
+    if(params.padding):
+        log.info("  ***   ON")
+        rec = rec[:,N//4:5*N//4,N//4:5*N//4]
+    else:
+        log.warning("  ***   OFF")
+        rec = rec
+    return rec
+
 
 def reconstruct(data, theta, rot_center, params):
 
@@ -69,12 +88,15 @@ def reconstruct(data, theta, rot_center, params):
 
 
 def mask(data, params):
-    
+
+    log.info("  *** mask")
     if(params.reconstruction_mask):
+        log.info("  ***   ON")
         if 0 < params.reconstruction_mask_ratio <= 1:
             log.warning("  *** apply reconstruction mask ratio: %f " % params.reconstruction_mask_ratio)
             data = tomopy.circ_mask(data, axis=0, ratio=params.reconstruction_mask_ratio)
         else:
             log.error("  *** mask ratio must be between 0-1: %f is ignored" % params.reconstruction_mask_ratio)
-
+    else:
+        log.warning("  ***   OFF")
     return data

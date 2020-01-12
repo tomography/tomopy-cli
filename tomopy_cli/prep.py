@@ -10,6 +10,7 @@ from tomopy_cli import prep
 
 
 def all(proj, flat, dark, params):
+
     # zinger_removal
     proj, flat = zinger_removal(proj, flat, params)
 
