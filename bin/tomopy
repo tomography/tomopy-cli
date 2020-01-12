@@ -13,8 +13,8 @@ from datetime import datetime
 from tomopy_cli import config, __version__
 from tomopy_cli import log
 from tomopy_cli import recon
+from tomopy_cli import prep
 from tomopy_cli import file_io
-from tomopy_cli import find_center
 
 
 def init(args):
@@ -28,7 +28,7 @@ def init(args):
 def run_find_center(args):
 
     log.warning('find center start')
-    find_center.auto(args)
+    prep.find_rotation_axis(args)
     log.warning('find center end')
 
     # update tomopy.conf
@@ -41,23 +41,23 @@ def run_rec(args):
     log.warning('reconstruction start')
     if os.path.isfile(args.hdf_file):    
 
-        log.info("Reconstructing a single file: %s" % args.hdf_file)   
+        log.info("reconstructing a single file: %s" % args.hdf_file)   
         recon.rec(args)
 
     elif os.path.isdir(args.hdf_file):
-        log.info("Reconstructing a folder containing multiple files:")   
 
         # Add a trailing slash if missing
         top = os.path.join(args.hdf_file, '')
 
         dictionary = file_io.read_rot_centers(args)
+        log.warning("reconstructing a folder containing %d files" % len(dictionary))   
         for key in dictionary:
             dict2 = dictionary[key]
             for h5fname in dict2:
                 args.rotation_axis = dict2[h5fname]
                 fname = top + h5fname
                 args.hdf_file = fname
-                log.info("   *** file: %s center: %f" % (args.hdf_file, args.rotation_axis))
+                log.error("file: %s/%d; %s center: %f" % (key, len(dictionary)-1, args.hdf_file, args.rotation_axis))
                 recon.rec(args)
     else:
         log.error("Directory or File Name does not exist: %s" % args.hdf_file)
