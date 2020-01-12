@@ -34,9 +34,14 @@ def rec(params):
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
 
+
+    log.info("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
+               ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
+               chunks, nSino_per_chunk/pow(2, int(params.binning))))            
+
     strt = 0
     for iChunk in range(0, chunks):
-        log.info('chunk # %i' % (iChunk))
+        log.info('chunk # %i/%i' % (iChunk, chunks))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
@@ -82,10 +87,6 @@ def rec(params):
             params.reconstruction_algorithm = reconstruction_algorithm_org
 
         else: # "slice" and "full"
-            log.warning("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
-                       ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
-                       chunks, nSino_per_chunk/pow(2, int(params.binning))))            
-
             rec = proc.padded_rec(data, theta, rotation_axis, params)
 
             # handling of the last chunk 
