@@ -35,7 +35,7 @@ def rec(params):
         sino_end = sino_start + pow(2, int(params.binning)) 
 
 
-    log.info("Reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
+    log.info("reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
                ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
                chunks, nSino_per_chunk/pow(2, int(params.binning))))            
 
@@ -70,7 +70,7 @@ def rec(params):
             for axis in np.arange(*center_range):
                 stack[index] = data[:, 0, :]
                 index = index + 1
-            log.warning('  Reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
+            log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
 
             rotation_axis = np.arange(*center_range)
             rec = proc.padded_rec(stack, theta, rotation_axis, params)
