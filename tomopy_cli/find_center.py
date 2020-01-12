@@ -3,7 +3,6 @@ import json
 import tomopy
 import dxchange
 
-from tomopy_cli import config #, __version__
 from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
@@ -23,16 +22,11 @@ def find_rotation_axis(params):
     # Read APS 32-BM raw data
     proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
         
-    # # Flat-field correction of raw data
-    # data = tomopy.normalize(proj, flat, dark, cutoff=1.4)
-
-    # # remove stripes
-    # data = tomopy.remove_stripe_fw(data,level=5,wname='sym16',sigma=1,pad=True)
-
     # apply all preprocessing functions
-    data = prep.pre_process(proj, flat, dark, params)
+    data = prep.all(proj, flat, dark, params)
 
     # find rotation center
+    log.info("  *** find_center vo")
     rot_center = tomopy.find_center_vo(data)   
     log.info("  *** automatic center: %f" % rot_center)
     return rot_center
@@ -43,8 +37,6 @@ def auto(params):
     fname = params.hdf_file
     nsino = float(params.nsino)
     ra_fname = params.rotation_axis_file
-
-    print(params)
 
     if os.path.isfile(fname):  
         rot_center = find_rotation_axis(params)
@@ -82,10 +74,6 @@ def auto(params):
         f.close()
         log.info("Rotation axis locations save in: %s" % jfname)
 
-        # update config file
-        sections = config.FIND_CENTER_PARAMS
-        config.write(params.config, args=params, sections=sections)
-    
     else:
         log.info("Directory or File Name does not exist: %s " % fname)
 
