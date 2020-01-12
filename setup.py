@@ -8,6 +8,7 @@ setup(
     author_email='decarlof@gmail.com',
     url='https://github.com/decarlof/tomopy-cli',
     packages=find_packages(),
+    include_package_data = True,
     scripts=['bin/tomopy'],
     description='cli for tomopy',
     zip_safe=False,
