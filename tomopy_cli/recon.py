@@ -9,14 +9,29 @@ import dxchange
 from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
-
+from tomopy_cli import beamhardening
 
 def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
 
+    #Determine rotation axis
     if params.rotation_axis < 0:
-        params.rotation_axis =  data_shape[2]/2
+        if file_io.read_rot_center(params):
+            params.rotation_axis = file_io.read_rot_center(params)
+        else:
+            log.warning('No rotation center given: assuming the middle of the projections.')
+            params.rotation_axis =  data_shape[2]/2
+
+    # If we are performing beam hardening, initialize it
+    if params.beam_hardening_method == 'standard':
+        beamhardening.parse_params(params)
+        center_row = beamhardening.find_center_row(params)
+        log.info("Center row for beam hardening = {0:f}".format(center_row))
+        if int(params.binning) > 0:
+            center_row /= pow(2, int(params.binning))
+            log.info("Center row after binning = {:f}".format(center_row))
+        params.center_row = center_row
 
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):

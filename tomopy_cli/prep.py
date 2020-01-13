@@ -22,10 +22,14 @@ def all(proj, flat, dark, params):
     data = flat_correction(proj, flat, dark, params)
     # remove stripes
     data = remove_stripe(data, params)
-    # phase retrieval
-    data = phase_retrieval(data, params)
-    # minus log
-    data = minus_log(data, params)
+    # Perform beam hardening.  This leaves the data in pathlength.
+    if params.beam_hardening_method == 'standard':
+        data = beamhardening_correct(data, params, sino)
+    else:
+        # phase retrieval
+        data = phase_retrieval(data, params)
+        # minus log
+        data = minus_log(data, params)
     # remove outlier
     data = remove_nan_neg_inf(data, params)
 
@@ -131,4 +135,23 @@ def minus_log(data, params):
 
     return data
 
+def beamhardening_correct(data, params, sino):
+    """
+    Performs beam hardening corrections.
+    Inputs
+    data: data normalized already for bright and dark corrections.
+    params: processing parameters
+    sino: row numbers for these data
+    """
+    data_dtype = data.dtype
+    #Correct for centerline of fan
+    data = beamhardening.centerline_spline(data).astype(data_dtype)
+    #Make an array of correction factors
+    angles = np.abs(np.arange(sino[0],sino[1])- beamhardening.center_row).astype(data_dtype)
+    angles *= beamhardening.pixel_size / beamhardening.d_source
+    correction_factor = beamhardening.angular_spline(angles).astype(data_dtype)
+    if len(data.shape) == 2:
+        return data* correction_factor[:,None]
+    else:
+        return data * correction_factor[None, :, None]
 
