@@ -321,7 +321,7 @@ SECTIONS['iterative'] = {
     }
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
-                'ti', 'sf', 'retrieve-phase', , 'beam-hardening', 'reconstruction', 'iterative')
+                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
