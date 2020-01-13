@@ -3,6 +3,7 @@ import sys
 import pathlib
 import argparse
 import configparser
+import h5py
 
 from collections import OrderedDict
 
@@ -225,6 +226,63 @@ SECTIONS['sf'] = {
         'help': "Smoothing filter remove stripe size"}
         }
 
+SECTIONS['beam-hardening']= {
+    'beam-hardening-method': {
+        'default': 'none',
+        'type': str,
+        'help': "Beam hardening method.",
+        'choices':['none','standard']},
+    'source-distance': {
+        'default': 36.0,
+        'type': float,
+        'help': 'Distance from source to scintillator in m'},
+    'scintillator-material': {
+        'default': 'LuAG_Ce',
+        'type': str,
+        'help': 'Scintillator material for beam hardening',
+        'choices': ['LuAG_Ce', 'LYSO_Ce', 'YAG_Ce']},
+    'scintillator-thickness': {
+        'default': 100.0,
+        'type': float,
+        'help': 'Scintillator thickness for beam hardening'},
+    'center-row': {
+        'default': 0.0,
+        'type': float,
+        'help': 'Row with the center of the vertical fan for beam hardening.'},
+    'sample-material': {
+        'default': 'Fe',
+        'type': str,
+        'help': 'Sample material for beam hardening',
+        'choices': ['Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+    'filter-1-material': {
+        'default': 'none',
+        'type': str,
+        'help': 'Filter 1 material for beam hardening',
+        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+    'filter-1-thickness': {
+        'default': 0.0,
+        'type': float,
+        'help': 'Filter 1 thickness for beam hardening'},
+    'filter-2-material': {
+        'default': 'none',
+        'type': str,
+        'help': 'Filter 2 material for beam hardening',
+        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+    'filter-2-thickness': {
+        'default': 0.0,
+        'type': float,
+        'help': 'Filter 2 thickness for beam hardening'},
+    'filter-3-material': {
+        'default': 'Be',
+        'type': str,
+        'help': 'Filter 3 material for beam hardening',
+        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+    'filter-3-thickness': {
+        'default': 750.0,
+        'type': float,
+        'help': 'Filter 3 thickness for beam hardening'},
+    }
+
 SECTIONS['reconstruction'] = {
     'filter': {
         'default': 'parzen',
@@ -263,13 +321,13 @@ SECTIONS['iterative'] = {
     }
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
-                'ti', 'sf', 'retrieve-phase', 'reconstruction', 'iterative')
+                'ti', 'sf', 'retrieve-phase', , 'beam-hardening', 'reconstruction', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Reconstruction', 'Iterative')
+              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Iterative')
 
 def get_config_name():
     """Get the command line --config option."""
@@ -336,6 +394,32 @@ def config_to_list(config_name=CONFIG_FILE_NAME):
 
     return result
 
+
+def param_from_dxchange(hdf_file, data_path, attr = None, scalar = True, char_array=False):
+    """
+    Reads a parameter from a DXchange file.
+    Inputs
+    hdf_file: string path or pathlib.Path object for the DXchange file.
+    data_path: path to the requested data in the DXchange file.
+    attr: name of the attribute if this is stored as an attribute (default: None)
+    scalar: True if the value is a single valued dataset (dafault: True)
+    char_array: if True, interpret as a character array.  Useful for EPICS strings (default: False)
+    """
+    if not os.path.isfile(hdf_file):
+        return None
+    with h5py.File(hdf_file,'r') as f:
+        try:
+            if attr:
+                return f[data_path].attrs[attr].decode('ASCII')
+            elif char_array:
+                return ''.join([chr(i) for i in f[data_path][0]]).strip(chr(0))
+            elif scalar:
+                return f[data_path][0]
+            else:
+                return None
+        except KeyError:
+            return None
+    
 
 class Params(object):
     def __init__(self, sections=()):

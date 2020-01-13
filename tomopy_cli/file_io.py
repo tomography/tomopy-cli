@@ -12,7 +12,18 @@ from tomopy_cli import proc
 
  
 def read_tomo(sino, params):
-
+    """
+    Read in the tomography data.
+    Inputs:
+    sino: tuple of (start_row, end_row) to be read in
+    params: parameters for reconstruction
+    Output:
+    projection data
+    flat field (bright) data
+    dark field data
+    theta: Numpy array of angle for each projection
+    rotation_axis: location of the rotation axis
+    """
     if params.hdf_file_type == 'standard':
         # Read APS 32-BM raw data.
         log.info("  *** loading a stardard data set: %s" % params.hdf_file)
@@ -46,26 +57,21 @@ def read_tomo(sino, params):
     #     miss_angles = [params.missing_angles_start, params.missing_angle_end]
     #     data = patch_projection(data, miss_angles)
 
-    proj, flat, dark = binning(proj, flat, dark, params)
 
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
-    log.info("  *** rotation center: %f" % rotation_axis)
+    if (params.binning == 0):
+        log.info("  *** rotation center: %f" % rotation_axis)
+    else:
+        log.warning("  *** binning: %d" % params.binning)
+        log.warning("  *** rotation center: %f" % rotation_axis)
+
+
+    proj = binning(proj, params)
+    flat = binning(flat, params)
+    dark = binning(dark, params)
 
     return proj, flat, dark, theta, rotation_axis
 
-def binning(proj, flat, dark, params):
-
-    log.info("  *** binning")
-    if(params.binning == 0):
-        log.info('  *** *** OFF')
-    else:
-        log.warning('  *** *** ON')
-        log.warning('  *** *** binning: %d' % params.binning)
-        proj = _binning(proj, params)
-        flat = _binning(flat, params)
-        dark = _binning(dark, params)
-
-    return proj, flat, dark
 
 def _binning(data, params):
 
@@ -181,3 +187,17 @@ def read_rot_centers(params):
         log.error("ERROR: to create one run:")
         log.error("ERROR: $ tomopy find_center --hdf-file %s" % top)
         exit()
+
+def read_rot_center(params):
+    """
+    Read the rotation center from /process group in the DXchange file.
+    Return: rotation center from this dataset or None if it doesn't exist.
+    """
+    with h5py.File(params.hdf_file) as hdf_file:
+        try:
+            rot_center = hdf_file['/process/rot_center'][0]
+            log.info('Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
+            return rot_center
+        except KeyError:
+            log.warning('No rotation center stored in the HDF5 file.')
+            return None

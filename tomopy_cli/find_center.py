@@ -2,6 +2,7 @@ import os
 import json
 import tomopy
 import numpy as np
+import h5py
 
 from tomopy_cli import log
 from tomopy_cli import prep
@@ -74,5 +75,9 @@ def _find_rotation_axis(params):
     log.info("  *** find_center vo")
     rot_center = tomopy.find_center_vo(data)   
     log.info("  *** automatic center: %f" % rot_center)
+    with h5py.File(params.hdf_file,'r+') as hdf_file:
+        hdf_file.require_dataset('/process/rot_center',shape=(1,), dtype=np.float64)
+        hdf_file['/process/rot_center'][0] = rot_center
+    log.info("  *** center written to /process/rot_center in file {0:f}".format(rot_center))
 
     return rot_center * np.power(2, float(params.binning))
