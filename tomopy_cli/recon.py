@@ -59,13 +59,14 @@ def rec(params):
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
                 
-        if sino_chunk_end > sino_end: 
-            break
-
         sino = (int(sino_chunk_start), int(sino_chunk_end))
 
         # Read APS 32-BM raw data.
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
+
+        # What if sino overruns the size of data?
+        if sino[1] - sino[0] > proj.shape[1]:
+            sino[1] = sino[0] + proj.shape[1]
 
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
@@ -101,7 +102,7 @@ def rec(params):
 
         else: # "slice" and "full"
             rec = padded_rec(data, theta, rotation_axis, params)
-
+            '''
             # handling of the last chunk 
             if (params.reconstruction_type == "full"):
                 if(iChunk == chunks-1):
@@ -109,7 +110,7 @@ def rec(params):
                     log.info("  *** chunk # %d" % (chunks))
                     log.info("  *** last rec size %d" % ((data_shape[1]-(chunks-1)*nSino_per_chunk)/pow(2, int(params.binning))))
                     rec = rec[0:data_shape[1]-(chunks-1)*nSino_per_chunk,:,:]
-
+            '''
             # Save images
             if (params.reconstruction_type == "full"):
                 tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_rec' + os.sep 
