@@ -68,7 +68,7 @@ def rec(params):
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
 
         # apply all preprocessing functions
-        data = prep.all(proj, flat, dark, params)
+        data = prep.all(proj, flat, dark, params, sino)
 
         # Reconstruct
         if (params.reconstruction_type == "try"):

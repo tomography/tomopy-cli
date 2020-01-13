@@ -7,9 +7,9 @@ import numpy as np
 from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
+from tomopy_cli import beamhardening
 
-
-def all(proj, flat, dark, params):
+def all(proj, flat, dark, params, sino):
 
     # zinger_removal
     proj, flat = zinger_removal(proj, flat, params)
