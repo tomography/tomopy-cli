@@ -143,12 +143,14 @@ def beamhardening_correct(data, params, sino):
     params: processing parameters
     sino: row numbers for these data
     """
+    log.info("  *** correct beam hardening")
     data_dtype = data.dtype
     #Correct for centerline of fan
     data = beamhardening.centerline_spline(data).astype(data_dtype)
     #Make an array of correction factors
-    angles = np.abs(np.arange(sino[0],sino[1])- beamhardening.center_row).astype(data_dtype)
+    angles = np.abs(np.arange(sino[0], sino[1])- beamhardening.center_row).astype(data_dtype)
     angles *= beamhardening.pixel_size / beamhardening.d_source
+    log.info("  *** angles from {0:f} to {1:f} urad".format(angles[0], angles[-1]))
     correction_factor = beamhardening.angular_spline(angles).astype(data_dtype)
     if len(data.shape) == 2:
         return data* correction_factor[:,None]
