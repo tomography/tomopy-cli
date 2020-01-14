@@ -4,11 +4,13 @@ import pathlib
 import argparse
 import configparser
 import h5py
+import numpy as np
 
 from collections import OrderedDict
 
 from tomopy_cli import log
 from tomopy_cli import util
+from tomopy_cli import __version__
 
 LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
 CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
@@ -57,6 +59,10 @@ SECTIONS['file-reading'] = {
         'type': str,
         'help': "Input file type",
         'choices': ['standard', 'flip_and_stich', 'mosaic']},
+    'hdf-file-save-log': {
+        'default': False,
+        'help': 'When set, the content of the config file is saved in the raw hdf dataset',
+        'action': 'store_true'},
     'nsino': {
         'default': 0.5,
         'type': float,
@@ -474,6 +480,38 @@ def write(config_file, args=None, sections=None):
                 config.set(section, prefix + name, str(value))
     with open(config_file, 'w') as f:
         config.write(f)
+
+    if args.hdf_file_save_log:
+        write_hdf(config_file, args, sections)
+
+
+def write_hdf(config_file, args=None, sections=None):
+    """
+    Write in the hdf raw data file the content of *config_file* with values from *args* 
+    if they are specified, otherwise use the defaults. If *sections* are specified, 
+    write values from *args* only to those sections, use the defaults on the remaining ones.
+    """
+    with h5py.File(args.hdf_file,'r+') as hdf_file:
+        dt = h5py.string_dtype(encoding='ascii')
+        log.info("  *** tomopy.conf parameter written to /process in file %s " % args.hdf_file)
+        config = configparser.ConfigParser()
+        for section in SECTIONS:
+            config.add_section(section)
+            for name, opts in SECTIONS[section].items():
+                if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
+                    value = getattr(args, name.replace('-', '_'))
+                    if isinstance(value, list):
+                        # print(type(value), value)
+                        value = ', '.join(value)
+                else:
+                    value = opts['default'] if opts['default'] is not None else ''
+
+                prefix = '# ' if value is '' else ''
+
+                if name != 'config':
+                    dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + section + '/'+ name
+                    hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
+                    hdf_file[dataset][0] = str(value)
 
 
 def log_values(args):

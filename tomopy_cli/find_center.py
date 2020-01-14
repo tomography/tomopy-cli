@@ -69,7 +69,7 @@ def _find_rotation_axis(params):
     proj, flat, dark, theta, params_rotation_axis_ignored = file_io.read_tomo(sino, params)
         
     # apply all preprocessing functions
-    data = prep.all(proj, flat, dark, params)
+    data = prep.all(proj, flat, dark, params, sino)
 
     # find rotation center
     log.info("  *** find_center vo")
