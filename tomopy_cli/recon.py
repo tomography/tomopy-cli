@@ -35,10 +35,16 @@ def rec(params):
 
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):
+        if params.start_row:
+            sino_start = params.start_row
+        else:
+            sino_start = 0
+        if params.end_row < 0:
+            sino_end = data_shape[1]
+        else:
+            sino_end = params.end_row 
         nSino_per_chunk = params.nsino_per_chunk
-        chunks = int(np.ceil(data_shape[1]/nSino_per_chunk))    
-        sino_start = 0
-        sino_end = chunks*nSino_per_chunk
+        chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))    
 
     else: # "slice" and "try"       
         nSino_per_chunk = pow(2, int(params.binning))
@@ -47,16 +53,18 @@ def rec(params):
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
 
-
     log.info("reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
                ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
                chunks, nSino_per_chunk/pow(2, int(params.binning))))            
 
-    strt = 0
+    strt = sino_start
     for iChunk in range(0, chunks):
-        log.info('chunk # %i/%i' % (iChunk, chunks))
+        log.info('chunk # %i/%i' % (iChunk + 1, chunks))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
+        if sino_chunk_end > sino_end:
+            log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
+            sino_chunk_end = sino_end
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
                 
         sino = (int(sino_chunk_start), int(sino_chunk_end))
@@ -66,6 +74,7 @@ def rec(params):
 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
+            log.warning(" *** Chunk size > remaining data size.")
             sino = (sino[0], sino[0] + proj.shape[1])
 
         # apply all preprocessing functions
