@@ -42,14 +42,8 @@ def read_tomo(sino, params):
         theta_size = dxreader.read_dx_dims(params.hdf_file, 'data')[0]
         theta = np.linspace(np.pi , (0+step_size), theta_size)   
 
-    if params.blocked_views:
-        log.info("  *** correcting for blocked view data collection")
-        miss_angles = [params.missing_angles_start, params.missing_angles_end]
-        
-        # Manage the missing angles:
-        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
-        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
- 
+    proj, theta = blocked_view(proj, theta, params)
+
     # new missing projection handling
     # if params.blocked_views:
     #     log.warning("  *** new missing angle handling")
@@ -62,6 +56,22 @@ def read_tomo(sino, params):
     log.info("  *** rotation center: %f" % rotation_axis)
 
     return proj, flat, dark, theta, rotation_axis
+
+
+def blocked_view(proj, theta, params):
+    log.info("  *** correcting for blocked view data collection")
+    if params.blocked_views:
+        log.warning('  *** *** ON')
+        miss_angles = [params.missing_angles_start, params.missing_angles_end]
+        
+        # Manage the missing angles:
+        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
+        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
+    else:
+        log.warning('  *** *** OFF')
+
+    return proj, theta
+
 
 def binning(proj, flat, dark, params):
 
