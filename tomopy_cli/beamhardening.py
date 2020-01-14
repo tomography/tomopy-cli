@@ -40,7 +40,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.signal import convolve
 from scipy.signal.windows import gaussian
 
-from tomopy.util.misc import mproc
+from tomopy.util import mproc
 
 #Global variables we need for computing LUT
 filters = {}
@@ -346,7 +346,6 @@ def find_center_row(params):
         bright = bright[0,:]
     vertical_slice = np.sum(bright, axis=1)
     gaussian_filter = scipy.signal.windows.gaussian(200,20)
-    print(vertical_slice.shape, gaussian_filter.shape)
     filtered_slice = scipy.signal.convolve(vertical_slice, gaussian_filter,
                                             mode='same')
     center_row = float(np.argmax(filtered_slice))
