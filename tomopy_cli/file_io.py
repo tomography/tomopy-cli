@@ -44,7 +44,7 @@ def read_tomo(sino, params):
 
     if params.blocked_views:
         log.info("  *** correcting for blocked view data collection")
-        miss_angles = [params.missing_angles_start, params.missing_angle_end]
+        miss_angles = [params.missing_angles_start, params.missing_angles_end]
         
         # Manage the missing angles:
         proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
