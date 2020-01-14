@@ -90,7 +90,15 @@ SECTIONS['file-reading'] = {
     'dark-zero': {
         'default': False,
         'help': 'When set, the the dark field is set to zero',
-        'action': 'store_true'}        
+        'action': 'store_true'},
+    'start-row': {
+        'default': 0,
+        'type': int,
+        'help': 'Row on which to start reconstructions'},
+    'end-row': {
+        'default': -1,
+        'type': int,
+        'help': 'Row on which to end reconstruction.  Negative values = last row of projection data.'}
        }
 
 SECTIONS['missing-angles'] = {

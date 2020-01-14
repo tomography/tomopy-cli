@@ -28,16 +28,19 @@ Usage:
     to correct an image.
 
 '''
+from copy import deepcopy
+import os
+from pathlib import Path, PurePath
+
 import numpy as np
 import scipy.interpolate
 import scipy.integrate
 import h5py
-import os
-from pathlib import Path, PurePath
-from copy import deepcopy
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.signal import convolve
 from scipy.signal.windows import gaussian
+
+from tomopy.util import mproc
 
 #Global variables we need for computing LUT
 filters = {}
@@ -317,7 +320,9 @@ def fcorrect_as_pathlength_centerline(input_trans):
     Input: transmission
     Output: sample pathlength in microns.
     """
-    return centerline_spline(input_trans)
+    data_dtype = input_trans.dtype
+    return_data = mproc.distribute_jobs(input_trans,centerline_spline,args=(),axis=1)
+    return return_data
 
 
 def fcorrect_as_pathlength(input_trans):
@@ -341,7 +346,6 @@ def find_center_row(params):
         bright = bright[0,:]
     vertical_slice = np.sum(bright, axis=1)
     gaussian_filter = scipy.signal.windows.gaussian(200,20)
-    print(vertical_slice.shape, gaussian_filter.shape)
     filtered_slice = scipy.signal.convolve(vertical_slice, gaussian_filter,
                                             mode='same')
     center_row = float(np.argmax(filtered_slice))
