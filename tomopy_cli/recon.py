@@ -66,7 +66,7 @@ def rec(params):
 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
-            sino[1] = sino[0] + proj.shape[1]
+            sino = (sino[0], sino[0] + proj.shape[1])
 
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
