@@ -51,7 +51,10 @@ center_row = 0
 spectra_dict = None
 source_data_file = None
 possible_materials = {}
-data_path = Path.joinpath(Path(__file__).parent, 'beam_hardening_data')
+
+# Add a trailing slash if missing
+top = os.path.join(Path(__file__).parent, '')
+data_path = os.path.join(top, 'beam_hardening_data')
 
 #Global variables for when we convert images
 centerline_spline = None
@@ -91,7 +94,8 @@ class Material:
         return "Material({0:s}, {1:f})".format(self.name, self.density)
     
     def fread_absorption_data(self):
-        raw_data = np.genfromtxt(PurePath.joinpath(data_path, self.name + '_properties_xCrossSec.dat'))
+
+        raw_data = np.genfromtxt(os.path.join(data_path, self.name + '_properties_xCrossSec.dat'))
         self.energy_array = raw_data[:,0] / 1000.0      #in keV
         self.absorption_array = raw_data[:,3]   #in cm^2/g, from XCOM in XOP
         self.attenuation_array = raw_data[:,6]  #in cm^2/g, from XCOM in XOP, ignoring coherent scattering
@@ -196,9 +200,12 @@ def fread_source_data():
     Dictionary of spectra at the various psi angles from the ring plane.
     '''
     spectra_dict = {}
-    for f_path in Path.joinpath(Path(__file__).parent, 'beam_hardening_data').iterdir():
-        f_name = f_path.stem
-        if f_path.is_file() and f_name.startswith('Psi'):
+                 #os.path.join
+    file_list = list(filter(lambda x: x.endswith(('.dat', '.DAT')), os.listdir(data_path)))
+    for f_name in file_list:
+        f_path = os.path.join(data_path, f_name)
+        print(f_path)
+        if os.path.isfile(f_path) and f_name.startswith('Psi'):
             f_angle = float(f_name.split('_')[1][:2])
             spectral_data = np.genfromtxt(f_path, comments='!')
             spectral_energies = spectral_data[:,0] / 1000.
