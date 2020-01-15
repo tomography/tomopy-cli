@@ -1,24 +1,45 @@
-'''Code to correct for beam hardening in filtered white beam imaging experiments.
-This code creates an HDF5 file with coefficients to perform a polynomial fit
-of transmission to correct for the effect of beam hardening for white beam
-imaging and tomography.
+'''Code to correct for beam hardening effects in tomography experiments.
+The main application of this code is for synchrotron experiments with 
+a bending magnet beam.  This beam is both polychromatic and has a spectrum
+which varies with the vertical angle from the ring plane.  In principle,
+this could be used for other polychromatic x-ray sources.
 
-Alan Kastengren, XSD, APS
+The mathematical approach is to filter the incident spectrum by a 
+series of filters.  This filtered spectrum passes through a series of
+thicknesses of the sample material.  For each thickness, the transmitted
+spectrum illuminates the scintillator material.  The absorbed power in 
+the scintillator material is computed as a function of the
+sample thickness.  A univariate spline fit is then calculated
+between the calculated transmission and the sample thickness for the centerline
+of the BM fan.  This is then used as a lookup table to convert sample 
+transmission to sample thickness, as an alternative to Beer's law.
+To correct for the dependence of the spectrum on vertical angle,
+at a reference transmission (0.1 by default, which works well with the APS BM
+beam), the ratio between sample thickness computed with the centerline spline
+fit and the actual sample thickness is computed as a correction factor. 
+A second spline fit between vertical angle and correction factor is calculated,
+and this is used to correct the images for the dependence of the spectrum
+on the vertical angle in the fan.  
 
-Started: November 11, 2015
+This code uses a set of text data files to both define the spectral
+properties of the beam and to define the absorption and attenuation
+properties of various materials.  
 
-Edits: Apr 27, 2016. Dan & Katie edited fcompute_lookup_table_function to sort the 
-       values going into the lookup table. Our version of interp1d was unhappy with
-       non monotonic x values and it spat out all NaNs. Also added 'pwd' to allow
-       files to be stored somewhere else.
-    
-        June 16, 2017: several edits to make the code more generally usable.
-            * Change to different files, from xCrossSec, for more materials.
+The spectra are in text files with 
+two columns.  The first column gives energy in eV, the second the spectral
+power of the beam.  A series of files are used, in the form 
+Psi_##urad.dat, with the ## corresponding to the vertical angle from the ring
+plane in microradians.  These files were created in the BM spectrum
+tool of XOP.
 
-        January 30, 2019: set up for using a config file to avoid having to alter
-            source code every time we run this code.
-        
-        September 23, 2019: set up Spectrum objects to simplify calls.
+The spectral properties of the various filter, sample, and scintillator 
+materials were computed in XOP with the xCrossSec tool.  To add a new
+material, compute the spectral properties with xCrossSec and add the 
+file to the beam_hardening_data folder.
+
+This code also uses a setup.cfg file, located in beam_hardening_data.
+This mainly gives the options for materials, their densities, and 
+the reference transmission for the angular correction factor.
 
 Usage:
 * Run fread_config_file to load in configuration information.
@@ -52,7 +73,6 @@ d_source = 0
 pixel_size = 0
 center_row = 0
 spectra_dict = None
-source_data_file = None
 possible_materials = {}
 
 # Add a trailing slash if missing
@@ -203,7 +223,6 @@ def fread_source_data():
     Dictionary of spectra at the various psi angles from the ring plane.
     '''
     spectra_dict = {}
-                 #os.path.join
     file_list = list(filter(lambda x: x.endswith(('.dat', '.DAT')), os.listdir(data_path)))
     for f_name in file_list:
         f_path = os.path.join(data_path, f_name)
