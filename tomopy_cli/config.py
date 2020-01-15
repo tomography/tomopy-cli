@@ -81,6 +81,9 @@ SECTIONS['file-reading'] = {
         'default': -1.0,
         'type': float,
         'help': "Location of rotation axis"},
+    'rotation-axis-auto': {
+        'default': True,
+        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it."},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
@@ -491,8 +494,11 @@ def write_hdf(config_file, args=None, sections=None):
     if they are specified, otherwise use the defaults. If *sections* are specified, 
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
+    if not args.hdf_file_save_log:
+        log.info(" *** Not saving log data to the projection HDF file.")
+        return
     with h5py.File(args.hdf_file,'r+') as hdf_file:
-        dt = h5py.string_dtype(encoding='ascii')
+        #dt = h5py.string_dtype(encoding='ascii')
         log.info("  *** tomopy.conf parameter written to /process in file %s " % args.hdf_file)
         config = configparser.ConfigParser()
         for section in SECTIONS:
@@ -510,8 +516,14 @@ def write_hdf(config_file, args=None, sections=None):
 
                 if name != 'config':
                     dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + section + '/'+ name
+                    dset_length = len(str(value)) * 2 if len(str(value)) > 5 else 10
+                    dt = 'S{0:d}'.format(dset_length)
                     hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
-                    hdf_file[dataset][0] = str(value)
+                    try:
+                        hdf_file[dataset][0] = np.string_(value)
+                    except TypeError:
+                        print(value)
+                        raise TypeError
 
 
 def log_values(args):
