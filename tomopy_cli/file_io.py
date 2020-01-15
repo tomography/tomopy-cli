@@ -214,4 +214,4 @@ def read_rot_center(params):
             return rot_center
         except KeyError:
             log.warning('No rotation center stored in the HDF5 file.')
-            return None
+            return 0

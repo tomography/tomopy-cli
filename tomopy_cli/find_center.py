@@ -15,7 +15,7 @@ def find_rotation_axis(params):
     ra_fname = params.rotation_axis_file
 
     if os.path.isfile(fname):  
-        rot_center = _find_rotation_axis(params)
+        return _find_rotation_axis(params)
         
     elif os.path.isdir(fname):
         # Add a trailing slash if missing
