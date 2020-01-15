@@ -18,6 +18,7 @@ info_extra={'endColor': __ENDC, 'color': __GREEN}
 warn_extra={'endColor': __ENDC, 'color': __YELLOW}
 error_extra={'endColor': __ENDC, 'color': __RED}
 
+
 def info(msg):
     logger.info(msg, extra=info_extra)
 
@@ -29,9 +30,7 @@ def warning(msg):
 
 
 def setup_logger(log_name, stream_to_console=True):
-    info_extra={'endColor': __ENDC, 'color': __GREEN}
-    warn_extra={'endColor': __ENDC, 'color': __YELLOW}
-    error_extra={'endColor': __ENDC, 'color': __RED}
+
 
     info_extra['logger_name'] = log_name
     warn_extra['logger_name'] = log_name
