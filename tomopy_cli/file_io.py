@@ -7,7 +7,11 @@ import dxchange
 import dxchange.reader as dxreader
 import numpy as np
 
+import logging
 from tomopy_cli import log
+
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger('test.txt')
 
  
 def read_tomo(sino, params):
@@ -25,19 +29,19 @@ def read_tomo(sino, params):
     """
     if params.hdf_file_type == 'standard':
         # Read APS 32-BM raw data.
-        log.info("  *** loading a stardard data set: %s" % params.hdf_file)
+        logger.info("  *** loading a stardard data set: %s" % params.hdf_file)
         proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
     elif params.hdf_file_type == 'flip_and_stich':
-        log.info("   *** loading a 360 deg flipped data set: %s" % params.hdf_file)
+        logger.info("   *** loading a 360 deg flipped data set: %s" % params.hdf_file)
         proj360, flat360, dark360, theta360 = dxchange.read_aps_32id(params.hdf_file, sino=sino)
         proj, flat, dark = flip_and_stitch(variableDict, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
     else: # params.hdf_file_type == 'mosaic':
-        log.error("   *** loading a mosaic data set is not supported yet")
+        logger.error("   *** loading a mosaic data set is not supported yet")
         exit()
 
     if params.reverse:
-        log.info("  *** correcting for 180-0 data collection")
+        logger.info("  *** correcting for 180-0 data collection")
         step_size = (theta[1] - theta[0]) 
         theta_size = dxreader.read_dx_dims(params.hdf_file, 'data')[0]
         theta = np.linspace(np.pi , (0+step_size), theta_size)   
@@ -46,41 +50,41 @@ def read_tomo(sino, params):
 
     # new missing projection handling
     # if params.blocked_views:
-    #     log.warning("  *** new missing angle handling")
+    #     logger.warning("  *** new missing angle handling")
     #     miss_angles = [params.missing_angles_start, params.missing_angle_end]
     #     data = patch_projection(data, miss_angles)
 
     proj, flat, dark = binning(proj, flat, dark, params)
 
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
-    log.info("  *** rotation center: %f" % rotation_axis)
+    logger.info("  *** rotation center: %f" % rotation_axis)
 
     return proj, flat, dark, theta, rotation_axis
 
 
 def blocked_view(proj, theta, params):
-    log.info("  *** correcting for blocked view data collection")
+    logger.info("  *** correcting for blocked view data collection")
     if params.blocked_views:
-        log.warning('  *** *** ON')
+        logger.warning('  *** *** ON')
         miss_angles = [params.missing_angles_start, params.missing_angles_end]
         
         # Manage the missing angles:
         proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
         theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
 
     return proj, theta
 
 
 def binning(proj, flat, dark, params):
 
-    log.info("  *** binning")
+    logger.info("  *** binning")
     if(params.binning == 0):
-        log.info('  *** *** OFF')
+        logger.info('  *** *** OFF')
     else:
-        log.warning('  *** *** ON')
-        log.warning('  *** *** binning: %d' % params.binning)
+        logger.warning('  *** *** ON')
+        logger.warning('  *** *** binning: %d' % params.binning)
         proj = _binning(proj, params)
         flat = _binning(flat, params)
         dark = _binning(dark, params)
@@ -197,9 +201,9 @@ def read_rot_centers(params):
         return collections.OrderedDict(sorted(dictionary.items()))
 
     except Exception as error: 
-        log.error("ERROR: the json %s file containing the rotation axis locations is missing" % jfname)
-        log.error("ERROR: to create one run:")
-        log.error("ERROR: $ tomopy find_center --hdf-file %s" % top)
+        logger.error("ERROR: the json %s file containing the rotation axis locations is missing" % jfname)
+        logger.error("ERROR: to create one run:")
+        logger.error("ERROR: $ tomopy find_center --hdf-file %s" % top)
         exit()
 
 def read_rot_center(params):
@@ -210,8 +214,8 @@ def read_rot_center(params):
     with h5py.File(params.hdf_file) as hdf_file:
         try:
             rot_center = hdf_file['/process/rot_center'][0]
-            log.info('Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
+            logger.info('Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
             return rot_center
         except KeyError:
-            log.warning('No rotation center stored in the HDF5 file.')
+            logger.warning('No rotation center stored in the HDF5 file.')
             return None

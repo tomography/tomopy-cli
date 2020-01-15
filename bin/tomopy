@@ -11,11 +11,23 @@ import pathlib
 from datetime import datetime
 
 from tomopy_cli import config, __version__
-from tomopy_cli import log
 from tomopy_cli import recon
 from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
+
+import logging
+from tomopy_cli import log
+
+# # log file name
+# logs_home = os.path.join(str(pathlib.Path.home()), 'logs')
+# # make sure logs directory exists
+# if not os.path.exists(logs_home):
+#     os.makedirs(logs_home)
+# lfname = os.path.join(logs_home, 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H_%M_%S") + '.log')
+
+lfname = 'test.txt'
+logger = log.setup_logger(lfname)
 
 
 def init(args):

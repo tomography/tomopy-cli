@@ -4,6 +4,9 @@
 '''
 import logging
 
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger('test.txt')
+
 # Logging defines
 __GREEN = "\033[92m"
 __RED = '\033[91m'
@@ -44,7 +47,8 @@ def setup_logger(log_name, stream_to_console=True):
     logger = logging.getLogger(log_name)
     fHandler = logging.FileHandler(log_name)
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s %(color)s  %(message)s %(endColor)s")
+    # formatter = logging.Formatter("%(asctime)s %(color)s  %(message)s %(endColor)s")
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     fHandler.setFormatter(formatter)
     logger.addHandler(fHandler)
     if stream_to_console:

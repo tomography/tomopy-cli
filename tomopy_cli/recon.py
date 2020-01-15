@@ -6,10 +6,16 @@ import numpy as np
 import tomopy
 import dxchange
 
-from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
 from tomopy_cli import beamhardening
+
+import logging
+from tomopy_cli import log
+
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger('test.txt')
+
 
 def rec(params):
     
@@ -20,17 +26,17 @@ def rec(params):
         if file_io.read_rot_center(params):
             params.rotation_axis = file_io.read_rot_center(params)
         else:
-            log.warning('No rotation center given: assuming the middle of the projections.')
+            logger.warning('No rotation center given: assuming the middle of the projections.')
             params.rotation_axis =  data_shape[2]/2
 
     # If we are performing beam hardening, initialize it
     if params.beam_hardening_method == 'standard':
         beamhardening.parse_params(params)
         center_row = beamhardening.find_center_row(params)
-        log.info("Center row for beam hardening = {0:f}".format(center_row))
+        logger.info("Center row for beam hardening = {0:f}".format(center_row))
         if int(params.binning) > 0:
             center_row /= pow(2, int(params.binning))
-            log.info("Center row after binning = {:f}".format(center_row))
+            logger.info("Center row after binning = {:f}".format(center_row))
         params.center_row = center_row
 
     # Select sinogram range to reconstruct
@@ -53,19 +59,19 @@ def rec(params):
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
 
-    log.info("reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
+    logger.info("reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
                ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
                chunks, nSino_per_chunk/pow(2, int(params.binning))))            
 
     strt = sino_start
     for iChunk in range(0, chunks):
-        log.info('chunk # %i/%i' % (iChunk + 1, chunks))
+        logger.info('chunk # %i/%i' % (iChunk + 1, chunks))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
         if sino_chunk_end > sino_end:
-            log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
+            logger.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
             sino_chunk_end = sino_end
-        log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
+        logger.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
                 
         sino = (int(sino_chunk_start), int(sino_chunk_end))
 
@@ -74,7 +80,7 @@ def rec(params):
 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
-            log.warning(" *** Chunk size > remaining data size.")
+            logger.warning(" *** Chunk size > remaining data size.")
             sino = (sino[0], sino[0] + proj.shape[1])
 
         # apply all preprocessing functions
@@ -93,7 +99,7 @@ def rec(params):
             for axis in np.arange(*center_range):
                 stack[index] = data[:, 0, :]
                 index = index + 1
-            log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
+            logger.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
 
             rotation_axis = np.arange(*center_range)
             rec = padded_rec(stack, theta, rotation_axis, params)
@@ -115,9 +121,9 @@ def rec(params):
             # handling of the last chunk 
             if (params.reconstruction_type == "full"):
                 if(iChunk == chunks-1):
-                    log.info("handling of the last chunk")
-                    log.info("  *** chunk # %d" % (chunks))
-                    log.info("  *** last rec size %d" % ((data_shape[1]-(chunks-1)*nSino_per_chunk)/pow(2, int(params.binning))))
+                    logger.info("handling of the last chunk")
+                    logger.info("  *** chunk # %d" % (chunks))
+                    logger.info("  *** last rec size %d" % ((data_shape[1]-(chunks-1)*nSino_per_chunk)/pow(2, int(params.binning))))
                     rec = rec[0:data_shape[1]-(chunks-1)*nSino_per_chunk,:,:]
             '''
             # Save images
@@ -131,7 +137,7 @@ def rec(params):
                 dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
 
 
-        log.info("  *** reconstructions: %s" % fname)
+        logger.info("  *** reconstructions: %s" % fname)
 
     
 
@@ -153,10 +159,10 @@ def padded_rec(data, theta, rotation_axis, params):
 
 def padding(data, rotation_axis, params):
 
-    log.info("  *** padding")
+    logger.info("  *** padding")
 
     if(params.padding):
-        log.info('  *** *** ON')
+        logger.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
         data_pad[:,:,N//4:5*N//4] = data
@@ -166,7 +172,7 @@ def padding(data, rotation_axis, params):
         data = data_pad
         rot_center = rotation_axis + N//4
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
         data = data
         rot_center = rotation_axis
 
@@ -175,12 +181,12 @@ def padding(data, rotation_axis, params):
 
 def unpadding(rec, N, params):
 
-    log.info("  *** un-padding")
+    logger.info("  *** un-padding")
     if(params.padding):
-        log.info('  *** *** ON')
+        logger.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
         rec = rec
     return rec
 
@@ -192,7 +198,7 @@ def reconstruct(data, theta, rot_center, params):
     else:
         sinogram_order = False
                
-    log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
+    logger.info("  *** algorithm: %s" % params.reconstruction_algorithm)
     if params.reconstruction_algorithm == 'astrasirt':
         extra_options ={'MinConstraint':0}
         options = {'proj_type':'cuda', 'method':'SIRT_CUDA', 'num_iter':200, 'extra_options':extra_options}
@@ -206,13 +212,13 @@ def reconstruct(data, theta, rot_center, params):
         data = np.roll(data, shift, axis=2)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'gridrec':
-        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        logger.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
     else:
-        log.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
+        logger.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
         params.reconstruction_algorithm = 'gridrec'
-        log.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
-        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        logger.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
+        logger.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
 
     return rec
@@ -220,15 +226,15 @@ def reconstruct(data, theta, rot_center, params):
 
 def mask(data, params):
 
-    log.info("  *** mask")
+    logger.info("  *** mask")
     if(params.reconstruction_mask):
-        log.info('  *** *** ON')
+        logger.info('  *** *** ON')
         if 0 < params.reconstruction_mask_ratio <= 1:
-            log.warning("  *** mask ratio: %f " % params.reconstruction_mask_ratio)
+            logger.warning("  *** mask ratio: %f " % params.reconstruction_mask_ratio)
             data = tomopy.circ_mask(data, axis=0, ratio=params.reconstruction_mask_ratio)
         else:
-            log.error("  *** mask ratio must be between 0-1: %f is ignored" % params.reconstruction_mask_ratio)
+            logger.error("  *** mask ratio must be between 0-1: %f is ignored" % params.reconstruction_mask_ratio)
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
     return data
 

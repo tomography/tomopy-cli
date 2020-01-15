@@ -4,9 +4,14 @@ import tomopy
 import numpy as np
 import h5py
 
-from tomopy_cli import log
 from tomopy_cli import prep
 from tomopy_cli import file_io
+
+import logging
+from tomopy_cli import log
+
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger('test.txt')
 
 
 def find_rotation_axis(params):
@@ -21,12 +26,12 @@ def find_rotation_axis(params):
         # Add a trailing slash if missing
         top = os.path.join(fname, '')
 
-        # log.info(os.listdir(top))
+        # logger.info(os.listdir(top))
         h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf')), os.listdir(top)))
         h5_file_list.sort()
 
-        log.info("Found: %s" % h5_file_list)
-        log.info("Determining the rotation axis location")
+        logger.info("Found: %s" % h5_file_list)
+        logger.info("Determining the rotation axis location")
         
         dic_centers = {}
         i=0
@@ -36,7 +41,7 @@ def find_rotation_axis(params):
             rot_center = _find_rotation_axis(params)
             params.hdf_file = top
             case =  {fname : rot_center}
-            log.info(case)
+            logger.info(case)
             dic_centers[i] = case
             i += 1
 
@@ -47,15 +52,15 @@ def find_rotation_axis(params):
         f = open(jfname,"w")
         f.write(json_dump)
         f.close()
-        log.info("Rotation axis locations save in: %s" % jfname)
+        logger.info("Rotation axis locations save in: %s" % jfname)
 
     else:
-        log.info("Directory or File Name does not exist: %s " % fname)
+        logger.info("Directory or File Name does not exist: %s " % fname)
 
 
 def _find_rotation_axis(params):
     
-    log.info("  *** calculating automatic center")
+    logger.info("  *** calculating automatic center")
     data_size = file_io.get_dx_dims(params)
     ssino = int(data_size[1] * params.nsino)
 
@@ -72,12 +77,12 @@ def _find_rotation_axis(params):
     data = prep.all(proj, flat, dark, params, sino)
 
     # find rotation center
-    log.info("  *** find_center vo")
+    logger.info("  *** find_center vo")
     rot_center = tomopy.find_center_vo(data)   
-    log.info("  *** automatic center: %f" % rot_center)
+    logger.info("  *** automatic center: %f" % rot_center)
     with h5py.File(params.hdf_file,'r+') as hdf_file:
         hdf_file.require_dataset('/process/rot_center',shape=(1,), dtype=np.float64)
         hdf_file['/process/rot_center'][0] = rot_center
-    log.info("  *** center written to /process/rot_center in file {0:f}".format(rot_center))
+    logger.info("  *** center written to /process/rot_center in file {0:f}".format(rot_center))
 
     return rot_center * np.power(2, float(params.binning))
