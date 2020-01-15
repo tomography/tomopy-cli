@@ -10,18 +10,11 @@ from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import prep
 from tomopy_cli import beamhardening
+from tomopy_cli import find_center
 
 def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
-
-    #Determine rotation axis
-    if params.rotation_axis < 0:
-        if file_io.read_rot_center(params):
-            params.rotation_axis = file_io.read_rot_center(params)
-        else:
-            log.warning('No rotation center given: assuming the middle of the projections.')
-            params.rotation_axis =  data_shape[2]/2
 
     # If we are performing beam hardening, initialize it
     if params.beam_hardening_method == 'standard':
@@ -32,6 +25,21 @@ def rec(params):
             center_row /= pow(2, int(params.binning))
             log.info("Center row after binning = {:f}".format(center_row))
         params.center_row = center_row
+
+    #Determine rotation axis
+    if params.rotation_axis_auto:
+        params.rotation_axis = file_io.read_rot_center(params)
+        #Take care of case where there wasn't a rotation axis stored.  
+        if not params.rotation_axis:
+            log.warning('No rotation axis stored and auto axis location requested.')
+            log.warning('Computing rotation axis.')
+            params.rotation_axis = find_center.find_rotation_axis(params)        
+    else:
+        if params.rotation_axis < 0:
+            params.rotation_axis = file_io.read_rot_center(params)
+            if not params.rotation_axis:
+                log.warning('No rotation center given: assuming the middle of the projections.')
+                params.rotation_axis =  data_shape[2]/2
 
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):
