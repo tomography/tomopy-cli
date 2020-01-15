@@ -100,20 +100,25 @@ def run_rec(args):
         with open(lfname, "a") as myfile:
             myfile.write(rec_log_msg)
     '''
-    if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+    if (args.reconstruction_type == "full"):
+    # if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
         # copy tomopy.conf in the reconstructed data directory path
         # in this way you can reproduce the reconstruction by simply running:
         # $ tomopy recon --config /path/tomopy.conf
-        config_path = pathlib.Path(args.config)
-        p = pathlib.Path(args.hdf_file)
-        log_fname = pathlib.Path.joinpath(p.parent, '_rec', p.stem + '_rec', config_path.name)
+
+        # config_path = pathlib.Path(args.config)
+        # p = pathlib.Path(args.hdf_file)
+        # log_fname = pathlib.Path.joinpath(p.parent, '_rec', p.stem + '_rec', config_path.name)
+        # un-did the above 
+        tail = os.sep + os.path.splitext(os.path.basename(args.hdf_file))[0]+ '_rec' + os.sep 
+        log_fname = os.path.dirname(args.hdf_file) + '_rec' + tail + os.path.split(args.config)[1]
         try:
             shutil.copyfile(args.config, log_fname)
             log.info('  *** copied %s to %s ' % (args.config, log_fname))
         except:
             log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
             pass
-    log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(str(log_fname)))
+        log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
     log.warning('reconstruction end')
 
 
