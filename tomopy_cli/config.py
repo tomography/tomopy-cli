@@ -519,8 +519,9 @@ def write_hdf(config_file, args=None, sections=None):
                     dset_length = len(str(value)) * 2 if len(str(value)) > 5 else 10
                     dt = 'S{0:d}'.format(dset_length)
                     hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
+                    log.info(name + ': ' + str(value))
                     try:
-                        hdf_file[dataset][0] = np.string_(value)
+                        hdf_file[dataset][0] = np.string_(str(value))
                     except TypeError:
                         print(value)
                         raise TypeError
