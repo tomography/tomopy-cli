@@ -113,7 +113,7 @@ def run_rec(args):
         except:
             log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
             pass
-    log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname.as_posix()))
+    log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(str(log_fname)))
     log.warning('reconstruction end')
 
 
