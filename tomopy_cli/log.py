@@ -14,32 +14,24 @@ __YELLOW = '\033[33m'
 __ENDC = '\033[0m'
 
 
-logger = None
 info_extra={'endColor': __ENDC, 'color': __GREEN}
 warn_extra={'endColor': __ENDC, 'color': __YELLOW}
 error_extra={'endColor': __ENDC, 'color': __RED}
 
 def info(msg):
-    global logger
-    global info_extra
     logger.info(msg, extra=info_extra)
 
 def error(msg):
-    global logger
-    global error_extra
     logger.error(msg, extra=error_extra)
 
 def warning(msg):
-    global logger
-    global warn_extra
     logger.warning(msg, extra=warn_extra)
 
 
 def setup_logger(log_name, stream_to_console=True):
-    global logger
-    global info_extra
-    global warn_extra
-    global error_extra
+    info_extra={'endColor': __ENDC, 'color': __GREEN}
+    warn_extra={'endColor': __ENDC, 'color': __YELLOW}
+    error_extra={'endColor': __ENDC, 'color': __RED}
 
     info_extra['logger_name'] = log_name
     warn_extra['logger_name'] = log_name
