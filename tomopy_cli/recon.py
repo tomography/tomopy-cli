@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import pathlib
+import threading
 import numpy as np
 import tomopy
 import dxchange
@@ -119,20 +120,15 @@ def rec(params):
 
         else: # "slice" and "full"
             rec = padded_rec(data, theta, rotation_axis, params)
-            '''
-            # handling of the last chunk 
-            if (params.reconstruction_type == "full"):
-                if(iChunk == chunks-1):
-                    log.info("handling of the last chunk")
-                    log.info("  *** chunk # %d" % (chunks))
-                    log.info("  *** last rec size %d" % ((data_shape[1]-(chunks-1)*nSino_per_chunk)/pow(2, int(params.binning))))
-                    rec = rec[0:data_shape[1]-(chunks-1)*nSino_per_chunk,:,:]
-            '''
             # Save images
             if (params.reconstruction_type == "full"):
                 tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_rec' + os.sep 
                 fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
-                dxchange.write_tiff_stack(rec, fname=fname, start=strt)
+                write_thread = threading.Thread(target=dxchange.write_tiff_stack,
+                                                args = (rec,),
+                                                kwargs = {'fname':fname, 'start':strt})
+                write_thread.start()
+                #dxchange.write_tiff_stack(rec, fname=fname, start=strt)
                 strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
             if (params.reconstruction_type == "slice"):
                 fname = os.path.dirname(params.hdf_file)  + os.sep + 'slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
@@ -222,7 +218,7 @@ def reconstruct(data, theta, rot_center, params):
         log.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
-
+    log.info("  *** reconstruction finished")
     return rec
 
 
@@ -234,6 +230,7 @@ def mask(data, params):
         if 0 < params.reconstruction_mask_ratio <= 1:
             log.warning("  *** mask ratio: %f " % params.reconstruction_mask_ratio)
             data = tomopy.circ_mask(data, axis=0, ratio=params.reconstruction_mask_ratio)
+            log.info('  *** masking finished')
         else:
             log.error("  *** mask ratio must be between 0-1: %f is ignored" % params.reconstruction_mask_ratio)
     else:
