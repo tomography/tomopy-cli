@@ -4,8 +4,8 @@
 '''
 import logging
 
-# logger = logging.getLogger(__name__)
-logger = logging.getLogger('test.txt')
+logger = logging.getLogger(__name__)
+# logger = logging.getLogger('test.txt')
 
 # Logging defines
 __GREEN = "\033[92m"
@@ -31,7 +31,6 @@ def warning(msg):
 
 def setup_logger(log_name, stream_to_console=True):
 
-
     info_extra['logger_name'] = log_name
     warn_extra['logger_name'] = log_name
     error_extra['logger_name'] = log_name
@@ -47,5 +46,5 @@ def setup_logger(log_name, stream_to_console=True):
         ch.setFormatter(formatter)
         ch.setLevel(logging.DEBUG)
         logger.addHandler(ch)
-
+    return logger
 

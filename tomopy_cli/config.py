@@ -8,9 +8,14 @@ import numpy as np
 
 from collections import OrderedDict
 
-from tomopy_cli import log
 from tomopy_cli import util
 from tomopy_cli import __version__
+
+import logging
+from tomopy_cli import log
+
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger('test.txt')
 
 LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
 CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
@@ -493,7 +498,7 @@ def write_hdf(config_file, args=None, sections=None):
     """
     with h5py.File(args.hdf_file,'r+') as hdf_file:
         dt = h5py.string_dtype(encoding='ascii')
-        log.info("  *** tomopy.conf parameter written to /process in file %s " % args.hdf_file)
+        logger.info("  *** tomopy.conf parameter written to /process in file %s " % args.hdf_file)
         config = configparser.ConfigParser()
         for section in SECTIONS:
             config.add_section(section)
@@ -522,19 +527,19 @@ def log_values(args):
     """
     args = args.__dict__
 
-    log.warning('tomopy-cli status start')
+    logger.warning('tomopy-cli status start')
     for section, name in zip(SECTIONS, NICE_NAMES):
         entries = sorted((k for k in args.keys() if k.replace('_', '-') in SECTIONS[section]))
 
         # print('log_values', section, name, entries)
         if entries:
-            log.info(name)
+            logger.info(name)
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
-                log.info("  {:<16} {}".format(entry, value))
+                logger.info("  {:<16} {}".format(entry, value))
 
-    log.warning('tomopy-cli status end')
+    logger.warning('tomopy-cli status end')
 
 
 
