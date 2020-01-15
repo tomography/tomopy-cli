@@ -4,36 +4,49 @@
 '''
 import logging
 
-logger = logging.getLogger(__name__)
+# logger = setup_logger(__name__)
+# logger = logging.getLogger(__name__)
 # logger = logging.getLogger('test.txt')
 
 # Logging defines
-__GREEN = "\033[92m"
-__RED = '\033[91m'
-__YELLOW = '\033[33m'
-__ENDC = '\033[0m'
+# __GREEN = "\033[92m"
+# __RED = '\033[91m'
+# __YELLOW = '\033[33m'
+# __ENDC = '\033[0m'
 
 
-info_extra={'endColor': __ENDC, 'color': __GREEN}
-warn_extra={'endColor': __ENDC, 'color': __YELLOW}
-error_extra={'endColor': __ENDC, 'color': __RED}
+# info_extra={'endColor': __ENDC, 'color': __GREEN}
+# warn_extra={'endColor': __ENDC, 'color': __YELLOW}
+# error_extra={'endColor': __ENDC, 'color': __RED}
 
 
-def info(msg):
-    logger.info(msg, extra=info_extra)
+# def info(msg):
+#     logger.info(msg, extra=info_extra)
 
-def error(msg):
-    logger.error(msg, extra=error_extra)
+# def error(msg):
+#     logger.error(msg, extra=error_extra)
 
-def warning(msg):
-    logger.warning(msg, extra=warn_extra)
+# def warning(msg):
+#     logger.warning(msg, extra=warn_extra)
 
+def setup_logger(name):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(module)s - %(message)s')
 
-def setup_logger(log_name, stream_to_console=True):
+    fhandler = logging.FileHandler(name)
+    fhandler.setFormatter(formatter)
+    logger.addHandler(fhandler)
 
-    info_extra['logger_name'] = log_name
-    warn_extra['logger_name'] = log_name
-    error_extra['logger_name'] = log_name
+    chandler = logging.StreamHandler()
+    chandler.setFormatter(formatter)
+    chandler.setLevel(logging.DEBUG)
+    logger.addHandler(chandler)
+
+    return logger
+
+def setup_old_logger(log_name, stream_to_console=True):
+
     logger = logging.getLogger(log_name)
     fHandler = logging.FileHandler(log_name)
     logger.setLevel(logging.DEBUG)

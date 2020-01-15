@@ -4,19 +4,12 @@ import os
 import re
 import sys
 import argparse
-import logging
 import time
 import shutil
 import pathlib
 from datetime import datetime
 
-from tomopy_cli import config, __version__
-from tomopy_cli import recon
-from tomopy_cli import find_center
-from tomopy_cli import file_io
-from tomopy_cli import post
 
-import logging
 from tomopy_cli import log
 
 # # log file name
@@ -29,20 +22,26 @@ from tomopy_cli import log
 lfname = 'test.txt'
 logger = log.setup_logger(lfname)
 
+from tomopy_cli import config, __version__
+from tomopy_cli import recon
+from tomopy_cli import find_center
+from tomopy_cli import file_io
+from tomopy_cli import post
+
 
 def init(args):
 
     if not os.path.exists(str(args.config)):
         config.write(args.config)
     else:
-        log.error("{0} already exists".format(args.config))
+        logger.error("{0} already exists".format(args.config))
 
 
 def run_find_center(args):
 
-    log.warning('find center start')
+    logger.warning('find center start')
     find_center.find_rotation_axis(args)
-    log.warning('find center end')
+    logger.warning('find center end')
 
     # update tomopy.conf
     sections = config.RECON_PARAMS
@@ -50,9 +49,9 @@ def run_find_center(args):
 
 def run_seg(args):
 
-    log.warning('segmentation start')
+    logger.warning('segmentation start')
     post.segment(args)
-    log.warning('segmentation end')
+    logger.warning('segmentation end')
 
     # update tomopy.conf
     sections = config.RECON_PARAMS
@@ -61,10 +60,10 @@ def run_seg(args):
     
 def run_rec(args):
 
-    log.warning('reconstruction start')
+    logger.warning('reconstruction start')
     if os.path.isfile(args.hdf_file):    
 
-        log.info("reconstructing a single file: %s" % args.hdf_file)   
+        logger.info("reconstructing a single file: %s" % args.hdf_file)   
         recon.rec(args)
 
     elif os.path.isdir(args.hdf_file):
@@ -73,7 +72,7 @@ def run_rec(args):
         top = os.path.join(args.hdf_file, '')
 
         dictionary = file_io.read_rot_centers(args)
-        log.warning("reconstructing a folder containing %d files" % len(dictionary))   
+        logger.warning("reconstructing a folder containing %d files" % len(dictionary))   
         index = 0
         for key in dictionary:
             dict2 = dictionary[key]
@@ -81,11 +80,11 @@ def run_rec(args):
                 args.rotation_axis = dict2[h5fname]
                 fname = top + h5fname
                 args.hdf_file = fname
-                log.warning("file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.hdf_file, args.rotation_axis))
+                logger.warning("file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.hdf_file, args.rotation_axis))
                 index += 1
                 recon.rec(args)
     else:
-        log.error("Directory or File Name does not exist: %s" % args.hdf_file)
+        logger.error("Directory or File Name does not exist: %s" % args.hdf_file)
 
     # update tomopy.conf
     sections = config.RECON_PARAMS
@@ -104,11 +103,11 @@ def run_rec(args):
                                             + " --pixel-size " + str(args.pixel_size) \
                                             + " --retrieve-phase-alpha  " + str(args.retrieve_phase_alpha)
 
-        log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
+        logger.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
         p = pathlib.Path(args.hdf_file)
         lfname = pathlib.Path.joinpath(pathlib.Path(args.logs_home), p.stem + '.log')
 
-        log.info('  *** command added to %s ' % lfname.as_posix())
+        logger.info('  *** command added to %s ' % lfname.as_posix())
         with open(lfname, "a") as myfile:
             myfile.write(rec_log_msg)
     '''
@@ -126,12 +125,12 @@ def run_rec(args):
         log_fname = os.path.dirname(args.hdf_file) + '_rec' + tail + os.path.split(args.config)[1]
         try:
             shutil.copyfile(args.config, log_fname)
-            log.info('  *** copied %s to %s ' % (args.config, log_fname))
+            logger.info('  *** copied %s to %s ' % (args.config, log_fname))
         except:
-            log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
+            logger.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
             pass
-        log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
-    log.warning('reconstruction end')
+        logger.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
+    logger.warning('reconstruction end')
 
 
 
@@ -171,14 +170,14 @@ def main():
 
     # lfname = os.path.join(logs_home, 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H_%M_%S") + '.log')
  
-    # log.setup_logger(lfname)
-    # log.info("Saving log at %s" % lfname)
+    # logger.setup_logger(lfname)
+    # logger.info("Saving log at %s" % lfname)
 
     try:
         config.log_values(args)
         args._func(args)
     except RuntimeError as e:
-        log.error(str(e))
+        logger.error(str(e))
         sys.exit(1)
 
 

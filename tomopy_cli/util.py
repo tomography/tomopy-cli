@@ -3,6 +3,7 @@ import numpy as np
 import logging
 from tomopy_cli import log
 
+# logger = log.setup_logger(__name__)
 # logger = logging.getLogger(__name__)
 logger = logging.getLogger('test.txt')
 
