@@ -46,6 +46,17 @@ SECTIONS['find-rotation-axis'] = {
         'type': float,
         'default': 10.0,
         'help': "+/- center search width (pixel). Search is in 0.5 pixel increments"},
+    'rotation-axis': {
+        'default': -1.0,
+        'type': float,
+        'help': "Location of rotation axis"},
+    'rotation-axis-auto': {
+        'default': True,
+        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it."},
+    'rotation-axis-flip': {
+        'default': -1.0,
+        'type': float,
+        'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
         }
 
 SECTIONS['file-reading'] = {
@@ -77,17 +88,6 @@ SECTIONS['file-reading'] = {
         'default': 0,
         'help': "Reconstruction binning factor as power(2, choice)",
         'choices': [0, 1, 2, 3]},
-    'rotation-axis': {
-        'default': -1.0,
-        'type': float,
-        'help': "Location of rotation axis"},
-    'rotation-axis-auto': {
-        'default': True,
-        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it."},
-    'rotation-axis-flip': {
-        'default': -1.0,
-        'type': float,
-        'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
     'reverse': {
         'default': False,
         'help': 'When set, the data set was collected in reverse (180-0)',
