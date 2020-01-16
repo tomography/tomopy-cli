@@ -70,9 +70,9 @@ SECTIONS['file-reading'] = {
         'type': str,
         'help': "Input file type",
         'choices': ['standard', 'flip_and_stich', 'mosaic']},
-    'hdf-file-save-log': {
+    'hdf-file-update': {
         'default': False,
-        'help': 'When set, the content of the config file is saved in the raw hdf dataset',
+        'help': 'When set, the content of the hdf file /process tag is updated using the current config file information',
         'action': 'store_true'},
     'nsino': {
         'default': 0.5,
