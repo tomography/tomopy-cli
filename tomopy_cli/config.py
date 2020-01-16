@@ -495,11 +495,11 @@ def write_hdf(config_file, args=None, sections=None):
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
     if not args.hdf_file_save_log:
-        log.info(" *** Not saving log data to the projection HDF file.")
+        log.warning(" *** Not saving log data to the projection HDF file.")
         return
     with h5py.File(args.hdf_file,'r+') as hdf_file:
         #dt = h5py.string_dtype(encoding='ascii')
-        log.info("  *** tomopy.conf parameter written to /process in file %s " % args.hdf_file)
+        log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.hdf_file))
         config = configparser.ConfigParser()
         for section in SECTIONS:
             config.add_section(section)
