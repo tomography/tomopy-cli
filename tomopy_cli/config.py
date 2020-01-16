@@ -481,12 +481,13 @@ def write(config_file, args=None, sections=None):
 
             if name != 'config':
                 config.set(section, prefix + name, str(value))
+
+
     with open(config_file, 'w') as f:
         config.write(f)
 
-    if args.hdf_file_update:
-        write_hdf(config_file, args, sections)
-
+    if args is not None:
+        write_hdf(config_file, args, sections)       
 
 def write_hdf(config_file, args=None, sections=None):
     """
