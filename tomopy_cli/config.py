@@ -484,7 +484,7 @@ def write(config_file, args=None, sections=None):
     with open(config_file, 'w') as f:
         config.write(f)
 
-    if args.hdf_file_save_log:
+    if args.hdf_file_update:
         write_hdf(config_file, args, sections)
 
 
@@ -494,7 +494,7 @@ def write_hdf(config_file, args=None, sections=None):
     if they are specified, otherwise use the defaults. If *sections* are specified, 
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
-    if not args.hdf_file_save_log:
+    if not args.hdf_file_update:
         log.warning(" *** Not saving log data to the projection HDF file.")
         return
     with h5py.File(args.hdf_file,'r+') as hdf_file:
