@@ -230,7 +230,7 @@ def fread_source_data():
         f_path = os.path.join(data_path, f_name)
         #print(f_path)
         if os.path.isfile(f_path) and f_name.startswith('Psi'):
-            log.info('  *** source file {:s} located'.format(f_name))
+            log.info('  *** *** source file {:s} located'.format(f_name))
             f_angle = float(f_name.split('_')[1][:2])
             spectral_data = np.genfromtxt(f_path, comments='!')
             spectral_energies = spectral_data[:,0] / 1000.
@@ -387,14 +387,14 @@ def initialize(params):
     '''
     log.info('  *** beam hardening')
     if params.beam_hardening_method != 'standard':
-        log.info('   *** OFF')
+        log.info('   *** *** OFF')
         return params
     if params.scintillator_auto:
-        log.info('  *** Find scintillator params from DXchange')
+        log.info('  *** *** Find scintillator params from DXchange')
         params.scintillator_thickness = float(config.param_from_dxchange(params.hdf_file, 
                                             '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
                                             attr = None, scalar = True, char_array=False))
-        log.info('  *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
+        log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
         scint_material_string = config.param_from_dxchange(params.hdf_file,
                                             '/measurement/instrument/detection_system/scintillator/description',
                                             scalar = False, char_array = True)
@@ -405,17 +405,17 @@ def initialize(params):
         elif scint_material_string.lower().startswith('yag'):
             params.scintillator_material = 'YAG_Ce' 
         else:
-            log.warning('  *** scintillator {:s} not recognized!'.format(scint_material_string))
-            log.warning('  *** using scintillator {:s}'.format(params.scintillator_material))
+            log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
+        log.warning('  *** *** using scintillator {:s}'.format(params.scintillator_material))
     fread_config_file()
     global spectra_dict
     spectra_dict = fread_source_data()
     parse_params(params)
     center_row = find_center_row(params)
-    log.info("Center row for beam hardening = {0:f}".format(center_row))
+    log.info("  *** *** Center row for beam hardening = {0:f}".format(center_row))
     if int(params.binning) > 0:
         center_row /= pow(2, int(params.binning))
-        log.info("Center row after binning = {:f}".format(center_row))
+        log.info("  *** *** Center row after binning = {:f}".format(center_row))
     params.center_row = center_row
-    log.info('  *** beam hardening initialization finished')
+    log.info('  *** *** beam hardening initialization finished')
     return params
