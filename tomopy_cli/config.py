@@ -46,6 +46,18 @@ SECTIONS['find-rotation-axis'] = {
         'type': float,
         'default': 10.0,
         'help': "+/- center search width (pixel). Search is in 0.5 pixel increments"},
+    'rotation-axis': {
+        'default': -1.0,
+        'type': float,
+        'help': "Location of rotation axis"},
+    'rotation-axis-auto': {
+        'default': False,
+        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it.",
+        'action': 'store_true'},
+    'rotation-axis-flip': {
+        'default': -1.0,
+        'type': float,
+        'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
         }
 
 SECTIONS['file-reading'] = {
@@ -59,9 +71,9 @@ SECTIONS['file-reading'] = {
         'type': str,
         'help': "Input file type",
         'choices': ['standard', 'flip_and_stich', 'mosaic']},
-    'hdf-file-save-log': {
+    'hdf-file-update': {
         'default': False,
-        'help': 'When set, the content of the config file is saved in the raw hdf dataset',
+        'help': 'When set, the content of the hdf file /process tag is updated using the current config file information',
         'action': 'store_true'},
     'nsino': {
         'default': 0.5,
@@ -77,17 +89,6 @@ SECTIONS['file-reading'] = {
         'default': 0,
         'help': "Reconstruction binning factor as power(2, choice)",
         'choices': [0, 1, 2, 3]},
-    'rotation-axis': {
-        'default': -1.0,
-        'type': float,
-        'help': "Location of rotation axis"},
-    'rotation-axis-auto': {
-        'default': True,
-        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it."},
-    'rotation-axis-flip': {
-        'default': -1.0,
-        'type': float,
-        'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
     'reverse': {
         'default': False,
         'help': 'When set, the data set was collected in reverse (180-0)',
@@ -481,12 +482,13 @@ def write(config_file, args=None, sections=None):
 
             if name != 'config':
                 config.set(section, prefix + name, str(value))
+
+
     with open(config_file, 'w') as f:
         config.write(f)
 
-    if args.hdf_file_save_log:
-        write_hdf(config_file, args, sections)
-
+    if args is not None:
+        write_hdf(config_file, args, sections)       
 
 def write_hdf(config_file, args=None, sections=None):
     """
@@ -494,12 +496,12 @@ def write_hdf(config_file, args=None, sections=None):
     if they are specified, otherwise use the defaults. If *sections* are specified, 
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
-    if not args.hdf_file_save_log:
-        log.info(" *** Not saving log data to the projection HDF file.")
+    if not args.hdf_file_update:
+        log.warning(" *** Not saving log data to the projection HDF file.")
         return
     with h5py.File(args.hdf_file,'r+') as hdf_file:
         #dt = h5py.string_dtype(encoding='ascii')
-        log.info("  *** tomopy.conf parameter written to /process in file %s " % args.hdf_file)
+        log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.hdf_file))
         config = configparser.ConfigParser()
         for section in SECTIONS:
             config.add_section(section)
