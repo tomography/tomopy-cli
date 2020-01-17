@@ -18,26 +18,12 @@ def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
 
-    # If we are performing beam hardening, initialize it
-    params = beamhardening.initialize(params)
+    #Read parameters from DXchange file if requested
+    params = file_io.auto_read_dxchange(params)
+    if params.rotation_axis <= 0:
+        params.rotation_axis =  data_shape[2]/2
+        log.warning('  *** *** No rotation center given: assuming the middle of the projections at %f' % float(params.rotation_axis))
     
-    #Determine rotation axis
-    if (params.rotation_axis_auto == True):
-        log.warning('  *** Auto axis location requested')
-        params.rotation_axis = file_io.read_rot_center(params)
-        #Take care of case where there wasn't a rotation axis stored.  
-        if (params.rotation_axis == 0):
-            log.warning('  *** *** Computing rotation axis')
-            params.rotation_axis = find_center.find_rotation_axis(params) 
-        else:
-            log.warning(' *** *** found rotation axis stored in hdf file %f' % float(params.rotation_axis))
-    else:
-        if params.rotation_axis < 0:
-            params.rotation_axis = file_io.read_rot_center(params)
-            if not params.rotation_axis:
-                params.rotation_axis =  data_shape[2]/2
-                log.warning('  *** *** No rotation center given: assuming the middle of the projections at %f' % float(params.rotation_axis))
-
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):
         if params.start_row:
