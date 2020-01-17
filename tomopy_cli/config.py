@@ -107,7 +107,15 @@ SECTIONS['file-reading'] = {
     'end-row': {
         'default': -1,
         'type': int,
-        'help': 'Row on which to end reconstruction.  Negative values = last row of projection data.'}
+        'help': 'Row on which to end reconstruction.  Negative values = last row of projection data.'},
+    'scintillator-auto': {
+        'default': False,
+        'help': "When set, read scintillator properties from DXchange file",
+        'action': 'store_true'},
+    'pixel-size-auto': {
+        'default': False,
+        'help': "When set, read effective pixel size from DXchange file",
+        'action': 'store_true'},
        }
 
 SECTIONS['missing-angles'] = {
@@ -253,10 +261,6 @@ SECTIONS['beam-hardening']= {
         'default': 36.0,
         'type': float,
         'help': 'Distance from source to scintillator in m'},
-    'scintillator-auto': {
-        'default': False,
-        'help': "When set, read scintillator properties from DXchange file",
-        'action': 'store_true'},
     'scintillator-material': {
         'default': 'LuAG_Ce',
         'type': str,

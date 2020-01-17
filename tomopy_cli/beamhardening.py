@@ -388,25 +388,6 @@ def initialize(params):
     log.info('  *** beam hardening')
     if params.beam_hardening_method != 'standard':
         log.info('   *** *** OFF')
-        return params
-    if params.scintillator_auto:
-        log.info('  *** *** Find scintillator params from DXchange')
-        params.scintillator_thickness = float(config.param_from_dxchange(params.hdf_file, 
-                                            '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
-                                            attr = None, scalar = True, char_array=False))
-        log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
-        scint_material_string = config.param_from_dxchange(params.hdf_file,
-                                            '/measurement/instrument/detection_system/scintillator/description',
-                                            scalar = False, char_array = True)
-        if scint_material_string.lower().startswith('luag'):
-            params.scintillator_material = 'LuAG_Ce'
-        elif scint_material_string.lower().startswith('lyso'):
-            params.scintillator_material = 'LYSO_Ce'
-        elif scint_material_string.lower().startswith('yag'):
-            params.scintillator_material = 'YAG_Ce' 
-        else:
-            log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
-        log.warning('  *** *** using scintillator {:s}'.format(params.scintillator_material))
     fread_config_file()
     global spectra_dict
     spectra_dict = fread_source_data()
@@ -418,4 +399,3 @@ def initialize(params):
         log.info("  *** *** Center row after binning = {:f}".format(center_row))
     params.center_row = center_row
     log.info('  *** *** beam hardening initialization finished')
-    return params
