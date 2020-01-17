@@ -28,19 +28,22 @@ def rec(params):
         params.center_row = center_row
 
     #Determine rotation axis
-    if params.rotation_axis_auto:
+    # if (params.rotation_axis_auto): # HELP .... why this is True when arams.rotation_axis_auto = False ???
+    if (params.rotation_axis_auto == True):
+        log.warning('Auto axis location requested')
         params.rotation_axis = file_io.read_rot_center(params)
         #Take care of case where there wasn't a rotation axis stored.  
-        if not params.rotation_axis:
-            log.warning('No rotation axis stored and auto axis location requested.')
-            log.warning('Computing rotation axis.')
-            params.rotation_axis = find_center.find_rotation_axis(params)        
+        if (params.rotation_axis == 0):
+            log.warning('Computing rotation axis')
+            params.rotation_axis = find_center.find_rotation_axis(params) 
+        else:
+            log.warning(' *** found rotation axis stored in hdf file %f' % float(params.rotation_axis))
     else:
         if params.rotation_axis < 0:
             params.rotation_axis = file_io.read_rot_center(params)
             if not params.rotation_axis:
-                log.warning('No rotation center given: assuming the middle of the projections.')
                 params.rotation_axis =  data_shape[2]/2
+                log.warning('No rotation center given: assuming the middle of the projections at %f' % float(params.rotation_axis))
 
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):
