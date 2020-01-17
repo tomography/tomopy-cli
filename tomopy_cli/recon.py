@@ -1,7 +1,8 @@
 import os
 import sys
 import shutil
-import pathlib
+from pathlib import Path
+from multiprocessing import cpu_count
 import threading
 import numpy as np
 import tomopy
@@ -18,15 +19,8 @@ def rec(params):
     data_shape = file_io.get_dx_dims(params)
 
     # If we are performing beam hardening, initialize it
-    if params.beam_hardening_method == 'standard':
-        beamhardening.parse_params(params)
-        center_row = beamhardening.find_center_row(params)
-        log.info("Center row for beam hardening = {0:f}".format(center_row))
-        if int(params.binning) > 0:
-            center_row /= pow(2, int(params.binning))
-            log.info("Center row after binning = {:f}".format(center_row))
-        params.center_row = center_row
-
+    params = beamhardening.initialize(params)
+    
     #Determine rotation axis
     if params.rotation_axis_auto:
         params.rotation_axis = file_io.read_rot_center(params)
@@ -52,6 +46,9 @@ def rec(params):
             sino_end = data_shape[1]
         else:
             sino_end = params.end_row 
+        #If params.nsino_per_chunk < 1, use # of processor cores
+        if params.nsino_per_chunk < 1:
+            params.nsino_per_chunk = cpu_count()
         nSino_per_chunk = params.nsino_per_chunk
         chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))    
 
@@ -131,14 +128,14 @@ def rec(params):
                 #dxchange.write_tiff_stack(rec, fname=fname, start=strt)
                 strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
             if (params.reconstruction_type == "slice"):
-                fname = os.path.dirname(params.hdf_file)  + os.sep + 'slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
+                fname = Path.joinpath(Path(params.hdf_file).parent, 'slice_rec','recon_'+str(Path(params.hdf_file).stem))
+                fname = str(fname)
+                #fname = os.path.dirname(params.hdf_file)  + os.sep + 'slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
                 dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
-
 
         log.info("  *** reconstructions: %s" % fname)
 
     
-
 def padded_rec(data, theta, rotation_axis, params):
 
     # original shape
@@ -236,4 +233,3 @@ def mask(data, params):
     else:
         log.warning('  *** *** OFF')
     return data
-

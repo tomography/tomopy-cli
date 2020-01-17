@@ -68,10 +68,9 @@ SECTIONS['file-reading'] = {
         'type': float,
         'help': 'Location of the sinogram used for slice reconstruction and find axis (0 top, 1 bottom)'},
     'nsino-per-chunk': {     
-        'type': util.positive_int,
+        'type': int,
         'default': 32,
-        'help': "Number of sinagram per chunk. Use larger numbers with computers with larger memory",
-        'choices': [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]},
+        'help': "Number of sinograms per chunk. Use larger numbers with computers with larger memory.  Value <= 0 defaults to # of cpus.",},
     'binning': {
         'type': util.positive_int,
         'default': 0,
@@ -253,6 +252,10 @@ SECTIONS['beam-hardening']= {
         'default': 36.0,
         'type': float,
         'help': 'Distance from source to scintillator in m'},
+    'scintillator-auto': {
+        'default': False,
+        'help': "When set, read scintillator properties from DXchange file",
+        'action': 'store_true'},
     'scintillator-material': {
         'default': 'LuAG_Ce',
         'type': str,
@@ -548,9 +551,3 @@ def log_values(args):
                 log.info("  {:<16} {}".format(entry, value))
 
     log.warning('tomopy-cli status end')
-
-
-
-
-
-
