@@ -52,7 +52,8 @@ SECTIONS['find-rotation-axis'] = {
         'help': "Location of rotation axis"},
     'rotation-axis-auto': {
         'default': False,
-        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it."},
+        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it.",
+        'action': 'store_true'},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
