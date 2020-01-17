@@ -209,7 +209,9 @@ def read_rot_center(params):
     """
     with h5py.File(params.hdf_file) as hdf_file:
         try:
-            rot_center = hdf_file['/process/rot_center'][0]
+            #Find the group /process/tomopy-cli-VERSION#
+            meta_group = [k for k in hdf_file['/process'].keys() if k.startswith('tomopy-cli')][0]
+            rot_center = float(hdf_file['/process'][meta_group]['rotation-axis'][0])
             log.info('Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
             return rot_center
         except KeyError:
