@@ -11,40 +11,27 @@ __YELLOW = '\033[33m'
 __ENDC = '\033[0m'
 
 
-logger = None
 info_extra={'endColor': __ENDC, 'color': __GREEN}
 warn_extra={'endColor': __ENDC, 'color': __YELLOW}
 error_extra={'endColor': __ENDC, 'color': __RED}
 
+logger = logging.getLogger(__name__)
+
 def info(msg):
-    global logger
-    global info_extra
-    logger.info(msg, extra=info_extra)
+    logger.info(info_extra['color']+ msg + info_extra['endColor'])
 
 def error(msg):
-    global logger
-    global error_extra
-    logger.error(msg, extra=error_extra)
+    logger.error(error_extra['color']+ msg + error_extra['endColor'])
 
 def warning(msg):
-    global logger
-    global warn_extra
-    logger.warning(msg, extra=warn_extra)
+    logger.warning(warn_extra['color']+ msg + warn_extra['endColor'])
 
 
-def setup_logger(log_name, stream_to_console=True):
-    global logger
-    global info_extra
-    global warn_extra
-    global error_extra
+def setup_custom_logger(lfname, stream_to_console=True):
 
-    info_extra['logger_name'] = log_name
-    warn_extra['logger_name'] = log_name
-    error_extra['logger_name'] = log_name
-    logger = logging.getLogger(log_name)
-    fHandler = logging.FileHandler(log_name)
+    fHandler = logging.FileHandler(lfname)
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s %(color)s  %(message)s %(endColor)s")
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
     fHandler.setFormatter(formatter)
     logger.addHandler(fHandler)
     if stream_to_console:
@@ -52,5 +39,3 @@ def setup_logger(log_name, stream_to_console=True):
         ch.setFormatter(formatter)
         ch.setLevel(logging.DEBUG)
         logger.addHandler(ch)
-
-

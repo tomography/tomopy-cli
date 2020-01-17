@@ -8,6 +8,7 @@ import dxchange.reader as dxreader
 import numpy as np
 
 from tomopy_cli import log
+from tomopy_cli import __version__
 
  
 def read_tomo(sino, params):
@@ -132,7 +133,7 @@ def patch_projection(data, miss_angles):
     slider(np.log(np.abs(fdatanew.swapaxes(0,1))), axis=0)
     a = np.real(np.fft.ifft(fdatanew,axis=2))
     b = np.imag(np.fft.ifft(fdatanew,axis=2))
-    # print(a.shape)
+
     slider(a.swapaxes(0,1), axis=0)
     slider(b.swapaxes(0,1), axis=0)
     return np.real(np.fft.ifft(fdatanew,axis=2))
@@ -207,13 +208,13 @@ def read_rot_center(params):
     Read the rotation center from /process group in the DXchange file.
     Return: rotation center from this dataset or None if it doesn't exist.
     """
-    with h5py.File(params.hdf_file) as hdf_file:
+
+    with h5py.File(params.hdf_file, 'r') as hdf_file:
         try:
-            #Find the group /process/tomopy-cli-VERSION#
-            meta_group = [k for k in hdf_file['/process'].keys() if k.startswith('tomopy-cli')][0]
-            rot_center = float(hdf_file['/process'][meta_group]['rotation-axis'][0])
+            dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
+            rot_center = float(hdf_file[dataset][0])
             log.info('Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
             return rot_center
         except KeyError:
-            log.warning('No rotation center stored in the HDF5 file.')
+            log.warning('No rotation center stored in the HDF5 file')
             return 0
