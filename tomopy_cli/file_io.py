@@ -213,8 +213,8 @@ def read_rot_center(params):
         try:
             dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
             rot_center = float(hdf_file[dataset][0])
-            log.info('Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
+            log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
             return rot_center
-        except KeyError:
-            log.warning('No rotation center stored in the HDF5 file')
+        except (KeyError, ValueError):
+            log.warning('  *** *** No rotation center stored in the HDF5 file')
             return 0
