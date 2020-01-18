@@ -149,10 +149,10 @@ def beamhardening_correct(data, params, sino):
     data = beamhardening.fcorrect_as_pathlength_centerline(data)
     #Make an array of correction factors
     beamhardening.center_row = params.center_row
-    log.info("Beam hardening center row = {:f}".format(beamhardening.center_row))
+    log.info("  *** *** Beam hardening center row = {:f}".format(beamhardening.center_row))
     angles = np.abs(np.arange(sino[0], sino[1])- beamhardening.center_row).astype(data_dtype)
     angles *= beamhardening.pixel_size / beamhardening.d_source
-    log.info("  *** angles from {0:f} to {1:f} urad".format(angles[0], angles[-1]))
+    log.info("  *** *** angles from {0:f} to {1:f} urad".format(angles[0], angles[-1]))
     correction_factor = beamhardening.angular_spline(angles).astype(data_dtype)
     if len(data.shape) == 2:
         return data* correction_factor[:,None]
