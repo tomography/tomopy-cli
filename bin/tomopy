@@ -25,6 +25,9 @@ def init(args):
     else:
         log.error("{0} already exists".format(args.config))
 
+def run_status(args):
+
+    config.log_values(args)
 
 def run_find_center(args):
 
@@ -136,6 +139,7 @@ def main():
     cmd_parsers = [
         ('init',        init,            (),                             "Create configuration file"),
         ('recon',       run_rec,         tomo_params,                    "Run tomographic reconstruction"),
+        ('status',      run_status,      tomo_params,                    "Show the tomographic reconstruction status"),
         ('segment',     run_seg,         tomo_params,                    "Run segmentation on reconstured data"),
         ('find_center', run_find_center, find_center_params,             "Find rotation axis location for all hdf files in a directory"),
     ]
@@ -163,7 +167,7 @@ def main():
     log.info("Saving log at %s" % lfname)
 
     try:
-        config.log_values(args)
+        # config.log_values(args)
         args._func(args)
     except RuntimeError as e:
         log.error(str(e))
