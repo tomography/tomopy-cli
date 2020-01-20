@@ -172,7 +172,7 @@ SECTIONS['flat-correction'] = {
         'type': float,
         'help': "Values to be replaced with negative values in array"},
     'minus-log': {
-        'default': False,
+        'default': True,
         'help': "Minus log",
         'action': 'store_true'},
         }
@@ -228,7 +228,7 @@ SECTIONS['fw'] = {
         'default': 7,
         'help': "Fourier-Wavelet remove stripe level parameter"},
     'fw-pad': {
-        'default': False,
+        'default': True,
         'help': "When set, Fourier-Wavelet remove stripe extend the size of the sinogram by padding with zeros",
         'action': 'store_true'},
     }
@@ -332,11 +332,14 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
-    'padding': {
+        }
+
+SECTIONS['gridrec'] = {
+    'gridrec-padding': {
         'default': False,
         'help': "When set, raw data are padded/unpadded before/after reconstruction",
         'action': 'store_true'},
-        }
+    }
 
 SECTIONS['iterative'] = {
     'iteration-count': {
@@ -346,13 +349,13 @@ SECTIONS['iterative'] = {
     }
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
-                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'iterative')
+                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'gridrec', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Iterative')
+              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Gridrec', 'Iterative')
 
 def get_config_name():
     """Get the command line --config option."""
@@ -554,6 +557,11 @@ def log_values(args):
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
-                log.info("  {:<16} {}".format(entry, value))
+                if (value == 'none'):
+                    log.warning("  {:<16} {}".format(entry, value))
+                elif (value is not False):
+                    log.info("  {:<16} {}".format(entry, value))
+                elif (value is False):
+                    log.warning("  {:<16} {}".format(entry, value))
 
     log.warning('tomopy-cli status end')
