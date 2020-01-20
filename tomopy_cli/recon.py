@@ -111,7 +111,7 @@ def rec(params):
                 fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
-                                                kwargs = {'fname':fname, 'start':strt})
+                                                kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
                 write_thread.start()
                 #dxchange.write_tiff_stack(rec, fname=fname, start=strt)
                 strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
