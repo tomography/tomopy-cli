@@ -547,7 +547,12 @@ def log_values(args):
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
-                log.info("  {:<16} {}".format(entry, value))
+                if (value == 'none'):
+                    log.warning("  {:<16} {}".format(entry, value))
+                elif (value is not False):
+                    log.info("  {:<16} {}".format(entry, value))
+                elif (value is False):
+                    log.warning("  {:<16} {}".format(entry, value))
 
     log.warning('tomopy-cli status end')
 
