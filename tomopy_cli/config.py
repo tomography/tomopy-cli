@@ -325,11 +325,14 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
-    'padding': {
+        }
+
+SECTIONS['gridrec'] = {
+    'gridrec-padding': {
         'default': False,
         'help': "When set, raw data are padded/unpadded before/after reconstruction",
         'action': 'store_true'},
-        }
+    }
 
 SECTIONS['iterative'] = {
     'iteration-count': {
@@ -339,13 +342,13 @@ SECTIONS['iterative'] = {
     }
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
-                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'iterative')
+                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'gridrec', 'iterative')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Iterative')
+              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Gridrec', 'Iterative')
 
 def get_config_name():
     """Get the command line --config option."""

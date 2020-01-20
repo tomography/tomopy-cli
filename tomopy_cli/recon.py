@@ -162,7 +162,7 @@ def padding(data, rotation_axis, params):
 
     log.info("  *** padding")
 
-    if(params.padding):
+    if(params.gridrec_padding):
         log.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
@@ -183,7 +183,7 @@ def padding(data, rotation_axis, params):
 def unpadding(rec, N, params):
 
     log.info("  *** un-padding")
-    if(params.padding):
+    if(params.gridrec_padding):
         log.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
