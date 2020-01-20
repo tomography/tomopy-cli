@@ -172,7 +172,7 @@ SECTIONS['flat-correction'] = {
         'type': float,
         'help': "Values to be replaced with negative values in array"},
     'minus-log': {
-        'default': False,
+        'default': True,
         'help': "Minus log",
         'action': 'store_true'},
         }
@@ -228,7 +228,7 @@ SECTIONS['fw'] = {
         'default': 7,
         'help': "Fourier-Wavelet remove stripe level parameter"},
     'fw-pad': {
-        'default': False,
+        'default': True,
         'help': "When set, Fourier-Wavelet remove stripe extend the size of the sinogram by padding with zeros",
         'action': 'store_true'},
     }
@@ -400,7 +400,6 @@ SECTIONS['astrasart'] = {
         'type': util.positive_int,
         'help': 'Number of requested iterations for ASTRA-SART.'},
     }
-
 
 SECTIONS['iterative'] = {
     'iteration-count': {
@@ -623,6 +622,11 @@ def log_values(args):
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
-                log.info("  {:<16} {}".format(entry, value))
+                if (value == 'none'):
+                    log.warning("  {:<16} {}".format(entry, value))
+                elif (value is not False):
+                    log.info("  {:<16} {}".format(entry, value))
+                elif (value is False):
+                    log.warning("  {:<16} {}".format(entry, value))
 
     log.warning('tomopy-cli status end')
