@@ -9,6 +9,9 @@ import numpy as np
 
 from tomopy_cli import log
 from tomopy_cli import __version__
+from tomopy_cli import find_center
+from tomopy_cli import config
+from tomopy_cli import beamhardening
 
  
 def read_tomo(sino, params):
@@ -203,18 +206,92 @@ def read_rot_centers(params):
         log.error("ERROR: $ tomopy find_center --hdf-file %s" % top)
         exit()
 
+
+def auto_read_dxchange(params):
+    log.info('  *** Auto parameter reading from DXchange file.')
+    params = read_pixel_size(params)
+    params = read_scintillator(params)
+    params = read_rot_center(params)
+    log.info('  *** *** Done')
+    return params
+
+
 def read_rot_center(params):
     """
     Read the rotation center from /process group in the DXchange file.
     Return: rotation center from this dataset or None if it doesn't exist.
     """
-
+    log.info('  *** *** rotation axis')
+    #First, try to read from the /process/tomopy-cli parameters
     with h5py.File(params.hdf_file, 'r') as hdf_file:
         try:
             dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
-            rot_center = float(hdf_file[dataset][0])
-            log.info('Rotation center read from HDF5 file: {0:f}'.format(rot_center)) 
-            return rot_center
-        except KeyError:
-            log.warning('No rotation center stored in the HDF5 file')
-            return 0
+            params.rotation_axis = float(hdf_file[dataset][0])
+            log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
+            return params
+        except (KeyError, ValueError):
+            log.warning('  *** *** No rotation center stored in the HDF5 file')
+    #If we get here, we need to either find it automatically or from config file.
+    log.warning('  *** *** No rotation axis stored in DXchange file')
+    if (params.rotation_axis_auto == True):
+        log.warning('  *** *** Auto axis location requested')
+        log.warning('  *** *** Computing rotation axis')
+        params.rotation_axis = find_center.find_rotation_axis(params) 
+    log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
+    return params
+
+
+def read_pixel_size(params):
+    '''
+    Read the pixel size and magnification from the DXchange file.
+    Use to compute the effective pixel size.
+    '''
+    log.info('  *** auto pixel size reading')
+    if params.pixel_size_auto != True:
+        log.info('  *** *** OFF')
+        return params
+    pixel_size = config.param_from_dxchange(params.hdf_file,
+                                            '/measurement/instrument/detector/pixel_size_x')
+    mag = config.param_from_dxchange(params.hdf_file,
+                                    '/measurement/instrument/detection_system/objective/magnification')
+    #Handle case where something wasn't read right
+    if not (pixel_size and mag):
+        log.warning('  *** *** problem reading pixel size from DXchange')
+        return params
+    #What if pixel size isn't in microns, but in mm or m?
+    for i in range(3):
+        if pixel_size < 0.5:
+            pixel_size *= 1e3
+        else:
+            break
+    params.pixel_size = pixel_size / mag
+    log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
+    return params
+
+
+def read_scintillator(params):
+    '''Read the scintillator type and thickness from DXchange.
+    '''
+    if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
+        log.info('  *** *** Find scintillator params from DXchange')
+        params.scintillator_thickness = float(config.param_from_dxchange(params.hdf_file, 
+                                            '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
+                                            attr = None, scalar = True, char_array=False))
+        log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
+        scint_material_string = config.param_from_dxchange(params.hdf_file,
+                                            '/measurement/instrument/detection_system/scintillator/description',
+                                            scalar = False, char_array = True)
+        if scint_material_string.lower().startswith('luag'):
+            params.scintillator_material = 'LuAG_Ce'
+        elif scint_material_string.lower().startswith('lyso'):
+            params.scintillator_material = 'LYSO_Ce'
+        elif scint_material_string.lower().startswith('yag'):
+            params.scintillator_material = 'YAG_Ce' 
+        else:
+            log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
+        log.warning('  *** *** using scintillator {:s}'.format(params.scintillator_material))
+    #Run the initialization for beam hardening.  Needed in case rotation_axis must
+    #be computed later.
+    if params.beam_hardening_method.lower() == 'standard':
+        beamhardening.initialize(params)
+    return params 
