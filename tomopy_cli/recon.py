@@ -143,8 +143,9 @@ def padded_rec(data, theta, rotation_axis, params):
 def padding(data, rotation_axis, params):
 
     log.info("  *** padding")
-
-    if(params.padding):
+    if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
+        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
+    #if(params.padding):
         log.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
@@ -165,7 +166,9 @@ def padding(data, rotation_axis, params):
 def unpadding(rec, N, params):
 
     log.info("  *** un-padding")
-    if(params.padding):
+    if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
+        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
+    #if(params.padding):
         log.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
@@ -183,8 +186,36 @@ def reconstruct(data, theta, rot_center, params):
                
     log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
     if params.reconstruction_algorithm == 'astrasirt':
-        extra_options ={'MinConstraint':0}
-        options = {'proj_type':'cuda', 'method':'SIRT_CUDA', 'num_iter':200, 'extra_options':extra_options}
+        extra_options ={}
+        try:
+            extra_options['MinConstraint'] = float(params.astrasirt_min_constraint)
+        except ValueError:
+            log.warning('Invalid astrasirt_min_constraint value.  Ignoring.')
+        try:
+            extra_options['MaxConstraint'] = float(params.astrasirt_max_constraint)
+        except ValueError:
+            log.warning('Invalid astrasirt_max_constraint value.  Ignoring.')
+        options = {'proj_type':params.astrasirt_proj_type,
+                    'method': params.astrasirt_method,
+                    'num_iter': params.astrasirt_num_iter,
+                    'extra_options': extra_options,}
+        shift = (int((data.shape[2]/2 - rot_center)+.5))
+        data = np.roll(data, shift, axis=2)
+        rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+    elif params.reconstruction_algorithm == 'astrasart':
+        extra_options ={}
+        try:
+            extra_options['MinConstraint'] = float(params.astrasart_min_constraint)
+        except ValueError:
+            log.warning('Invalid astrasart_min_constraint value.  Ignoring.')
+        try:
+            extra_options['MaxConstraint'] = float(params.astrasart_max_constraint)
+        except ValueError:
+            log.warning('Invalid astrasart_max_constraint value.  Ignoring.')
+        options = {'proj_type':params.astrasart_proj_type,
+                    'method': params.astrasart_method,
+                    'num_iter': params.astrasart_num_iter,
+                    'extra_options': extra_options,}
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
@@ -196,7 +227,19 @@ def reconstruct(data, theta, rot_center, params):
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
-        rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
+        rec = tomopy.recon(data, theta, 
+                            center=rot_center, 
+                            sinogram_order=sinogram_order, 
+                            algorithm='gridrec', 
+                            filter_name=params.gridrec_filter)
+    elif params.reconstruction_algorithm == 'lprec_fbp':
+        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        rec = tomopy.recon(data, theta, 
+                            center=rot_center, 
+                            sinogram_order=sinogram_order, 
+                            algorithm=tomopy.lprec,
+                            lpmethod='fbp', 
+                            filter_name=params.lprec_fbp_filter)
     else:
         log.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
         params.reconstruction_algorithm = 'gridrec'
