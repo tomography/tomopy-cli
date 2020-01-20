@@ -309,11 +309,6 @@ SECTIONS['beam-hardening']= {
     }
 
 SECTIONS['reconstruction'] = {
-    'filter': {
-        'default': 'parzen',
-        'type': str,
-        'help': "Reconstruction filter",
-        'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
     'reconstruction-type': {
         'default': 'try',
         'type': str,
@@ -323,7 +318,7 @@ SECTIONS['reconstruction'] = {
         'default': 'gridrec',
         'type': str,
         'help': "Reconstruction algorithm",
-        'choices': ['art', 'astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
+        'choices': ['art', 'astrasart','astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'lprec_fbp', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
     'reconstruction-mask': {
         'default': False,
         'help': "When set, applies circular mask to the reconstructed slices",
@@ -332,11 +327,80 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
-    'padding': {
+        }
+
+SECTIONS['gridrec'] = {
+    'gridrec-filter': {
+        'default': 'parzen',
+        'type': str,
+        'help': 'Filter used for gridrec reconstruction',
+        'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
+    'gridrec-padding': {
         'default': False,
         'help': "When set, raw data are padded/unpadded before/after reconstruction",
         'action': 'store_true'},
-        }
+    }
+
+SECTIONS['lprec-fbp'] = {
+    'lprec-fbp-filter': {
+        'default': 'parzen',
+        'type': str,
+        'help': 'Filter used for lprec-fbp reconstruction',
+        'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
+    'lprec-fbp-padding': {
+        'default': False,
+        'help': "When set, raw data are padded/unpadded before/after reconstruction",
+        'action': 'store_true'},
+    }
+    
+SECTIONS['astrasirt'] = {
+    'astrasirt-proj-type': {
+        'default': 'cuda',
+        'choices': ['cuda', 'linear'],
+        'type': str,
+        'help': 'Projection type for ASTRA-SIRT.  CPU = linear, GPU = cuda.'},
+    'astrasirt-method': {
+        'default': 'SIRT_CUDA',
+        'type': str,
+        'help': 'Parameter passed to ASTRA for ASTRA-SIRT algorithm.'},
+    'astrasirt-min-constraint': {
+        'default': 'None',
+        'type': str,
+        'help': 'Minimum constraint for ASTRA-SIRT reconstruction.  None = no constraint.'},
+    'astrasirt-max-constraint': {
+        'default': 'None',
+        'type': str,
+        'help': 'Maximum constraint for ASTRA-SIRT reconstruction.  None = no constraint.'},
+    'astrasirt-num_iter': {
+        'default': 200,
+        'type': util.positive_int,
+        'help': 'Number of requested iterations for ASTRA-SIRT.'},
+    }
+
+SECTIONS['astrasart'] = {
+    'astrasart-proj-type': {
+        'default': 'cuda',
+        'choices': ['cuda', 'linear'],
+        'type': str,
+        'help': 'Projection type for ASTRA-SART.  CPU = linear, GPU = cuda.'},
+    'astrasart-method': {
+        'default': 'SART_CUDA',
+        'type': str,
+        'help': 'Parameter passed to ASTRA for ASTRA-SART algorithm.'},
+    'astrasart-min-constraint': {
+        'default': 'None',
+        'type': str,
+        'help': 'Minimum constraint for ASTRA-SART reconstruction.  None = no constraint.'},
+    'astrasart-max-constraint': {
+        'default': 'None',
+        'type': str,
+        'help': 'Maximum constraint for ASTRA-SART reconstruction.  None = no constraint.'},
+    'astrasart-num_iter': {
+        'default': 200,
+        'type': util.positive_int,
+        'help': 'Number of requested iterations for ASTRA-SART.'},
+    }
+
 
 SECTIONS['iterative'] = {
     'iteration-count': {
@@ -346,13 +410,15 @@ SECTIONS['iterative'] = {
     }
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
-                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'iterative')
+                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'iterative',
+                'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Iterative')
+              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Iterative',
+                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)')
 
 def get_config_name():
     """Get the command line --config option."""
@@ -507,6 +573,9 @@ def write_hdf(config_file, args=None, sections=None):
         log.warning(" *** Not saving log data to the projection HDF file.")
         return
     with h5py.File(args.hdf_file,'r+') as hdf_file:
+        #If the group we will write to already exists, remove it
+        if hdf_file.get('/process/tomopy-cli-' + __version__):
+            del(hdf_file['/process/tomopy-cli-' + __version__])
         #dt = h5py.string_dtype(encoding='ascii')
         log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.hdf_file))
         config = configparser.ConfigParser()
