@@ -375,6 +375,10 @@ SECTIONS['astrasirt'] = {
         'default': 200,
         'type': util.positive_int,
         'help': 'Number of requested iterations for ASTRA-SIRT.'},
+    'astrasirt-bootstrap': {
+        'default': False,
+        'help': 'When set, gridrec is run first and used to initialize ASTRA-SIRT.',
+        'action': 'store_true',},
     }
 
 SECTIONS['astrasart'] = {
@@ -399,6 +403,10 @@ SECTIONS['astrasart'] = {
         'default': 200,
         'type': util.positive_int,
         'help': 'Number of requested iterations for ASTRA-SART per projection angle.'},
+    'astrasart-bootstrap': {
+        'default': False,
+        'help': 'When set, gridrec is run first and used to initialize ASTRA-SART.',
+        'action': 'store_true',},
     }
 
 SECTIONS['astracgls'] = {
@@ -415,24 +423,21 @@ SECTIONS['astracgls'] = {
         'default': 200,
         'type': util.positive_int,
         'help': 'Number of requested iterations for ASTRA-CGLS.'},
-    }
-
-SECTIONS['iterative'] = {
-    'iteration-count': {
-        'default': 10,
-        'type': util.positive_int,
-        'help': "Maximum number of iterations"},
+    'astracgls-bootstrap': {
+        'default': False,
+        'help': 'When set, gridrec is run first and used to initialize ASTRA-GCLS.',
+        'action': 'store_true',},
     }
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
-                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'iterative',
+                'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
                 'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
-              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Iterative',
+              'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 
                 'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)')
 
 def get_config_name():

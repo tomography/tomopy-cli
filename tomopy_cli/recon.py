@@ -198,9 +198,20 @@ def reconstruct(data, theta, rot_center, params):
                     'method': params.astrasirt_method,
                     'num_iter': params.astrasirt_num_iter,
                     'extra_options': extra_options,}
+        if params.astrasirt_bootstrap:
+            log.info('  *** *** bootstrapping with gridrec')
+            rec = tomopy.recon(data, theta, 
+                            center=rot_center, 
+                            sinogram_order=sinogram_order, 
+                            algorithm='gridrec', 
+                            filter_name=params.gridrec_filter)
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
-        rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+        if params.astrasirt_bootstrap:
+            log.info('  *** *** using gridrec to start astrasirt recon')
+            rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
+        else:
+            rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'astrasart':
         extra_options ={}
         try:
@@ -215,8 +226,20 @@ def reconstruct(data, theta, rot_center, params):
                     'method': params.astrasart_method,
                     'num_iter': params.astrasart_num_iter * data.shape[0],
                     'extra_options': extra_options,}
+        if params.astrasart_bootstrap:
+            log.info('  *** *** bootstrapping with gridrec')
+            rec = tomopy.recon(data, theta, 
+                            center=rot_center, 
+                            sinogram_order=sinogram_order, 
+                            algorithm='gridrec', 
+                            filter_name=params.gridrec_filter)
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
+        if params.astrasart_bootstrap:
+            log.info('  *** *** using gridrec to start astrasart recon')
+            rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
+        else:
+            rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'astracgls':
         extra_options ={}
@@ -224,9 +247,20 @@ def reconstruct(data, theta, rot_center, params):
                     'method': params.astracgls_method,
                     'num_iter': params.astracgls_num_iter,
                     'extra_options': extra_options,}
+        if params.astracgls_bootstrap:
+            log.info('  *** *** bootstrapping with gridrec')
+            rec = tomopy.recon(data, theta, 
+                            center=rot_center, 
+                            sinogram_order=sinogram_order, 
+                            algorithm='gridrec', 
+                            filter_name=params.gridrec_filter)
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
-        rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+        if params.astracgls_bootstrap:
+            log.info('  *** *** using gridrec to start astracgls recon')
+            rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
+        else:
+            rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, 
