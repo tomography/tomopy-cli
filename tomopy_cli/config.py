@@ -61,20 +61,21 @@ SECTIONS['find-rotation-axis'] = {
         }
 
 SECTIONS['file-reading'] = {
-    'hdf-file': {
+    'file-name': {
         'default': '.',
         'type': str,
         'help': "Name of the last used hdf file or directory containing multiple hdf files",
         'metavar': 'PATH'},
-    'hdf-file-type': {
+    'file-format': {
+        'default': 'dx',
+        'type': str,
+        'help': "see from https://dxchange.readthedocs.io/en/latest/source/demo.html",
+        'choices': ['dx', 'anka', 'australian', 'als', 'elettra', 'esrf', 'aps1id', 'aps2bm', 'aps5bm', 'aps7bm', 'aps8bm', 'aps13bm', 'aps32id', 'petraP05', 'tomcat', 'xradia']},
+    'file-type': {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
         'choices': ['standard', 'flip_and_stich', 'mosaic']},
-    'hdf-file-update': {
-        'default': False,
-        'help': 'When set, the content of the hdf file /process tag is updated using the current config file information',
-        'action': 'store_true'},
     'nsino': {
         'default': 0.5,
         'type': float,
@@ -117,6 +118,13 @@ SECTIONS['file-reading'] = {
         'help': "When set, read effective pixel size from DXchange file",
         'action': 'store_true'},
        }
+
+SECTIONS['dx-options'] = {
+    'dx-update': {
+        'default': False,
+        'help': 'When set, the content of the hdf dx file /process tag is updated using the current config file information',
+        'action': 'store_true'},
+        }
 
 SECTIONS['missing-angles'] = {
     'missing-angles-start': {
@@ -429,14 +437,14 @@ SECTIONS['astracgls'] = {
         'action': 'store_true',},
     }
 
-RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
                 'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
-FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
+FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
-NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
+NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'dx-options', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 
                 'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)')
 

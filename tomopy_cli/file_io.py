@@ -27,23 +27,23 @@ def read_tomo(sino, params):
     theta: Numpy array of angle for each projection
     rotation_axis: location of the rotation axis
     """
-    if params.hdf_file_type == 'standard':
+    if params.file_type == 'standard':
         # Read APS 32-BM raw data.
-        log.info("  *** loading a stardard data set: %s" % params.hdf_file)
-        proj, flat, dark, theta = dxchange.read_aps_32id(params.hdf_file, sino=sino)
-    elif params.hdf_file_type == 'flip_and_stich':
-        log.info("   *** loading a 360 deg flipped data set: %s" % params.hdf_file)
-        proj360, flat360, dark360, theta360 = dxchange.read_aps_32id(params.hdf_file, sino=sino)
+        log.info("  *** loading a stardard data set: %s" % params.file_name)
+        proj, flat, dark, theta = _read_tomo(params, sino=sino)
+    elif params.file_type == 'flip_and_stich':
+        log.info("   *** loading a 360 deg flipped data set: %s" % params.file_name)
+        proj360, flat360, dark360, theta360 = _read_tomo(params, sino=sino)
         proj, flat, dark = flip_and_stitch(variableDict, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
-    else: # params.hdf_file_type == 'mosaic':
+    else: # params.file_type == 'mosaic':
         log.error("   *** loading a mosaic data set is not supported yet")
         exit()
 
     if params.reverse:
         log.info("  *** correcting for 180-0 data collection")
         step_size = (theta[1] - theta[0]) 
-        theta_size = dxreader.read_dx_dims(params.hdf_file, 'data')[0]
+        theta_size = _read_theta_size(params)
         theta = np.linspace(np.pi , (0+step_size), theta_size)   
 
     proj, theta = blocked_view(proj, theta, params)
@@ -60,6 +60,34 @@ def read_tomo(sino, params):
     log.info("  *** rotation center: %f" % rotation_axis)
 
     return proj, flat, dark, theta, rotation_axis
+
+
+def _read_theta_size(params):
+    if (str(params.file_type) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+        theta_size = dxreader.read_dx_dims(params.file_name, 'data')[0]
+    # elif:
+    #     # add here other reader of theta size for other formats
+    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
+    else:
+        log.error("  *** %s is not a supported file format" % params.file_format)
+        exit()
+
+    return theta_size
+
+
+def _read_tomo(params, sino):
+
+    if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+        proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
+        log.info("  *** %s is a valid dx file format" % params.file_name)
+    # elif:
+    #     # add here other dxchange loader
+    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
+
+    else:
+        log.error("  *** %s is not a supported file format" % params.file_format)
+        exit()
+    return proj, flat, dark, theta
 
 
 def blocked_view(proj, theta, params):
@@ -161,7 +189,7 @@ def get_dx_dims(params):
 
     grp = '/'.join(['exchange', dataset])
 
-    with h5py.File(params.hdf_file, "r") as f:
+    with h5py.File(params.file_name, "r") as f:
         try:
             data = f[grp]
         except KeyError:
@@ -188,7 +216,7 @@ def path_base_name(path):
 def read_rot_centers(params):
 
     # Add a trailing slash if missing
-    top = os.path.join(params.hdf_file, '')
+    top = os.path.join(params.file_name, '')
 
     # Load the the rotation axis positions.
     jfname = top + "rotation_axis.json"
@@ -223,10 +251,10 @@ def read_rot_center(params):
     """
     log.info('  *** *** rotation axis')
     #First, try to read from the /process/tomopy-cli parameters
-    with h5py.File(params.hdf_file, 'r') as hdf_file:
+    with h5py.File(params.file_name, 'r') as file_name:
         try:
             dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
-            params.rotation_axis = float(hdf_file[dataset][0])
+            params.rotation_axis = float(file_name[dataset][0])
             log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
             return params
         except (KeyError, ValueError):
@@ -250,9 +278,9 @@ def read_pixel_size(params):
     if params.pixel_size_auto != True:
         log.info('  *** *** OFF')
         return params
-    pixel_size = config.param_from_dxchange(params.hdf_file,
+    pixel_size = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detector/pixel_size_x')
-    mag = config.param_from_dxchange(params.hdf_file,
+    mag = config.param_from_dxchange(params.file_name,
                                     '/measurement/instrument/detection_system/objective/magnification')
     #Handle case where something wasn't read right
     if not (pixel_size and mag):
@@ -274,11 +302,11 @@ def read_scintillator(params):
     '''
     if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
         log.info('  *** *** Find scintillator params from DXchange')
-        params.scintillator_thickness = float(config.param_from_dxchange(params.hdf_file, 
+        params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
                                             '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
                                             attr = None, scalar = True, char_array=False))
         log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
-        scint_material_string = config.param_from_dxchange(params.hdf_file,
+        scint_material_string = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detection_system/scintillator/description',
                                             scalar = False, char_array = True)
         if scint_material_string.lower().startswith('luag'):

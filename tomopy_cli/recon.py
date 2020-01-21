@@ -93,7 +93,7 @@ def rec(params):
             rec = padded_rec(stack, theta, rotation_axis, params)
 
             # Save images to a temporary folder.
-            fname = os.path.dirname(params.hdf_file) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.hdf_file) + os.sep + 'recon_'
+            fname = os.path.dirname(params.file_name) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.file_name) + os.sep + 'recon_'
             index = 0
             for axis in np.arange(*center_range):
                 rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
@@ -107,8 +107,8 @@ def rec(params):
             rec = padded_rec(data, theta, rotation_axis, params)
             # Save images
             if (params.reconstruction_type == "full"):
-                tail = os.sep + os.path.splitext(os.path.basename(params.hdf_file))[0]+ '_rec' + os.sep 
-                fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
+                tail = os.sep + os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec' + os.sep 
+                fname = os.path.dirname(params.file_name) + '_rec' + tail + 'recon'
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
                                                 kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
@@ -116,8 +116,8 @@ def rec(params):
                 #dxchange.write_tiff_stack(rec, fname=fname, start=strt)
                 strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
             if (params.reconstruction_type == "slice"):
-                fname = Path.joinpath(Path(os.path.dirname(params.hdf_file) + '_rec'), 'slice_rec', 'recon_'+ Path(params.hdf_file).stem)
-                # fname = Path.joinpath(Path(params.hdf_file).parent, 'slice_rec','recon_'+str(Path(params.hdf_file).stem))
+                fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 'slice_rec', 'recon_'+ Path(params.file_name).stem)
+                # fname = Path.joinpath(Path(params.file_name).parent, 'slice_rec','recon_'+str(Path(params.file_name).stem))
                 dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
 
         log.info("  *** reconstructions: %s" % fname)
