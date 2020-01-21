@@ -398,7 +398,7 @@ SECTIONS['astrasart'] = {
     'astrasart-num_iter': {
         'default': 200,
         'type': util.positive_int,
-        'help': 'Number of requested iterations for ASTRA-SART.'},
+        'help': 'Number of requested iterations for ASTRA-SART per projection angle.'},
     }
 
 SECTIONS['iterative'] = {
@@ -431,7 +431,6 @@ def get_config_name():
                 if name[0] == '=':
                     name = name[1:]
                 return name
-
     return name
 
 
