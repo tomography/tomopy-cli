@@ -213,7 +213,7 @@ def reconstruct(data, theta, rot_center, params):
             log.warning('Invalid astrasart_max_constraint value.  Ignoring.')
         options = {'proj_type':params.astrasart_proj_type,
                     'method': params.astrasart_method,
-                    'num_iter': params.astrasart_num_iter,
+                    'num_iter': params.astrasart_num_iter * data.shape[0],
                     'extra_options': extra_options,}
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
