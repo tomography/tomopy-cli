@@ -111,15 +111,14 @@ def rec(params):
                 fname = os.path.dirname(params.hdf_file) + '_rec' + tail + 'recon'
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
-                                                kwargs = {'fname':fname, 'start':strt})
+                                                kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
                 write_thread.start()
                 #dxchange.write_tiff_stack(rec, fname=fname, start=strt)
                 strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
             if (params.reconstruction_type == "slice"):
-                fname = Path.joinpath(Path(params.hdf_file).parent, 'slice_rec','recon_'+str(Path(params.hdf_file).stem))
-                fname = str(fname)
-                #fname = os.path.dirname(params.hdf_file)  + os.sep + 'slice_rec/recon_' + os.path.splitext(os.path.basename(params.hdf_file))[0]
-                dxchange.write_tiff_stack(rec, fname=fname, overwrite=False)
+                fname = Path.joinpath(Path(os.path.dirname(params.hdf_file) + '_rec'), 'slice_rec', 'recon_'+ Path(params.hdf_file).stem)
+                # fname = Path.joinpath(Path(params.hdf_file).parent, 'slice_rec','recon_'+str(Path(params.hdf_file).stem))
+                dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
 
         log.info("  *** reconstructions: %s" % fname)
 
