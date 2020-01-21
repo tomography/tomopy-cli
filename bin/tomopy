@@ -31,7 +31,7 @@ def run_status(args):
 
 def run_find_center(args):
 
-    if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+    if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         log.warning('find center start')
         find_center.find_rotation_axis(args)
         log.warning('find center end')
@@ -40,7 +40,7 @@ def run_find_center(args):
         sections = config.RECON_PARAMS
         config.write(args.config, args=args, sections=sections)
     else:
-        log.error("  *** %s is not a supported file format" % params.file_format)
+        log.error("  *** %s is not a supported file format" % args.file_format)
         exit()
 
 def run_seg(args):
@@ -63,7 +63,7 @@ def run_rec(args):
         recon.rec(args)
 
     elif os.path.isdir(args.file_name):
-        if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+        if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
 
@@ -128,7 +128,7 @@ def run_rec(args):
             log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
         log.warning('reconstruction end')
     else:
-        log.error("  *** %s is not a supported file format" % params.file_format)
+        log.error("  *** %s is not a supported file format" % args.file_format)
         exit()
 
 
