@@ -401,6 +401,22 @@ SECTIONS['astrasart'] = {
         'help': 'Number of requested iterations for ASTRA-SART per projection angle.'},
     }
 
+SECTIONS['astracgls'] = {
+    'astracgls-proj-type': {
+        'default': 'cuda',
+        'choices': ['cuda', 'linear'],
+        'type': str,
+        'help': 'Projection type for ASTRA-CGLS.  CPU = linear, GPU = cuda.'},
+    'astracgls-method': {
+        'default': 'CGLS_CUDA',
+        'type': str,
+        'help': 'Parameter passed to ASTRA for ASTRA-CGLS algorithm.'},
+    'astracgls-num_iter': {
+        'default': 200,
+        'type': util.positive_int,
+        'help': 'Number of requested iterations for ASTRA-CGLS.'},
+    }
+
 SECTIONS['iterative'] = {
     'iteration-count': {
         'default': 10,
@@ -410,14 +426,14 @@ SECTIONS['iterative'] = {
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 'iterative',
-                'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt')
+                'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis')
 
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 'Iterative',
-                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)')
+                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)')
 
 def get_config_name():
     """Get the command line --config option."""

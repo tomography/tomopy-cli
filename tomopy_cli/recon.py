@@ -219,8 +219,11 @@ def reconstruct(data, theta, rot_center, params):
         data = np.roll(data, shift, axis=2)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'astracgls':
-        extra_options ={'MinConstraint':0}
-        options = {'proj_type':'cuda', 'method':'CGLS_CUDA', 'num_iter':15, 'extra_options':extra_options}
+        extra_options ={}
+        options = {'proj_type':params.astracgls_proj_type,
+                    'method': params.astracgls_method,
+                    'num_iter': params.astracgls_num_iter,
+                    'extra_options': extra_options,}
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
