@@ -72,10 +72,8 @@ def run_rec(args):
                 log.info("found: %s" % h5_file_list) 
                 # look for pre-calculated rotation axis positions.
                 jfname = top + args.rotation_axis_file
-                print(str(jfname))
-                print(os.path.exists(jfname))
                 if(os.path.exists(jfname)):
-                    log.warning("try to use pre-calculated rotation centers from %s file" % jfname)   
+                    log.warning("  *** try to use pre-calculated rotation centers from %s file" % jfname)   
                     dictionary = file_io.read_rot_centers(args)
                     # log.warning("reconstructing a folder containing %d files" % len(dictionary))   
                     index = 0
@@ -85,7 +83,7 @@ def run_rec(args):
                             args.rotation_axis = dict2[h5fname]
                             fname = top + h5fname
                             args.file_name = fname
-                            log.warning("file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
+                            log.warning("  *** file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
                             index += 1
                             recon.rec(args)
                             config.update_log(args)
