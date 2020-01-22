@@ -599,12 +599,12 @@ def write_hdf(config_file, args=None, sections=None):
     if not args.dx_update:
         log.warning("  *** Not saving log data to the projection HDF file.")
         return
-    with h5py.File(args.hdf_file,'r+') as hdf_file:
+    with h5py.File(args.file_name,'r+') as hdf_file:
         #If the group we will write to already exists, remove it
         if hdf_file.get('/process/tomopy-cli-' + __version__):
             del(hdf_file['/process/tomopy-cli-' + __version__])
         #dt = h5py.string_dtype(encoding='ascii')
-        log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.hdf_file))
+        log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.file_name))
         config = configparser.ConfigParser()
         for section in SECTIONS:
             config.add_section(section)

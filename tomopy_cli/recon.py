@@ -205,6 +205,8 @@ def reconstruct(data, theta, rot_center, params):
                             sinogram_order=sinogram_order, 
                             algorithm='gridrec', 
                             filter_name=params.gridrec_filter)
+            rec = tomopy.misc.corr.gaussian_filter(rec, axis=1)
+            rec = tomopy.misc.corr.gaussian_filter(rec, axis=2)
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         if params.astrasirt_bootstrap:
