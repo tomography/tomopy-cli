@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import pathlib
 import argparse
 import configparser
@@ -705,4 +706,4 @@ def update_log(args):
             except:
                 log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
                 pass
-            log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
+            log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
