@@ -369,7 +369,7 @@ def find_center_row(params):
     '''Finds the brightest row of the input image.
     Filters to make sure we ignore spurious noise.
     '''
-    with h5py.File(params.hdf_file,'r') as hdf_file:
+    with h5py.File(params.file_name,'r') as hdf_file:
         bright = hdf_file['/exchange/data_white'][...]
     if len(bright.shape) > 2:
         bright = bright[0,:]
