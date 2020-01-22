@@ -111,11 +111,11 @@ SECTIONS['file-reading'] = {
         'help': 'Row on which to end reconstruction.  Negative values = last row of projection data.'},
     'scintillator-auto': {
         'default': False,
-        'help': "When set, read scintillator properties from DXchange file",
+        'help': "When set, read scintillator properties from the HDF file",
         'action': 'store_true'},
     'pixel-size-auto': {
         'default': False,
-        'help': "When set, read effective pixel size from DXchange file",
+        'help': "When set, read effective pixel size from the HDF file",
         'action': 'store_true'},
        }
 
@@ -515,10 +515,10 @@ def config_to_list(config_name=CONFIG_FILE_NAME):
 
 def param_from_dxchange(hdf_file, data_path, attr = None, scalar = True, char_array=False):
     """
-    Reads a parameter from a DXchange file.
+    Reads a parameter from the HDF file.
     Inputs
-    hdf_file: string path or pathlib.Path object for the DXchange file.
-    data_path: path to the requested data in the DXchange file.
+    hdf_file: string path or pathlib.Path object for the HDF file.
+    data_path: path to the requested data in the HDF file.
     attr: name of the attribute if this is stored as an attribute (default: None)
     scalar: True if the value is a single valued dataset (dafault: True)
     char_array: if True, interpret as a character array.  Useful for EPICS strings (default: False)
@@ -590,6 +590,7 @@ def write(config_file, args=None, sections=None):
     if args is not None:
         write_hdf(config_file, args, sections)       
 
+
 def write_hdf(config_file, args=None, sections=None):
     """
     Write in the hdf raw data file the content of *config_file* with values from *args* 
@@ -597,7 +598,7 @@ def write_hdf(config_file, args=None, sections=None):
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
     if not args.dx_update:
-        log.warning("  *** Not saving log data to the projection HDF file.")
+        log.warning("  *** Not saving log data to the HDF file.")
         return
     with h5py.File(args.file_name,'r+') as hdf_file:
         #If the group we will write to already exists, remove it
