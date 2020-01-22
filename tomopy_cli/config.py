@@ -658,3 +658,50 @@ def log_values(args):
                     log.warning("  {:<16} {}".format(entry, value))
 
     log.warning('tomopy-cli status end')
+
+
+def update_log(args):
+       # update tomopy.conf
+        sections = RECON_PARAMS
+        write(args.config, args=args, sections=sections)
+        '''
+        if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+        # add reconstruction command in ~/logs/user_last_name.log
+            rec_log_msg = "\n" + "tomopy recon" + " --rotation-axis " + str(args.rotation_axis) \
+                                                + " --reconstruction-type " + str(args.reconstruction_type) \
+                                                + " --hdf-file " + str(args.file_name) \
+                                                + " --binning " + str(args.binning) \
+                                                + " --reconstruction-algorithm " + str(args.reconstruction_algorithm) \
+                                                + " --retrieve-phase-method " + str(args.retrieve_phase_method) \
+                                                + " --energy " + str(args.energy) \
+                                                + " --propagation-distance " + str(args.propagation_distance) \
+                                                + " --pixel-size " + str(args.pixel_size) \
+                                                + " --retrieve-phase-alpha  " + str(args.retrieve_phase_alpha)
+
+            log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
+            p = pathlib.Path(args.file_name)
+            lfname = pathlib.Path.joinpath(pathlib.Path(args.logs_home), p.stem + '.log')
+
+            log.info('  *** command added to %s ' % lfname.as_posix())
+            with open(lfname, "a") as myfile:
+                myfile.write(rec_log_msg)
+        '''
+        if (args.reconstruction_type == "full"):
+        # if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+            # copy tomopy.conf in the reconstructed data directory path
+            # in this way you can reproduce the reconstruction by simply running:
+            # $ tomopy recon --config /path/tomopy.conf
+
+            # config_path = pathlib.Path(args.config)
+            # p = pathlib.Path(args.file_name)
+            # log_fname = pathlib.Path.joinpath(p.parent, '_rec', p.stem + '_rec', config_path.name)
+            # un-did the above 
+            tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
+            log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
+            try:
+                shutil.copyfile(args.config, log_fname)
+                log.info('  *** copied %s to %s ' % (args.config, log_fname))
+            except:
+                log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
+                pass
+            log.info(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
