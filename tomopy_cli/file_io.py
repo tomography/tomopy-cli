@@ -219,7 +219,7 @@ def read_rot_centers(params):
     top = os.path.join(params.file_name, '')
 
     # Load the the rotation axis positions.
-    jfname = top + "rotation_axis.json"
+    jfname = top + params.rotation_axis_file
     
     try:
         with open(jfname) as json_file:
@@ -229,10 +229,10 @@ def read_rot_centers(params):
         return collections.OrderedDict(sorted(dictionary.items()))
 
     except Exception as error: 
-        log.error("ERROR: the json %s file containing the rotation axis locations is missing" % jfname)
-        log.error("ERROR: to create one run:")
-        log.error("ERROR: $ tomopy find_center --hdf-file %s" % top)
-        exit()
+        log.warning("the json %s file containing the rotation axis locations is missing" % jfname)
+        log.warning("to create one run:")
+        log.warning("$ tomopy find_center --file-name %s" % top)
+        # exit()
 
 
 def auto_read_dxchange(params):
