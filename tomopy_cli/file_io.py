@@ -236,7 +236,7 @@ def read_rot_centers(params):
 
 
 def auto_read_dxchange(params):
-    log.info('  *** Auto parameter reading from DXchange file.')
+    log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
     params = read_scintillator(params)
     params = read_rot_center(params)
@@ -246,7 +246,7 @@ def auto_read_dxchange(params):
 
 def read_rot_center(params):
     """
-    Read the rotation center from /process group in the DXchange file.
+    Read the rotation center from /process group in the HDF file.
     Return: rotation center from this dataset or None if it doesn't exist.
     """
     log.info('  *** *** rotation axis')
@@ -260,7 +260,7 @@ def read_rot_center(params):
         except (KeyError, ValueError):
             log.warning('  *** *** No rotation center stored in the HDF5 file')
     #If we get here, we need to either find it automatically or from config file.
-    log.warning('  *** *** No rotation axis stored in DXchange file')
+    log.warning('  *** *** No rotation axis stored in the HDF file')
     if (params.rotation_axis_auto == True):
         log.warning('  *** *** Auto axis location requested')
         log.warning('  *** *** Computing rotation axis')
@@ -271,7 +271,7 @@ def read_rot_center(params):
 
 def read_pixel_size(params):
     '''
-    Read the pixel size and magnification from the DXchange file.
+    Read the pixel size and magnification from the HDF file.
     Use to compute the effective pixel size.
     '''
     log.info('  *** auto pixel size reading')
@@ -284,7 +284,7 @@ def read_pixel_size(params):
                                     '/measurement/instrument/detection_system/objective/magnification')
     #Handle case where something wasn't read right
     if not (pixel_size and mag):
-        log.warning('  *** *** problem reading pixel size from DXchange')
+        log.warning('  *** *** problem reading pixel size from the HDF file')
         return params
     #What if pixel size isn't in microns, but in mm or m?
     for i in range(3):
@@ -298,10 +298,10 @@ def read_pixel_size(params):
 
 
 def read_scintillator(params):
-    '''Read the scintillator type and thickness from DXchange.
+    '''Read the scintillator type and thickness from the HDF file.
     '''
     if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
-        log.info('  *** *** Find scintillator params from DXchange')
+        log.info('  *** *** Find scintillator params from the HDF file')
         params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
                                             '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
                                             attr = None, scalar = True, char_array=False))
