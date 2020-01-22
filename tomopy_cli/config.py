@@ -597,7 +597,7 @@ def write_hdf(config_file, args=None, sections=None):
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
     if not args.dx_update:
-        log.warning(" *** Not saving log data to the projection HDF file.")
+        log.warning("  *** Not saving log data to the projection HDF file.")
         return
     with h5py.File(args.hdf_file,'r+') as hdf_file:
         #If the group we will write to already exists, remove it
