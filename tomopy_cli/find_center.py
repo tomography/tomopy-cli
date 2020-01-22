@@ -11,7 +11,7 @@ from tomopy_cli import file_io
 
 def find_rotation_axis(params):
 
-    fname = params.hdf_file
+    fname = params.file_name
     ra_fname = params.rotation_axis_file
 
     if os.path.isfile(fname):  
@@ -32,11 +32,11 @@ def find_rotation_axis(params):
         i=0
         for fname in h5_file_list:
             h5fname = top + fname
-            params.hdf_file = h5fname
+            params.file_name = h5fname
             rot_center = _find_rotation_axis(params)
-            params.hdf_file = top
+            params.file_name = top
             case =  {fname : rot_center}
-            log.info(case)
+            log.info("  *** file: %s; rotation axis %f" % (fname, rot_center))
             dic_centers[i] = case
             i += 1
 
