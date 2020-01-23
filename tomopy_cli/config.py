@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import pathlib
 import argparse
 import configparser
@@ -111,11 +112,11 @@ SECTIONS['file-reading'] = {
         'help': 'Row on which to end reconstruction.  Negative values = last row of projection data.'},
     'scintillator-auto': {
         'default': False,
-        'help': "When set, read scintillator properties from DXchange file",
+        'help': "When set, read scintillator properties from the HDF file",
         'action': 'store_true'},
     'pixel-size-auto': {
         'default': False,
-        'help': "When set, read effective pixel size from DXchange file",
+        'help': "When set, read effective pixel size from the HDF file",
         'action': 'store_true'},
        }
 
@@ -515,10 +516,10 @@ def config_to_list(config_name=CONFIG_FILE_NAME):
 
 def param_from_dxchange(hdf_file, data_path, attr = None, scalar = True, char_array=False):
     """
-    Reads a parameter from a DXchange file.
+    Reads a parameter from the HDF file.
     Inputs
-    hdf_file: string path or pathlib.Path object for the DXchange file.
-    data_path: path to the requested data in the DXchange file.
+    hdf_file: string path or pathlib.Path object for the HDF file.
+    data_path: path to the requested data in the HDF file.
     attr: name of the attribute if this is stored as an attribute (default: None)
     scalar: True if the value is a single valued dataset (dafault: True)
     char_array: if True, interpret as a character array.  Useful for EPICS strings (default: False)
@@ -590,6 +591,7 @@ def write(config_file, args=None, sections=None):
     if args is not None:
         write_hdf(config_file, args, sections)       
 
+
 def write_hdf(config_file, args=None, sections=None):
     """
     Write in the hdf raw data file the content of *config_file* with values from *args* 
@@ -597,7 +599,7 @@ def write_hdf(config_file, args=None, sections=None):
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
     if not args.dx_update:
-        log.warning("  *** Not saving log data to the projection HDF file.")
+        log.warning("  *** Not saving log data to the HDF file.")
         return
     with h5py.File(args.file_name,'r+') as hdf_file:
         #If the group we will write to already exists, remove it
@@ -658,3 +660,50 @@ def log_values(args):
                     log.warning("  {:<16} {}".format(entry, value))
 
     log.warning('tomopy-cli status end')
+
+
+def update_log(args):
+       # update tomopy.conf
+        sections = RECON_PARAMS
+        write(args.config, args=args, sections=sections)
+        '''
+        if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+        # add reconstruction command in ~/logs/user_last_name.log
+            rec_log_msg = "\n" + "tomopy recon" + " --rotation-axis " + str(args.rotation_axis) \
+                                                + " --reconstruction-type " + str(args.reconstruction_type) \
+                                                + " --hdf-file " + str(args.file_name) \
+                                                + " --binning " + str(args.binning) \
+                                                + " --reconstruction-algorithm " + str(args.reconstruction_algorithm) \
+                                                + " --retrieve-phase-method " + str(args.retrieve_phase_method) \
+                                                + " --energy " + str(args.energy) \
+                                                + " --propagation-distance " + str(args.propagation_distance) \
+                                                + " --pixel-size " + str(args.pixel_size) \
+                                                + " --retrieve-phase-alpha  " + str(args.retrieve_phase_alpha)
+
+            log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
+            p = pathlib.Path(args.file_name)
+            lfname = pathlib.Path.joinpath(pathlib.Path(args.logs_home), p.stem + '.log')
+
+            log.info('  *** command added to %s ' % lfname.as_posix())
+            with open(lfname, "a") as myfile:
+                myfile.write(rec_log_msg)
+        '''
+        if (args.reconstruction_type == "full"):
+        # if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
+            # copy tomopy.conf in the reconstructed data directory path
+            # in this way you can reproduce the reconstruction by simply running:
+            # $ tomopy recon --config /path/tomopy.conf
+
+            # config_path = pathlib.Path(args.config)
+            # p = pathlib.Path(args.file_name)
+            # log_fname = pathlib.Path.joinpath(p.parent, '_rec', p.stem + '_rec', config_path.name)
+            # un-did the above 
+            tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
+            log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
+            try:
+                shutil.copyfile(args.config, log_fname)
+                log.info('  *** copied %s to %s ' % (args.config, log_fname))
+            except:
+                log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
+                pass
+            log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
