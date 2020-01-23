@@ -1,6 +1,7 @@
 import numpy as np
 
 from tomopy_cli import log
+logger = log.logger
 
 
 def theta_step(start, end, proj_number):

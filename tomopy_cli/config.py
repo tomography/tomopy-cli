@@ -12,6 +12,7 @@ from collections import OrderedDict
 from tomopy_cli import log
 from tomopy_cli import util
 from tomopy_cli import __version__
+logger = log.logger
 
 LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
 CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
@@ -599,14 +600,14 @@ def write_hdf(config_file, args=None, sections=None):
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
     if not args.dx_update:
-        log.warning("  *** Not saving log data to the HDF file.")
+        logger.warning("  *** Not saving log data to the HDF file.")
         return
     with h5py.File(args.file_name,'r+') as hdf_file:
         #If the group we will write to already exists, remove it
         if hdf_file.get('/process/tomopy-cli-' + __version__):
             del(hdf_file['/process/tomopy-cli-' + __version__])
         #dt = h5py.string_dtype(encoding='ascii')
-        log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.file_name))
+        logger.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.file_name))
         config = configparser.ConfigParser()
         for section in SECTIONS:
             config.add_section(section)
@@ -626,7 +627,7 @@ def write_hdf(config_file, args=None, sections=None):
                     dset_length = len(str(value)) * 2 if len(str(value)) > 5 else 10
                     dt = 'S{0:d}'.format(dset_length)
                     hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
-                    log.info(name + ': ' + str(value))
+                    logger.info(name + ': ' + str(value))
                     try:
                         hdf_file[dataset][0] = np.string_(str(value))
                     except TypeError:
@@ -642,24 +643,24 @@ def log_values(args):
     """
     args = args.__dict__
 
-    log.warning('tomopy-cli status start')
+    logger.warning('tomopy-cli status start')
     for section, name in zip(SECTIONS, NICE_NAMES):
         entries = sorted((k for k in args.keys() if k.replace('_', '-') in SECTIONS[section]))
 
         # print('log_values', section, name, entries)
         if entries:
-            log.info(name)
+            logger.info(name)
 
             for entry in entries:
                 value = args[entry] if args[entry] is not None else "-"
                 if (value == 'none'):
-                    log.warning("  {:<16} {}".format(entry, value))
+                    logger.warning("  {:<16} {}".format(entry, value))
                 elif (value is not False):
-                    log.info("  {:<16} {}".format(entry, value))
+                    logger.info("  {:<16} {}".format(entry, value))
                 elif (value is False):
-                    log.warning("  {:<16} {}".format(entry, value))
+                    logger.warning("  {:<16} {}".format(entry, value))
 
-    log.warning('tomopy-cli status end')
+    logger.warning('tomopy-cli status end')
 
 
 def update_log(args):
@@ -680,11 +681,11 @@ def update_log(args):
                                                 + " --pixel-size " + str(args.pixel_size) \
                                                 + " --retrieve-phase-alpha  " + str(args.retrieve_phase_alpha)
 
-            log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
+            logger.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
             p = pathlib.Path(args.file_name)
             lfname = pathlib.Path.joinpath(pathlib.Path(args.logs_home), p.stem + '.log')
 
-            log.info('  *** command added to %s ' % lfname.as_posix())
+            logger.info('  *** command added to %s ' % lfname.as_posix())
             with open(lfname, "a") as myfile:
                 myfile.write(rec_log_msg)
         '''
@@ -702,8 +703,8 @@ def update_log(args):
             log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
             try:
                 shutil.copyfile(args.config, log_fname)
-                log.info('  *** copied %s to %s ' % (args.config, log_fname))
+                logger.info('  *** copied %s to %s ' % (args.config, log_fname))
             except:
-                log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
+                logger.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
                 pass
-            log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
+            logger.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))

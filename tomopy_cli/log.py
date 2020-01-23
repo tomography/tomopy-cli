@@ -4,38 +4,33 @@
 '''
 import logging
 
-# Logging defines
-__GREEN = "\033[92m"
-__RED = '\033[91m'
-__YELLOW = '\033[33m'
-__ENDC = '\033[0m'
-
-
-info_extra={'endColor': __ENDC, 'color': __GREEN}
-warn_extra={'endColor': __ENDC, 'color': __YELLOW}
-error_extra={'endColor': __ENDC, 'color': __RED}
-
 logger = logging.getLogger(__name__)
 
-def info(msg):
-    logger.info(info_extra['color']+ msg + info_extra['endColor'])
-
-def error(msg):
-    logger.error(error_extra['color']+ msg + error_extra['endColor'])
-
-def warning(msg):
-    logger.warning(warn_extra['color']+ msg + warn_extra['endColor'])
-
-
 def setup_custom_logger(lfname, stream_to_console=True):
-
     fHandler = logging.FileHandler(lfname)
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(message)s')
-    fHandler.setFormatter(formatter)
+    fformatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    fHandler.setFormatter(fformatter)
     logger.addHandler(fHandler)
     if stream_to_console:
         ch = logging.StreamHandler()
-        ch.setFormatter(formatter)
+        cformatter = ColoredFormatter("%(asctime)s  %(levelname)s  %(message)s")
+        ch.setFormatter(cformatter)
         ch.setLevel(logging.DEBUG)
         logger.addHandler(ch)
+
+
+class ColoredFormatter(logging.Formatter):
+    def __init__(self, msg, use_color = True):
+        self.__GREEN = "\033[92m"
+        self.__RED = '\033[91m'
+        self.__YELLOW = '\033[33m'
+        self.__ENDC = '\033[0m'
+        self.COLORS = {'WARNING': self.__YELLOW, 'INFO': self.__GREEN, 'DEBUG': self.__GREEN, 'CRITICAL': self.__RED, 'ERROR': self.__RED}
+        logging.Formatter.__init__(self, msg)
+        self.use_color = use_color
+
+    def format(self, record):
+        if self.use_color and record.levelname in self.COLORS:
+            record.levelname = self.COLORS[record.levelname] + record.levelname + self.__ENDC 
+        return logging.Formatter.format(self, record)

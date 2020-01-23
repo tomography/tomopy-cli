@@ -22,7 +22,7 @@ def init(args):
     if not os.path.exists(str(args.config)):
         config.write(args.config)
     else:
-        log.error("{0} already exists".format(args.config))
+        logger.error("{0} already exists".format(args.config))
 
 def run_status(args):
 
@@ -31,22 +31,22 @@ def run_status(args):
 def run_find_center(args):
 
     if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
-        log.warning('find center start')
+        logger.warning('find center start')
         find_center.find_rotation_axis(args)
-        log.warning('find center end')
+        logger.warning('find center end')
 
         # update tomopy.conf
         sections = config.RECON_PARAMS
         config.write(args.config, args=args, sections=sections)
     else:
-        log.error("  *** %s is not a supported file format" % args.file_format)
+        logger.error("  *** %s is not a supported file format" % args.file_format)
         exit()
 
 def run_seg(args):
 
-    log.warning('segmentation start')
+    logger.warning('segmentation start')
     post.segment(args)
-    log.warning('segmentation end')
+    logger.warning('segmentation end')
 
     # update tomopy.conf
     sections = config.RECON_PARAMS
@@ -55,11 +55,11 @@ def run_seg(args):
     
 def run_rec(args):
 
-    log.warning('reconstruction start')
+    logger.warning('reconstruction start')
 
     if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         if os.path.isfile(args.file_name):    
-            log.info("reconstructing a single file: %s" % args.file_name)   
+            logger.info("reconstructing a single file: %s" % args.file_name)   
             recon.rec(args)
             config.update_log(args)
         elif os.path.isdir(args.file_name):
@@ -69,13 +69,13 @@ def run_rec(args):
             h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf')), os.listdir(top)))
             if (h5_file_list):
                 h5_file_list.sort()
-                log.info("found: %s" % h5_file_list) 
+                logger.info("found: %s" % h5_file_list) 
                 # look for pre-calculated rotation axis positions.
                 jfname = top + args.rotation_axis_file
                 if(os.path.exists(jfname)):
-                    log.warning("  *** try to use pre-calculated rotation centers from %s file" % jfname)   
+                    logger.warning("  *** try to use pre-calculated rotation centers from %s file" % jfname)   
                     dictionary = file_io.read_rot_centers(args)
-                    # log.warning("reconstructing a folder containing %d files" % len(dictionary))   
+                    # logger.warning("reconstructing a folder containing %d files" % len(dictionary))   
                     index = 0
                     for key in dictionary:
                         dict2 = dictionary[key]
@@ -83,29 +83,29 @@ def run_rec(args):
                             args.rotation_axis = dict2[h5fname]
                             fname = top + h5fname
                             args.file_name = fname
-                            log.warning("  *** file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
+                            logger.warning("  *** file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
                             index += 1
                             recon.rec(args)
                             config.update_log(args)
-                    log.warning('reconstruction end')
+                    logger.warning('reconstruction end')
                 else:
-                    log.warning("  *** no pre-calculated rotation centers from %s file" % jfname)   
+                    logger.warning("  *** no pre-calculated rotation centers from %s file" % jfname)   
                     index=0
                     for fname in h5_file_list:
                         args.file_name = top + fname
-                        log.warning("  *** file %d/%d;  %s" % (index, len(h5_file_list), fname))
+                        logger.warning("  *** file %d/%d;  %s" % (index, len(h5_file_list), fname))
                         index += 1
                         recon.rec(args)
                         config.update_log(args)
-                    log.warning('reconstruction end')
+                    logger.warning('reconstruction end')
             else:
-                log.error("directory %s does not contain any file" % args.file_name)
+                logger.error("directory %s does not contain any file" % args.file_name)
         else:
-            log.error("directory or File Name does not exist: %s" % args.file_name)
+            logger.error("directory or File Name does not exist: %s" % args.file_name)
     else:
         # add here support for other file formats
-        log.error("  *** %s is not a supported file format" % args.file_format)
-        log.error("supported data formats are: %s, %s, %s, %s" % ('dx', 'aps2bm', 'aps7bm', 'aps32id'))
+        logger.error("  *** %s is not a supported file format" % args.file_format)
+        logger.error("supported data formats are: %s, %s, %s, %s" % ('dx', 'aps2bm', 'aps7bm', 'aps32id'))
 
 
 def main():
@@ -146,13 +146,14 @@ def main():
     lfname = os.path.join(logs_home, 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H_%M_%S") + '.log')
  
     log.setup_custom_logger(lfname)
-    log.info("Saving log at %s" % lfname)
+    logger = log.logger
+    logger.info("Saving log at %s" % lfname)
 
     try:
         # config.log_values(args)
         args._func(args)
     except RuntimeError as e:
-        log.error(str(e))
+        logger.error(str(e))
         sys.exit(1)
          
 

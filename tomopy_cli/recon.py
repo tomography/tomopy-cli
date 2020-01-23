@@ -13,6 +13,7 @@ from tomopy_cli import file_io
 from tomopy_cli import prep
 from tomopy_cli import beamhardening
 from tomopy_cli import find_center
+logger = log.logger
 
 def rec(params):
     
@@ -22,7 +23,7 @@ def rec(params):
     params = file_io.auto_read_dxchange(params)
     if params.rotation_axis <= 0:
         params.rotation_axis =  data_shape[2]/2
-        log.warning('  *** *** No rotation center given: assuming the middle of the projections at %f' % float(params.rotation_axis))
+        logger.warning('  *** *** No rotation center given: assuming the middle of the projections at %f' % float(params.rotation_axis))
     
     # Select sinogram range to reconstruct
     if (params.reconstruction_type == "full"):
@@ -47,19 +48,19 @@ def rec(params):
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
 
-    log.info("reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
+    logger.info("reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
                ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
                chunks, nSino_per_chunk/pow(2, int(params.binning))))            
 
     strt = sino_start
     for iChunk in range(0, chunks):
-        log.info('chunk # %i/%i' % (iChunk + 1, chunks))
+        logger.info('chunk # %i/%i' % (iChunk + 1, chunks))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
         sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
         if sino_chunk_end > sino_end:
-            log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
+            logger.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
             sino_chunk_end = sino_end
-        log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
+        logger.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
                 
         sino = (int(sino_chunk_start), int(sino_chunk_end))
 
@@ -68,7 +69,7 @@ def rec(params):
 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
-            log.warning(" *** Chunk size > remaining data size.")
+            logger.warning(" *** Chunk size > remaining data size.")
             sino = (sino[0], sino[0] + proj.shape[1])
 
         # apply all preprocessing functions
@@ -87,7 +88,7 @@ def rec(params):
             for axis in np.arange(*center_range):
                 stack[index] = data[:, 0, :]
                 index = index + 1
-            log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
+            logger.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
 
             rotation_axis = np.arange(*center_range)
             rec = padded_rec(stack, theta, rotation_axis, params)
@@ -120,7 +121,7 @@ def rec(params):
                 # fname = Path.joinpath(Path(params.file_name).parent, 'slice_rec','recon_'+str(Path(params.file_name).stem))
                 dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
 
-        log.info("  *** reconstructions: %s" % fname)
+        logger.info("  *** reconstructions: %s" % fname)
 
     
 def padded_rec(data, theta, rotation_axis, params):
@@ -141,11 +142,11 @@ def padded_rec(data, theta, rotation_axis, params):
 
 def padding(data, rotation_axis, params):
 
-    log.info("  *** padding")
+    logger.info("  *** padding")
     if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
         or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
     #if(params.padding):
-        log.info('  *** *** ON')
+        logger.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
         data_pad[:,:,N//4:5*N//4] = data
@@ -155,7 +156,7 @@ def padding(data, rotation_axis, params):
         data = data_pad
         rot_center = rotation_axis + N//4
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
         data = data
         rot_center = rotation_axis
 
@@ -164,14 +165,14 @@ def padding(data, rotation_axis, params):
 
 def unpadding(rec, N, params):
 
-    log.info("  *** un-padding")
+    logger.info("  *** un-padding")
     if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
         or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
     #if(params.padding):
-        log.info('  *** *** ON')
+        logger.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
         rec = rec
     return rec
 
@@ -183,23 +184,23 @@ def reconstruct(data, theta, rot_center, params):
     else:
         sinogram_order = False
                
-    log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
+    logger.info("  *** algorithm: %s" % params.reconstruction_algorithm)
     if params.reconstruction_algorithm == 'astrasirt':
         extra_options ={}
         try:
             extra_options['MinConstraint'] = float(params.astrasirt_min_constraint)
         except ValueError:
-            log.warning('Invalid astrasirt_min_constraint value.  Ignoring.')
+            logger.warning('Invalid astrasirt_min_constraint value.  Ignoring.')
         try:
             extra_options['MaxConstraint'] = float(params.astrasirt_max_constraint)
         except ValueError:
-            log.warning('Invalid astrasirt_max_constraint value.  Ignoring.')
+            logger.warning('Invalid astrasirt_max_constraint value.  Ignoring.')
         options = {'proj_type':params.astrasirt_proj_type,
                     'method': params.astrasirt_method,
                     'num_iter': params.astrasirt_num_iter,
                     'extra_options': extra_options,}
         if params.astrasirt_bootstrap:
-            log.info('  *** *** bootstrapping with gridrec')
+            logger.info('  *** *** bootstrapping with gridrec')
             rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
@@ -210,7 +211,7 @@ def reconstruct(data, theta, rot_center, params):
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         if params.astrasirt_bootstrap:
-            log.info('  *** *** using gridrec to start astrasirt recon')
+            logger.info('  *** *** using gridrec to start astrasirt recon')
             rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
         else:
             rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
@@ -219,17 +220,17 @@ def reconstruct(data, theta, rot_center, params):
         try:
             extra_options['MinConstraint'] = float(params.astrasart_min_constraint)
         except ValueError:
-            log.warning('Invalid astrasart_min_constraint value.  Ignoring.')
+            logger.warning('Invalid astrasart_min_constraint value.  Ignoring.')
         try:
             extra_options['MaxConstraint'] = float(params.astrasart_max_constraint)
         except ValueError:
-            log.warning('Invalid astrasart_max_constraint value.  Ignoring.')
+            logger.warning('Invalid astrasart_max_constraint value.  Ignoring.')
         options = {'proj_type':params.astrasart_proj_type,
                     'method': params.astrasart_method,
                     'num_iter': params.astrasart_num_iter * data.shape[0],
                     'extra_options': extra_options,}
         if params.astrasart_bootstrap:
-            log.info('  *** *** bootstrapping with gridrec')
+            logger.info('  *** *** bootstrapping with gridrec')
             rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
@@ -238,7 +239,7 @@ def reconstruct(data, theta, rot_center, params):
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         if params.astrasart_bootstrap:
-            log.info('  *** *** using gridrec to start astrasart recon')
+            logger.info('  *** *** using gridrec to start astrasart recon')
             rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
         else:
             rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
@@ -250,7 +251,7 @@ def reconstruct(data, theta, rot_center, params):
                     'num_iter': params.astracgls_num_iter,
                     'extra_options': extra_options,}
         if params.astracgls_bootstrap:
-            log.info('  *** *** bootstrapping with gridrec')
+            logger.info('  *** *** bootstrapping with gridrec')
             rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
@@ -259,19 +260,19 @@ def reconstruct(data, theta, rot_center, params):
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
         if params.astracgls_bootstrap:
-            log.info('  *** *** using gridrec to start astracgls recon')
+            logger.info('  *** *** using gridrec to start astracgls recon')
             rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
         else:
             rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'gridrec':
-        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        logger.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
                             algorithm='gridrec', 
                             filter_name=params.gridrec_filter)
     elif params.reconstruction_algorithm == 'lprec_fbp':
-        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        logger.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
@@ -279,26 +280,26 @@ def reconstruct(data, theta, rot_center, params):
                             lpmethod='fbp', 
                             filter_name=params.lprec_fbp_filter)
     else:
-        log.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
+        logger.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
         params.reconstruction_algorithm = 'gridrec'
-        log.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
-        log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        logger.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
+        logger.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
-    log.info("  *** reconstruction finished")
+    logger.info("  *** reconstruction finished")
     return rec
 
 
 def mask(data, params):
 
-    log.info("  *** mask")
+    logger.info("  *** mask")
     if(params.reconstruction_mask):
-        log.info('  *** *** ON')
+        logger.info('  *** *** ON')
         if 0 < params.reconstruction_mask_ratio <= 1:
-            log.warning("  *** mask ratio: %f " % params.reconstruction_mask_ratio)
+            logger.warning("  *** mask ratio: %f " % params.reconstruction_mask_ratio)
             data = tomopy.circ_mask(data, axis=0, ratio=params.reconstruction_mask_ratio)
-            log.info('  *** masking finished')
+            logger.info('  *** masking finished')
         else:
-            log.error("  *** mask ratio must be between 0-1: %f is ignored" % params.reconstruction_mask_ratio)
+            logger.error("  *** mask ratio must be between 0-1: %f is ignored" % params.reconstruction_mask_ratio)
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
     return data

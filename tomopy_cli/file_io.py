@@ -12,6 +12,7 @@ from tomopy_cli import __version__
 from tomopy_cli import find_center
 from tomopy_cli import config
 from tomopy_cli import beamhardening
+logger = log.logger
 
  
 def read_tomo(sino, params):
@@ -29,10 +30,10 @@ def read_tomo(sino, params):
     """
     if params.file_type == 'standard':
         # Read APS 32-BM raw data.
-        log.info("  *** loading a stardard data set: %s" % params.file_name)
+        logger.info("  *** loading a stardard data set: %s" % params.file_name)
         proj, flat, dark, theta = _read_tomo(params, sino=sino)
     elif params.file_type == 'flip_and_stich':
-        log.info("   *** loading a 360 deg flipped data set: %s" % params.file_name)
+        logger.info("   *** loading a 360 deg flipped data set: %s" % params.file_name)
         proj360, flat360, dark360, theta360 = _read_tomo(params, sino=sino)
         proj, flat, dark = flip_and_stitch(variableDict, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
@@ -41,7 +42,7 @@ def read_tomo(sino, params):
         exit()
 
     if params.reverse:
-        log.info("  *** correcting for 180-0 data collection")
+        logger.info("  *** correcting for 180-0 data collection")
         step_size = (theta[1] - theta[0]) 
         theta_size = _read_theta_size(params)
         theta = np.linspace(np.pi , (0+step_size), theta_size)   
@@ -50,14 +51,14 @@ def read_tomo(sino, params):
 
     # new missing projection handling
     # if params.blocked_views:
-    #     log.warning("  *** new missing angle handling")
+    #     logger.warning("  *** new missing angle handling")
     #     miss_angles = [params.missing_angles_start, params.missing_angle_end]
     #     data = patch_projection(data, miss_angles)
 
     proj, flat, dark = binning(proj, flat, dark, params)
 
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
-    log.info("  *** rotation center: %f" % rotation_axis)
+    logger.info("  *** rotation center: %f" % rotation_axis)
 
     return proj, flat, dark, theta, rotation_axis
 
@@ -67,7 +68,7 @@ def _read_theta_size(params):
         theta_size = dxreader.read_dx_dims(params.file_name, 'data')[0]
     # elif:
     #     # add here other reader of theta size for other formats
-    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
+    #     logger.info("  *** %s is a valid xxx file format" % params.file_name)
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
@@ -79,10 +80,10 @@ def _read_tomo(params, sino):
 
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
-        log.info("  *** %s is a valid dx file format" % params.file_name)
+        logger.info("  *** %s is a valid dx file format" % params.file_name)
     # elif:
     #     # add here other dxchange loader
-    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
+    #     logger.info("  *** %s is a valid xxx file format" % params.file_name)
 
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
@@ -91,28 +92,28 @@ def _read_tomo(params, sino):
 
 
 def blocked_view(proj, theta, params):
-    log.info("  *** correcting for blocked view data collection")
+    logger.info("  *** correcting for blocked view data collection")
     if params.blocked_views:
-        log.warning('  *** *** ON')
+        logger.warning('  *** *** ON')
         miss_angles = [params.missing_angles_start, params.missing_angles_end]
         
         # Manage the missing angles:
         proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
         theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
     else:
-        log.warning('  *** *** OFF')
+        logger.warning('  *** *** OFF')
 
     return proj, theta
 
 
 def binning(proj, flat, dark, params):
 
-    log.info("  *** binning")
+    logger.info("  *** binning")
     if(params.binning == 0):
-        log.info('  *** *** OFF')
+        logger.info('  *** *** OFF')
     else:
-        log.warning('  *** *** ON')
-        log.warning('  *** *** binning: %d' % params.binning)
+        logger.warning('  *** *** ON')
+        logger.warning('  *** *** binning: %d' % params.binning)
         proj = _binning(proj, params)
         flat = _binning(flat, params)
         dark = _binning(dark, params)
@@ -229,18 +230,18 @@ def read_rot_centers(params):
         return collections.OrderedDict(sorted(dictionary.items()))
 
     except Exception as error: 
-        log.warning("the json %s file containing the rotation axis locations is missing" % jfname)
-        log.warning("to create one run:")
-        log.warning("$ tomopy find_center --file-name %s" % top)
+        logger.warning("the json %s file containing the rotation axis locations is missing" % jfname)
+        logger.warning("to create one run:")
+        logger.warning("$ tomopy find_center --file-name %s" % top)
         # exit()
 
 
 def auto_read_dxchange(params):
-    log.info('  *** Auto parameter reading from the HDF file.')
+    logger.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
     params = read_scintillator(params)
     params = read_rot_center(params)
-    log.info('  *** *** Done')
+    logger.info('  *** *** Done')
     return params
 
 
@@ -249,23 +250,23 @@ def read_rot_center(params):
     Read the rotation center from /process group in the HDF file.
     Return: rotation center from this dataset or None if it doesn't exist.
     """
-    log.info('  *** *** rotation axis')
+    logger.info('  *** *** rotation axis')
     #First, try to read from the /process/tomopy-cli parameters
     with h5py.File(params.file_name, 'r') as file_name:
         try:
             dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
             params.rotation_axis = float(file_name[dataset][0])
-            log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
+            logger.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
             return params
         except (KeyError, ValueError):
-            log.warning('  *** *** No rotation center stored in the HDF5 file')
+            logger.warning('  *** *** No rotation center stored in the HDF5 file')
     #If we get here, we need to either find it automatically or from config file.
-    log.warning('  *** *** No rotation axis stored in the HDF file')
+    logger.warning('  *** *** No rotation axis stored in the HDF file')
     if (params.rotation_axis_auto == True):
-        log.warning('  *** *** Auto axis location requested')
-        log.warning('  *** *** Computing rotation axis')
+        logger.warning('  *** *** Auto axis location requested')
+        logger.warning('  *** *** Computing rotation axis')
         params.rotation_axis = find_center.find_rotation_axis(params) 
-    log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
+    logger.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params
 
 
@@ -274,9 +275,9 @@ def read_pixel_size(params):
     Read the pixel size and magnification from the HDF file.
     Use to compute the effective pixel size.
     '''
-    log.info('  *** auto pixel size reading')
+    logger.info('  *** auto pixel size reading')
     if params.pixel_size_auto != True:
-        log.info('  *** *** OFF')
+        logger.info('  *** *** OFF')
         return params
     pixel_size = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detector/pixel_size_x')
@@ -284,7 +285,7 @@ def read_pixel_size(params):
                                     '/measurement/instrument/detection_system/objective/magnification')
     #Handle case where something wasn't read right
     if not (pixel_size and mag):
-        log.warning('  *** *** problem reading pixel size from the HDF file')
+        logger.warning('  *** *** problem reading pixel size from the HDF file')
         return params
     #What if pixel size isn't in microns, but in mm or m?
     for i in range(3):
@@ -293,7 +294,7 @@ def read_pixel_size(params):
         else:
             break
     params.pixel_size = pixel_size / mag
-    log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
+    logger.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
     return params
 
 
@@ -301,11 +302,11 @@ def read_scintillator(params):
     '''Read the scintillator type and thickness from the HDF file.
     '''
     if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
-        log.info('  *** *** Find scintillator params from the HDF file')
+        logger.info('  *** *** Find scintillator params from the HDF file')
         params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
                                             '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
                                             attr = None, scalar = True, char_array=False))
-        log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
+        logger.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
         scint_material_string = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detection_system/scintillator/description',
                                             scalar = False, char_array = True)
@@ -316,8 +317,8 @@ def read_scintillator(params):
         elif scint_material_string.lower().startswith('yag'):
             params.scintillator_material = 'YAG_Ce' 
         else:
-            log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
-        log.warning('  *** *** using scintillator {:s}'.format(params.scintillator_material))
+            logger.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
+        logger.warning('  *** *** using scintillator {:s}'.format(params.scintillator_material))
     #Run the initialization for beam hardening.  Needed in case rotation_axis must
     #be computed later.
     if params.beam_hardening_method.lower() == 'standard':
