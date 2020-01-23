@@ -16,6 +16,7 @@ from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
 
+logger = log.logger
 
 def init(args):
 
@@ -146,7 +147,6 @@ def main():
     lfname = os.path.join(logs_home, 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H_%M_%S") + '.log')
  
     log.setup_custom_logger(lfname)
-    logger = log.logger
     logger.info("Saving log at %s" % lfname)
 
     try:
