@@ -38,14 +38,10 @@ class ColoredLogFormatter(logging.Formatter):
     
     
     def formatMessage(self,record):
-        print(record)
-        print(record.message)
         if record.levelname=='INFO':
             record.message = self.__GREEN + record.message + self.__ENDC
         elif record.levelname == 'WARNING':
             record.message = self.__YELLOW + record.message + self.__ENDC
         elif record.levelname == 'ERROR':
             record.message = self.__RED + record.message + self.__ENDC
-        print(record)
-        print(record.message)
         return super().formatMessage(record)
