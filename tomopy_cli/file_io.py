@@ -64,7 +64,7 @@ def read_tomo(sino, params):
 
 
 def _read_theta_size(params):
-    if (str(params.file_type) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+    if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         theta_size = dxreader.read_dx_dims(params.file_name, 'data')[0]
     # elif:
     #     # add here other reader of theta size for other formats
