@@ -438,16 +438,35 @@ SECTIONS['astracgls'] = {
         'action': 'store_true',},
     }
 
+SECTIONS['convert'] = {
+    'old-projection-file-name': {
+        'default': '.',
+        'type': str,
+        'help': "Name of the hdf file containing the projections",
+        'metavar': 'PATH'},
+    'old-dark-file-name': {
+        'default': '.',
+        'type': str,
+        'help': "Name of the hdf file containing the dark images",
+        'metavar': 'PATH'},
+    'old-white-file-name': {
+        'default': '.',
+        'type': str,
+        'help': "Name of the hdf file containing the white images",
+        'metavar': 'PATH'},
+        }
+
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
                 'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
 
+CONVERT_PARAMS = ('convert', )
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'dx-options', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 
-                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)')
+                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert')
 
 def get_config_name():
     """Get the command line --config option."""
