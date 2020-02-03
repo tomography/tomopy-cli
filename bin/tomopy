@@ -132,7 +132,7 @@ def main():
         ('status',      run_status,      tomo_params,                    "Show the tomographic reconstruction status"),
         ('segment',     run_seg,         tomo_params,                    "Run segmentation on reconstured data"),
         ('find_center', run_find_center, find_center_params,             "Find rotation axis location for all hdf files in a directory"),
-        ('cenvert',     run_convert,     convert_params,                 "Convert pre-2015 (proj, dark, white) hdf files in a single data exchange h5 file"),
+        ('convert',     run_convert,     convert_params,                 "Convert pre-2015 (proj, dark, white) hdf files in a single data exchange h5 file"),
     ]
 
     subparsers = parser.add_subparsers(title="Commands", metavar='')
