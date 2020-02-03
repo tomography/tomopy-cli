@@ -5,6 +5,7 @@ import collections
 import tomopy
 import dxchange
 import dxchange.reader as dxreader
+import dxfile.dxtomo as dx
 import numpy as np
 
 from tomopy_cli import log
@@ -339,10 +340,10 @@ def convert(params):
     flat_grp = '/'.join([exchange_base, 'data_white'])
     dark_grp = '/'.join([exchange_base, 'data_dark'])
     theta_grp = '/'.join([exchange_base, 'theta'])
-    tomo = read_hdf5(params.old_projection_file_name, tomo_grp)
-    flat = read_hdf5(params.old_white_file_name, flat_grp)
-    dark = read_hdf5(params.old_dark_file_name, dark_grp)
-    theta = read_hdf5(params.old_projection_file_name, theta_grp)
+    tomo = dxreader.read_hdf5(params.old_projection_file_name, tomo_grp)
+    flat = dxreader.read_hdf5(params.old_white_file_name, flat_grp)
+    dark = dxreader.read_hdf5(params.old_dark_file_name, dark_grp)
+    theta = dxreader.read_hdf5(params.old_projection_file_name, theta_grp)
 
     # Open DataExchange file
     f = dx.File(new_hdf_file_name, mode='w') 
