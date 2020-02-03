@@ -322,4 +322,34 @@ def read_scintillator(params):
     #be computed later.
     if params.beam_hardening_method.lower() == 'standard':
         beamhardening.initialize(params)
-    return params 
+    return params
+
+
+def convert(params):
+
+    head_tail = os.path.split(params.old_projection_file_name)
+
+    new_hdf_file_name = head_tail[0] + os.sep + os.path.splitext(head_tail[1])[0] + '.h5'
+
+    print('converting data file: %s in new format: %s' % (params.old_projection_file_name, new_hdf_file_name))
+    print('using %s as dark and %s as white field' %(params.old_dark_file_name, params.old_white_file_name))
+    exchange_base = "exchange"
+
+    tomo_grp = '/'.join([exchange_base, 'data'])
+    flat_grp = '/'.join([exchange_base, 'data_white'])
+    dark_grp = '/'.join([exchange_base, 'data_dark'])
+    theta_grp = '/'.join([exchange_base, 'theta'])
+    tomo = read_hdf5(params.old_projection_file_name, tomo_grp)
+    flat = read_hdf5(params.old_white_file_name, flat_grp)
+    dark = read_hdf5(params.old_dark_file_name, dark_grp)
+    theta = read_hdf5(params.old_projection_file_name, theta_grp)
+
+    # Open DataExchange file
+    f = dx.File(new_hdf_file_name, mode='w') 
+
+    f.add_entry(dx.Entry.data(data={'value': tomo, 'units':'counts'}))
+    f.add_entry(dx.Entry.data(data_white={'value': flat, 'units':'counts'}))
+    f.add_entry(dx.Entry.data(data_dark={'value': dark, 'units':'counts'}))
+    f.add_entry(dx.Entry.data(theta={'value': theta, 'units':'degrees'}))
+
+    f.close()
