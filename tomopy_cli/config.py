@@ -39,7 +39,7 @@ SECTIONS['general'] = {
     'verbose': {
         'default': False,
         'help': 'Verbose output',
-        'action': 'store_true'}
+        'action': 'store_true'},
     'config-update': {
         'default': False,
         'help': 'When set, the content of the config file is updated using the current params values',
@@ -608,7 +608,6 @@ def write(config_file, args=None, sections=None):
             if name != 'config':
                 config.set(section, prefix + name, str(value))
 
-
     with open(config_file, 'w') as f:
         config.write(f)
 
@@ -619,40 +618,41 @@ def write_hdf(args=None, sections=None):
     if they are specified, otherwise use the defaults. If *sections* are specified, 
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
-    if not args.dx_update or (args == None):
+    if (args == None):
         log.warning("  *** Not saving log data to the HDF file.")
-        return
-    with h5py.File(args.file_name,'r+') as hdf_file:
-        #If the group we will write to already exists, remove it
-        if hdf_file.get('/process/tomopy-cli-' + __version__):
-            del(hdf_file['/process/tomopy-cli-' + __version__])
-        #dt = h5py.string_dtype(encoding='ascii')
-        log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.file_name))
-        config = configparser.ConfigParser()
-        for section in SECTIONS:
-            config.add_section(section)
-            for name, opts in SECTIONS[section].items():
-                if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
-                    value = getattr(args, name.replace('-', '_'))
-                    if isinstance(value, list):
-                        # print(type(value), value)
-                        value = ', '.join(value)
-                else:
-                    value = opts['default'] if opts['default'] is not None else ''
 
-                prefix = '# ' if value is '' else ''
+    else:
+        with h5py.File(args.file_name,'r+') as hdf_file:
+            #If the group we will write to already exists, remove it
+            if hdf_file.get('/process/tomopy-cli-' + __version__):
+                del(hdf_file['/process/tomopy-cli-' + __version__])
+            #dt = h5py.string_dtype(encoding='ascii')
+            log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.file_name))
+            config = configparser.ConfigParser()
+            for section in SECTIONS:
+                config.add_section(section)
+                for name, opts in SECTIONS[section].items():
+                    if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
+                        value = getattr(args, name.replace('-', '_'))
+                        if isinstance(value, list):
+                            # print(type(value), value)
+                            value = ', '.join(value)
+                    else:
+                        value = opts['default'] if opts['default'] is not None else ''
 
-                if name != 'config':
-                    dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + section + '/'+ name
-                    dset_length = len(str(value)) * 2 if len(str(value)) > 5 else 10
-                    dt = 'S{0:d}'.format(dset_length)
-                    hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
-                    log.info(name + ': ' + str(value))
-                    try:
-                        hdf_file[dataset][0] = np.string_(str(value))
-                    except TypeError:
-                        print(value)
-                        raise TypeError
+                    prefix = '# ' if value is '' else ''
+
+                    if name != 'config':
+                        dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + section + '/'+ name
+                        dset_length = len(str(value)) * 2 if len(str(value)) > 5 else 10
+                        dt = 'S{0:d}'.format(dset_length)
+                        hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
+                        log.info(name + ': ' + str(value))
+                        try:
+                            hdf_file[dataset][0] = np.string_(str(value))
+                        except TypeError:
+                            print(value)
+                            raise TypeError
 
 
 def log_values(args):
@@ -689,15 +689,16 @@ def update_log(args):
     if (args.config_update):
         # update tomopy.conf
         write(args.config, args=args, sections=sections)
-        if (args.reconstruction_type == "full"):
-            tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
-            log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
-            try:
-                shutil.copyfile(args.config, log_fname)
-                log.info('  *** copied %s to %s ' % (args.config, log_fname))
-            except:
-                log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
-                pass
+    if (args.reconstruction_type == "full"):
+        tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
+        log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
+        try:
+            write(log_fname, args=args, sections=sections)
+            log.info('  *** saved config to %s ' % (log_fname))
             log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
-    write_hdf(args, sections)       
+        except:
+            log.error('  *** attempt to save config to %s failed' % (log_fname))
+            pass
+    if(args.dx_update):
+        write_hdf(args, sections)       
 
