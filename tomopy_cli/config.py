@@ -683,7 +683,7 @@ def log_values(args):
     log.warning('tomopy-cli status end')
 
 
-def update_log(args):
+def update_config(args):
 
     sections = RECON_PARAMS
     if (args.config_update):
