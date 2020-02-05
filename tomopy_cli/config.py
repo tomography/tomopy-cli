@@ -585,7 +585,7 @@ class Params(object):
         return parser.parse_args('')
 
 
-def write(config_file, args=None, sections=None):
+def write_config(config_file, args=None, sections=None):
     """
     Write *config_file* with values from *args* if they are specified,
     otherwise use the defaults. If *sections* are specified, write values from
@@ -609,7 +609,7 @@ def write(config_file, args=None, sections=None):
                 config.set(section, prefix + name, str(value))
 
     with open(config_file, 'w') as f:
-        config.write(f)
+        config.write_config(f)
 
 
 def write_hdf(args=None, sections=None):
@@ -688,12 +688,12 @@ def update_config(args):
     sections = RECON_PARAMS
     if (args.config_update):
         # update tomopy.conf
-        write(args.config, args=args, sections=sections)
+        write_config(args.config, args=args, sections=sections)
     if (args.reconstruction_type == "full"):
         tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
         log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
         try:
-            write(log_fname, args=args, sections=sections)
+            write_config(log_fname, args=args, sections=sections)
             log.info('  *** saved config to %s ' % (log_fname))
             log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
         except:
