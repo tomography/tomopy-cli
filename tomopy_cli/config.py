@@ -40,7 +40,12 @@ SECTIONS['general'] = {
         'default': False,
         'help': 'Verbose output',
         'action': 'store_true'}
+    'config-update': {
+        'default': False,
+        'help': 'When set, the content of the config file is updated using the current params values',
+        'action': 'store_true'},
         }
+
 
 SECTIONS['find-rotation-axis'] = {
     'center-search-width': {
@@ -123,7 +128,7 @@ SECTIONS['file-reading'] = {
 SECTIONS['dx-options'] = {
     'dx-update': {
         'default': False,
-        'help': 'When set, the content of the hdf dx file /process tag is updated using the current config file information',
+        'help': 'When set, the content of the hdf dx file /process tag is updated using the current params values',
         'action': 'store_true'},
         }
 
@@ -607,17 +612,14 @@ def write(config_file, args=None, sections=None):
     with open(config_file, 'w') as f:
         config.write(f)
 
-    if args is not None:
-        write_hdf(config_file, args, sections)       
 
-
-def write_hdf(config_file, args=None, sections=None):
+def write_hdf(args=None, sections=None):
     """
     Write in the hdf raw data file the content of *config_file* with values from *args* 
     if they are specified, otherwise use the defaults. If *sections* are specified, 
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
-    if not args.dx_update:
+    if not args.dx_update or (args == None):
         log.warning("  *** Not saving log data to the HDF file.")
         return
     with h5py.File(args.file_name,'r+') as hdf_file:
@@ -682,8 +684,10 @@ def log_values(args):
 
 
 def update_log(args):
-       # update tomopy.conf
-        sections = RECON_PARAMS
+
+    sections = RECON_PARAMS
+    if (args.config_update):
+        # update tomopy.conf
         write(args.config, args=args, sections=sections)
         if (args.reconstruction_type == "full"):
             tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
@@ -695,3 +699,5 @@ def update_log(args):
                 log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
                 pass
             log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
+    write_hdf(args, sections)       
+
