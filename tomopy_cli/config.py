@@ -609,7 +609,7 @@ def write_config(config_file, args=None, sections=None):
                 config.set(section, prefix + name, str(value))
 
     with open(config_file, 'w') as f:
-        config.write_config(f)
+        config.write(f)
 
 
 def write_hdf(args=None, sections=None):
@@ -693,13 +693,14 @@ def update_config(args):
     if (args.reconstruction_type == "full"):
         tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
         log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
-        try:
+        # try:
+        if 0==0:
             write_config(log_fname, args=args, sections=sections)
             log.info('  *** saved config to %s ' % (log_fname))
             log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
-        except:
-            log.error('  *** attempt to save config to %s failed' % (log_fname))
-            pass
+        # except:
+        #     log.error('  *** attempt to save config to %s failed' % (log_fname))
+        #     pass
     if(args.dx_update):
         write_hdf(args, sections)       
 
