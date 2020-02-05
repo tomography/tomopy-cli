@@ -686,6 +686,7 @@ def log_values(args):
 def update_config(args):
 
     sections = RECON_PARAMS
+    # write_config(args.config, args=args, sections=sections)
     if (args.config_update):
         # update tomopy.conf
         write_config(args.config, args=args, sections=sections)
