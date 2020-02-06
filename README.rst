@@ -9,6 +9,7 @@ Installation
 ============
 
 ::
+
     $ git clone https://github.com/tomography/tomopy-cli.git
     $ cd tomopy-cli
     $ python setup.py install
@@ -16,6 +17,17 @@ Installation
 in a prepared virtualenv or as root for system-wide installation.
 
 .. warning:: If your python installation is in a location different from #!/usr/bin/env python please edit the first line of the bin/tomopy file to match yours.
+
+
+Update
+======
+
+**tomopy** is constantly updated to include new features. To update your locally installed version::
+
+    $ cd tomopy-cli
+    $ git pull
+    $ python setup.py install
+
 
 Dependencies
 ============

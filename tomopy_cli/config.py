@@ -438,16 +438,35 @@ SECTIONS['astracgls'] = {
         'action': 'store_true',},
     }
 
+SECTIONS['convert'] = {
+    'old-projection-file-name': {
+        'default': '.',
+        'type': str,
+        'help': "Name of the hdf file containing the projections",
+        'metavar': 'PATH'},
+    'old-dark-file-name': {
+        'default': '.',
+        'type': str,
+        'help': "Name of the hdf file containing the dark images",
+        'metavar': 'PATH'},
+    'old-white-file-name': {
+        'default': '.',
+        'type': str,
+        'help': "Name of the hdf file containing the white images",
+        'metavar': 'PATH'},
+        }
+
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
                 'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
 
+CONVERT_PARAMS = ('convert', )
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'dx-options', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 
-                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)')
+                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert')
 
 def get_config_name():
     """Get the command line --config option."""
@@ -666,38 +685,7 @@ def update_log(args):
        # update tomopy.conf
         sections = RECON_PARAMS
         write(args.config, args=args, sections=sections)
-        '''
-        if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
-        # add reconstruction command in ~/logs/user_last_name.log
-            rec_log_msg = "\n" + "tomopy recon" + " --rotation-axis " + str(args.rotation_axis) \
-                                                + " --reconstruction-type " + str(args.reconstruction_type) \
-                                                + " --hdf-file " + str(args.file_name) \
-                                                + " --binning " + str(args.binning) \
-                                                + " --reconstruction-algorithm " + str(args.reconstruction_algorithm) \
-                                                + " --retrieve-phase-method " + str(args.retrieve_phase_method) \
-                                                + " --energy " + str(args.energy) \
-                                                + " --propagation-distance " + str(args.propagation_distance) \
-                                                + " --pixel-size " + str(args.pixel_size) \
-                                                + " --retrieve-phase-alpha  " + str(args.retrieve_phase_alpha)
-
-            log.info('  *** command to repeat the reconstruction: %s' % rec_log_msg)
-            p = pathlib.Path(args.file_name)
-            lfname = pathlib.Path.joinpath(pathlib.Path(args.logs_home), p.stem + '.log')
-
-            log.info('  *** command added to %s ' % lfname.as_posix())
-            with open(lfname, "a") as myfile:
-                myfile.write(rec_log_msg)
-        '''
         if (args.reconstruction_type == "full"):
-        # if (args.reconstruction_type == "slice") or (args.reconstruction_type == "full"):
-            # copy tomopy.conf in the reconstructed data directory path
-            # in this way you can reproduce the reconstruction by simply running:
-            # $ tomopy recon --config /path/tomopy.conf
-
-            # config_path = pathlib.Path(args.config)
-            # p = pathlib.Path(args.file_name)
-            # log_fname = pathlib.Path.joinpath(p.parent, '_rec', p.stem + '_rec', config_path.name)
-            # un-did the above 
             tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
             log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
             try:

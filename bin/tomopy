@@ -52,6 +52,13 @@ def run_seg(args):
     sections = config.RECON_PARAMS
     config.write(args.config, args=args, sections=sections)
 
+
+def run_convert(args):
+
+    log.warning('convert start')
+    file_io.convert(args)
+    log.warning('convert end')
+
     
 def run_rec(args):
 
@@ -66,7 +73,7 @@ def run_rec(args):
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
 
-            h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf')), os.listdir(top)))
+            h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf', 'hdf5')), os.listdir(top)))
             if (h5_file_list):
                 h5_file_list.sort()
                 log.info("found: %s" % h5_file_list) 
@@ -117,6 +124,7 @@ def main():
 
     tomo_params = config.RECON_PARAMS
     find_center_params = config.RECON_PARAMS
+    convert_params = config.CONVERT_PARAMS
 
     cmd_parsers = [
         ('init',        init,            (),                             "Create configuration file"),
@@ -124,6 +132,7 @@ def main():
         ('status',      run_status,      tomo_params,                    "Show the tomographic reconstruction status"),
         ('segment',     run_seg,         tomo_params,                    "Run segmentation on reconstured data"),
         ('find_center', run_find_center, find_center_params,             "Find rotation axis location for all hdf files in a directory"),
+        ('convert',     run_convert,     convert_params,                 "Convert pre-2015 (proj, dark, white) hdf files in a single data exchange h5 file"),
     ]
 
     subparsers = parser.add_subparsers(title="Commands", metavar='')
