@@ -80,6 +80,15 @@ def _read_tomo(params, sino):
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
+        #Check if the flat and dark fields are single images or sets
+        if len(flat.shape) == len(proj.shape):
+            log.info('  *** median filter flat images')
+            #Do a median filter on the first dimension
+            flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
+        if len(dark.shape) == len(proj.shape):
+            log.info('  *** median filter dark images')
+            #Do a median filter on the first dimension
+            dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
     # elif:
     #     # add here other dxchange loader
     #     log.info("  *** %s is a valid xxx file format" % params.file_name)
@@ -239,6 +248,7 @@ def auto_read_dxchange(params):
     log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
     params = read_scintillator(params)
+    params = read_bright_ratio(params)
     params = read_rot_center(params)
     log.info('  *** *** Done')
     return params
@@ -323,3 +333,28 @@ def read_scintillator(params):
     if params.beam_hardening_method.lower() == 'standard':
         beamhardening.initialize(params)
     return params 
+
+
+def read_bright_ratio(params):
+    '''Read the ratio between the bright exposure and other exposures.
+    '''
+    log.info(params.flat_correction_method)
+    if params.scintillator_auto and params.flat_correction_method == 'standard':
+        log.info('  *** *** Find bright exposure ratio params from the HDF file')
+        try:
+            bright_exp = config.param_from_dxchange(params.file_name,
+                                        '/measurement/instrument/detector/brightfield_exposure_time',
+                                        attr = None, scalar = True, char_array = False)
+            log.info(bright_exp)
+            norm_exp = config.param_from_dxchange(params.file_name,
+                                        '/measurement/instrument/detector/exposure_time',
+                                        attr = None, scalar = True, char_array = False)
+            log.info(norm_exp)
+            params.bright_exp_ratio = bright_exp / norm_exp
+            log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
+        except:
+            log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
+            params.bright_exp_ratio = 1
+    else:
+            params.bright_exp_ratio = 1
+    return params
