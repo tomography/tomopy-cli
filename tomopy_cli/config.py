@@ -88,7 +88,7 @@ SECTIONS['file-reading'] = {
         'help': 'Location of the sinogram used for slice reconstruction and find axis (0 top, 1 bottom)'},
     'nsino-per-chunk': {     
         'type': int,
-        'default': 32,
+        'default': 256,
         'help': "Number of sinograms per chunk. Use larger numbers with computers with larger memory.  Value <= 0 defaults to # of cpus.",},
     'binning': {
         'type': util.positive_int,
@@ -585,7 +585,7 @@ class Params(object):
         return parser.parse_args('')
 
 
-def write_config(config_file, args=None, sections=None):
+def write(config_file, args=None, sections=None):
     """
     Write *config_file* with values from *args* if they are specified,
     otherwise use the defaults. If *sections* are specified, write values from
@@ -686,21 +686,20 @@ def log_values(args):
 def update_config(args):
 
     sections = RECON_PARAMS
-    # write_config(args.config, args=args, sections=sections)
+    # write(args.config, args=args, sections=sections)
     if (args.config_update):
         # update tomopy.conf
-        write_config(args.config, args=args, sections=sections)
+        write(args.config, args=args, sections=sections)
     if (args.reconstruction_type == "full"):
         tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
         log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
-        # try:
-        if 0==0:
-            write_config(log_fname, args=args, sections=sections)
+        try:
+            write(log_fname, args=args, sections=sections)
             log.info('  *** saved config to %s ' % (log_fname))
             log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
-        # except:
-        #     log.error('  *** attempt to save config to %s failed' % (log_fname))
-        #     pass
+        except:
+            log.error('  *** attempt to save config to %s failed' % (log_fname))
+            pass
     if(args.dx_update):
         write_hdf(args, sections)       
 
