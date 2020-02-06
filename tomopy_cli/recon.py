@@ -7,6 +7,7 @@ import threading
 import numpy as np
 import tomopy
 import dxchange
+import matplotlib.pyplot as plt
 
 from tomopy_cli import log
 from tomopy_cli import file_io
@@ -77,6 +78,15 @@ def rec(params):
         # Reconstruct
         if (params.reconstruction_type == "try"):
             # try passes an array of rotation centers and this is only supported by gridrec
+            plt.imshow(data[:,0,:], vmin=3200, vmax=3600)
+            plt.colorbar()
+            plt.figure()
+            plt.imshow(proj[:,0,:])
+            plt.colorbar()
+            plt.figure()
+            plt.imshow(flat[:,0,:])
+            plt.colorbar()
+            plt.show()
             reconstruction_algorithm_org = params.reconstruction_algorithm
             params.reconstruction_algorithm = 'gridrec'
 
