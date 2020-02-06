@@ -5,6 +5,7 @@ import collections
 import tomopy
 import dxchange
 import dxchange.reader as dxreader
+import dxfile.dxtomo as dx
 import numpy as np
 
 from tomopy_cli import log
@@ -47,13 +48,6 @@ def read_tomo(sino, params):
         theta = np.linspace(np.pi , (0+step_size), theta_size)   
 
     proj, theta = blocked_view(proj, theta, params)
-
-    # new missing projection handling
-    # if params.blocked_views:
-    #     log.warning("  *** new missing angle handling")
-    #     miss_angles = [params.missing_angles_start, params.missing_angle_end]
-    #     data = patch_projection(data, miss_angles)
-
     proj, flat, dark = binning(proj, flat, dark, params)
 
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
@@ -63,11 +57,8 @@ def read_tomo(sino, params):
 
 
 def _read_theta_size(params):
-    if (str(params.file_type) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+    if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         theta_size = dxreader.read_dx_dims(params.file_name, 'data')[0]
-    # elif:
-    #     # add here other reader of theta size for other formats
-    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
@@ -89,10 +80,6 @@ def _read_tomo(params, sino):
             log.info('  *** median filter dark images')
             #Do a median filter on the first dimension
             dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
-    # elif:
-    #     # add here other dxchange loader
-    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
-
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
@@ -358,3 +345,33 @@ def read_bright_ratio(params):
     else:
             params.bright_exp_ratio = 1
     return params
+
+
+def convert(params):
+
+    head_tail = os.path.split(params.old_projection_file_name)
+
+    new_hdf_file_name = head_tail[0] + os.sep + os.path.splitext(head_tail[1])[0] + '.h5'
+
+    print('converting data file: %s in new format: %s' % (params.old_projection_file_name, new_hdf_file_name))
+    print('using %s as dark and %s as white field' %(params.old_dark_file_name, params.old_white_file_name))
+    exchange_base = "exchange"
+
+    tomo_grp = '/'.join([exchange_base, 'data'])
+    flat_grp = '/'.join([exchange_base, 'data_white'])
+    dark_grp = '/'.join([exchange_base, 'data_dark'])
+    theta_grp = '/'.join([exchange_base, 'theta'])
+    tomo = dxreader.read_hdf5(params.old_projection_file_name, tomo_grp)
+    flat = dxreader.read_hdf5(params.old_white_file_name, flat_grp)
+    dark = dxreader.read_hdf5(params.old_dark_file_name, dark_grp)
+    theta = dxreader.read_hdf5(params.old_projection_file_name, theta_grp)
+
+    # Open DataExchange file
+    f = dx.File(new_hdf_file_name, mode='w') 
+
+    f.add_entry(dx.Entry.data(data={'value': tomo, 'units':'counts'}))
+    f.add_entry(dx.Entry.data(data_white={'value': flat, 'units':'counts'}))
+    f.add_entry(dx.Entry.data(data_dark={'value': dark, 'units':'counts'}))
+    f.add_entry(dx.Entry.data(theta={'value': theta, 'units':'degrees'}))
+
+    f.close()
