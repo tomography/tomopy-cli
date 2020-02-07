@@ -32,7 +32,7 @@ def run_find_center(args):
 
     if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         log.warning('find center start')
-        find_center.find_rotation_axis(args)
+        args = find_center.find_rotation_axis(args)
         log.warning('find center end')
 
         # update tomopy.conf
