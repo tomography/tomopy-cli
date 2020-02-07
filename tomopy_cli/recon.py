@@ -7,7 +7,6 @@ import threading
 import numpy as np
 import tomopy
 import dxchange
-import matplotlib.pyplot as plt
 
 from tomopy_cli import log
 from tomopy_cli import file_io
