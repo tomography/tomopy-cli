@@ -15,7 +15,7 @@ from tomopy_cli import config
 from tomopy_cli import beamhardening
 
  
-def read_tomo(sino, params):
+def read_tomo(sino, params, ignore_flip = False):
     """
     Read in the tomography data.
     Inputs:
@@ -28,14 +28,15 @@ def read_tomo(sino, params):
     theta: Numpy array of angle for each projection
     rotation_axis: location of the rotation axis
     """
-    if params.file_type == 'standard':
+    if (params.file_type == 'standard' or 
+            (params.file_type == 'flip_and_stich' and ignore_flip)):
         # Read APS 32-BM raw data.
         log.info("  *** loading a stardard data set: %s" % params.file_name)
         proj, flat, dark, theta = _read_tomo(params, sino=sino)
     elif params.file_type == 'flip_and_stich':
         log.info("   *** loading a 360 deg flipped data set: %s" % params.file_name)
         proj360, flat360, dark360, theta360 = _read_tomo(params, sino=sino)
-        proj, flat, dark = flip_and_stitch(variableDict, proj360, flat360, dark360)
+        proj, flat, dark = flip_and_stitch(params, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
     else: # params.file_type == 'mosaic':
         log.error("   *** loading a mosaic data set is not supported yet")
@@ -124,19 +125,45 @@ def _binning(data, params):
 
 
 def flip_and_stitch(params, img360, flat360, dark360):
+    '''Code to take a 0-360 flip and stitch scan and provide stitched
+    0-180 degree projections.
+    '''
+    num_stitched_angles = img360.shape[0]//2 
+    new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
+                            params.rotation_axis_flip + 0.5]))
+    log.info('  *** *** new image width = {:d}'.format(new_width))
+    log.info('  *** *** rotation axis flip = {:f}'.format(params.rotation_axis_flip))
+    img = np.zeros([num_stitched_angles,img360.shape[1], new_width],dtype=np.float32)
+    flat = np.zeros([flat360.shape[0],flat360.shape[1], new_width],dtype=np.float32)
+    dark = np.zeros([dark360.shape[0],dark360.shape[1], new_width],dtype=np.float32)
+    # Just add both images, keeping an array to record whether there was an overlap
+    weight = np.zeros((1,1,new_width))
+    # Take care of case where rotation axis is on the left edge of the image
+    if params.rotation_axis_flip < img360.shape[2] - 1:
+        img[:,:,:img360.shape[2]] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
+        flat[:,:,:img360.shape[2]] = flat360[...,::-1]
+        dark[:,:,:img360.shape[2]] = dark360[...,::-1]
+        weight[:img360.shape[2]] += 1
+        img[:,:,-img360.shape[2]:] = img360[:num_stitched_angles,:,:]
+        flat[:,:,-img360.shape[2]:] = flat360
+        dark[:,:,-img360.shape[2]:] = dark360
+        weight[-img360.shape[2]:] += 1
+    else:
+        img[:,:,:img360.shape[2]] = img360[:num_stitched_angles,:,:]
+        flat[:,:,:img360.shape[2]] = flat360
+        dark[:,:,:img360.shape[2]] = dark360
+        weight[:img360.shape[2]] += 1
+        img[:,:,-img360.shape[2]:] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
+        flat[:,:,-img360.shape[2]:] = flat360[...,::-1]
+        dark[:,:,-img360.shape[2]:] = dark360[...,::-1]
+        weight[-img360.shape[2]:] += 1
 
-    center = int(params.rotation_axis_flip)
-    img = np.zeros([img360.shape[0]//2,img360.shape[1],2*img360.shape[2]-2*center],dtype=img360.dtype)
-    flat = np.zeros([flat360.shape[0],flat360.shape[1],2*flat360.shape[2]-2*center],dtype=img360.dtype)
-    dark = np.zeros([dark360.shape[0],dark360.shape[1],2*dark360.shape[2]-2*center],dtype=img360.dtype)
-    img[:,:,img360.shape[2]-2*center:] = img360[:img360.shape[0]//2,:,:]
-    img[:,:,:img360.shape[2]] = img360[img360.shape[0]//2:,:,::-1]
-    flat[:,:,flat360.shape[2]-2*center:] = flat360
-    flat[:,:,:flat360.shape[2]] = flat360[:,:,::-1]
-    dark[:,:,dark360.shape[2]-2*center:] = dark360
-    dark[:,:,:dark360.shape[2]] = dark360[:,:,::-1]
+    # Divide through by the weight to take care of doubled regions
+    img = (img / weight).astype(img360.dtype)
+    flat = (flat / weight).astype(img360.dtype)
+    dark = (dark / weight).astype(img360.dtype)
 
-    params.rotation_axis = img.shape[2]//2
+    params.rotation_axis = img.shape[2]/2 - 0.5
 
     return img, flat, dark
 
@@ -252,7 +279,10 @@ def read_rot_center(params):
         try:
             dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
             params.rotation_axis = float(file_name[dataset][0])
+            dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
+            params.rotation_axis_flip = float(file_name[dataset][0])
             log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
+            log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
             return params
         except (KeyError, ValueError):
             log.warning('  *** *** No rotation center stored in the HDF5 file')
