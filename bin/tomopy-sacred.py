@@ -57,12 +57,11 @@ from tomopy_cli import post
 
 from sacred import Experiment
 
-ex = Experiment("my_commands")
+ex = Experiment("tomopy-cli")
 
 
 @ex.config
 def cfg():
-    name = "John"
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', **config.SECTIONS['general']['config'])
