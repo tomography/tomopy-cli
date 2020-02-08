@@ -168,4 +168,7 @@ def rec(args):
 
 @ex.automain
 def main():
-    print("This is just the main command. Try greet or shout.")
+    print("done!")
+
+if __name__ == '__main__':
+    main()
