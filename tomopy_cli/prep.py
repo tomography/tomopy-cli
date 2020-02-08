@@ -6,14 +6,11 @@ import numpy as np
 
 from tomopy_cli import log
 from tomopy_cli import file_io
-from tomopy_cli import prep
 from tomopy_cli import beamhardening
 
 def all(proj, flat, dark, params, sino):
-
     # zinger_removal
     proj, flat = zinger_removal(proj, flat, params)
-
     if (params.dark_zero):
         dark *= 0
         log.warning('  *** *** dark fields are ignored')
@@ -32,7 +29,6 @@ def all(proj, flat, dark, params, sino):
         data = minus_log(data, params)
     # remove outlier
     data = remove_nan_neg_inf(data, params)
-
     return data
 
 
@@ -72,6 +68,11 @@ def flat_correction(proj, flat, dark, params):
     log.info('  *** normalization')
     if(params.flat_correction_method == 'standard'):
         data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff)
+        try:
+            if params.bright_exp_ratio != 1:
+                data *= params.bright_exp_ratio
+        except AttributeError:
+            log.warning('  *** *** No bright_exp_ratio found.  Ignore')
         log.info('  *** *** ON %f cut-off' % params.normalization_cutoff)
     elif(params.flat_correction_method == 'air'):
         data = tomopy.normalize_bg(proj, air=params.air)

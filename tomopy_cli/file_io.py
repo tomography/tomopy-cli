@@ -15,7 +15,7 @@ from tomopy_cli import config
 from tomopy_cli import beamhardening
 
  
-def read_tomo(sino, params):
+def read_tomo(sino, params, ignore_flip = False):
     """
     Read in the tomography data.
     Inputs:
@@ -28,14 +28,15 @@ def read_tomo(sino, params):
     theta: Numpy array of angle for each projection
     rotation_axis: location of the rotation axis
     """
-    if params.file_type == 'standard':
+    if (params.file_type == 'standard' or 
+            (params.file_type == 'flip_and_stich' and ignore_flip)):
         # Read APS 32-BM raw data.
         log.info("  *** loading a stardard data set: %s" % params.file_name)
         proj, flat, dark, theta = _read_tomo(params, sino=sino)
     elif params.file_type == 'flip_and_stich':
         log.info("   *** loading a 360 deg flipped data set: %s" % params.file_name)
         proj360, flat360, dark360, theta360 = _read_tomo(params, sino=sino)
-        proj, flat, dark = flip_and_stitch(variableDict, proj360, flat360, dark360)
+        proj, flat, dark = flip_and_stitch(params, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
     else: # params.file_type == 'mosaic':
         log.error("   *** loading a mosaic data set is not supported yet")
@@ -48,13 +49,6 @@ def read_tomo(sino, params):
         theta = np.linspace(np.pi , (0+step_size), theta_size)   
 
     proj, theta = blocked_view(proj, theta, params)
-
-    # new missing projection handling
-    # if params.blocked_views:
-    #     log.warning("  *** new missing angle handling")
-    #     miss_angles = [params.missing_angles_start, params.missing_angle_end]
-    #     data = patch_projection(data, miss_angles)
-
     proj, flat, dark = binning(proj, flat, dark, params)
 
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
@@ -66,9 +60,6 @@ def read_tomo(sino, params):
 def _read_theta_size(params):
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         theta_size = dxreader.read_dx_dims(params.file_name, 'data')[0]
-    # elif:
-    #     # add here other reader of theta size for other formats
-    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
@@ -81,10 +72,15 @@ def _read_tomo(params, sino):
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
-    # elif:
-    #     # add here other dxchange loader
-    #     log.info("  *** %s is a valid xxx file format" % params.file_name)
-
+        #Check if the flat and dark fields are single images or sets
+        if len(flat.shape) == len(proj.shape):
+            log.info('  *** median filter flat images')
+            #Do a median filter on the first dimension
+            flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
+        if len(dark.shape) == len(proj.shape):
+            log.info('  *** median filter dark images')
+            #Do a median filter on the first dimension
+            dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
@@ -129,19 +125,45 @@ def _binning(data, params):
 
 
 def flip_and_stitch(params, img360, flat360, dark360):
+    '''Code to take a 0-360 flip and stitch scan and provide stitched
+    0-180 degree projections.
+    '''
+    num_stitched_angles = img360.shape[0]//2 
+    new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
+                            params.rotation_axis_flip + 0.5]))
+    log.info('  *** *** new image width = {:d}'.format(new_width))
+    log.info('  *** *** rotation axis flip = {:f}'.format(params.rotation_axis_flip))
+    img = np.zeros([num_stitched_angles,img360.shape[1], new_width],dtype=np.float32)
+    flat = np.zeros([flat360.shape[0],flat360.shape[1], new_width],dtype=np.float32)
+    dark = np.zeros([dark360.shape[0],dark360.shape[1], new_width],dtype=np.float32)
+    # Just add both images, keeping an array to record whether there was an overlap
+    weight = np.zeros((1,1,new_width))
+    # Take care of case where rotation axis is on the left edge of the image
+    if params.rotation_axis_flip < img360.shape[2] - 1:
+        img[:,:,:img360.shape[2]] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
+        flat[:,:,:img360.shape[2]] = flat360[...,::-1]
+        dark[:,:,:img360.shape[2]] = dark360[...,::-1]
+        weight[:img360.shape[2]] += 1
+        img[:,:,-img360.shape[2]:] = img360[:num_stitched_angles,:,:]
+        flat[:,:,-img360.shape[2]:] = flat360
+        dark[:,:,-img360.shape[2]:] = dark360
+        weight[-img360.shape[2]:] += 1
+    else:
+        img[:,:,:img360.shape[2]] = img360[:num_stitched_angles,:,:]
+        flat[:,:,:img360.shape[2]] = flat360
+        dark[:,:,:img360.shape[2]] = dark360
+        weight[:img360.shape[2]] += 1
+        img[:,:,-img360.shape[2]:] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
+        flat[:,:,-img360.shape[2]:] = flat360[...,::-1]
+        dark[:,:,-img360.shape[2]:] = dark360[...,::-1]
+        weight[-img360.shape[2]:] += 1
 
-    center = int(params.rotation_axis_flip)
-    img = np.zeros([img360.shape[0]//2,img360.shape[1],2*img360.shape[2]-2*center],dtype=img360.dtype)
-    flat = np.zeros([flat360.shape[0],flat360.shape[1],2*flat360.shape[2]-2*center],dtype=img360.dtype)
-    dark = np.zeros([dark360.shape[0],dark360.shape[1],2*dark360.shape[2]-2*center],dtype=img360.dtype)
-    img[:,:,img360.shape[2]-2*center:] = img360[:img360.shape[0]//2,:,:]
-    img[:,:,:img360.shape[2]] = img360[img360.shape[0]//2:,:,::-1]
-    flat[:,:,flat360.shape[2]-2*center:] = flat360
-    flat[:,:,:flat360.shape[2]] = flat360[:,:,::-1]
-    dark[:,:,dark360.shape[2]-2*center:] = dark360
-    dark[:,:,:dark360.shape[2]] = dark360[:,:,::-1]
+    # Divide through by the weight to take care of doubled regions
+    img = (img / weight).astype(img360.dtype)
+    flat = (flat / weight).astype(img360.dtype)
+    dark = (dark / weight).astype(img360.dtype)
 
-    params.rotation_axis = img.shape[2]//2
+    params.rotation_axis = img.shape[2]/2 - 0.5
 
     return img, flat, dark
 
@@ -240,6 +262,7 @@ def auto_read_dxchange(params):
     log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
     params = read_scintillator(params)
+    params = read_bright_ratio(params)
     params = read_rot_center(params)
     log.info('  *** *** Done')
     return params
@@ -256,7 +279,10 @@ def read_rot_center(params):
         try:
             dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
             params.rotation_axis = float(file_name[dataset][0])
+            dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
+            params.rotation_axis_flip = float(file_name[dataset][0])
             log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
+            log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
             return params
         except (KeyError, ValueError):
             log.warning('  *** *** No rotation center stored in the HDF5 file')
@@ -323,6 +349,31 @@ def read_scintillator(params):
     #be computed later.
     if params.beam_hardening_method.lower() == 'standard':
         beamhardening.initialize(params)
+    return params 
+
+
+def read_bright_ratio(params):
+    '''Read the ratio between the bright exposure and other exposures.
+    '''
+    log.info(params.flat_correction_method)
+    if params.scintillator_auto and params.flat_correction_method == 'standard':
+        log.info('  *** *** Find bright exposure ratio params from the HDF file')
+        try:
+            bright_exp = config.param_from_dxchange(params.file_name,
+                                        '/measurement/instrument/detector/brightfield_exposure_time',
+                                        attr = None, scalar = True, char_array = False)
+            log.info(bright_exp)
+            norm_exp = config.param_from_dxchange(params.file_name,
+                                        '/measurement/instrument/detector/exposure_time',
+                                        attr = None, scalar = True, char_array = False)
+            log.info(norm_exp)
+            params.bright_exp_ratio = bright_exp / norm_exp
+            log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
+        except:
+            log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
+            params.bright_exp_ratio = 1
+    else:
+            params.bright_exp_ratio = 1
     return params
 
 

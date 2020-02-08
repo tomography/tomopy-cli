@@ -32,7 +32,7 @@ def run_find_center(args):
 
     if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         log.warning('find center start')
-        find_center.find_rotation_axis(args)
+        args = find_center.find_rotation_axis(args)
         log.warning('find center end')
 
         # update tomopy.conf
@@ -73,7 +73,7 @@ def run_rec(args):
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
 
-            h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf')), os.listdir(top)))
+            h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf', 'hdf5')), os.listdir(top)))
             if (h5_file_list):
                 h5_file_list.sort()
                 log.info("found: %s" % h5_file_list) 
