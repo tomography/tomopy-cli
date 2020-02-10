@@ -15,6 +15,7 @@ from tomopy_cli import recon
 from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
+from tomopy_cli.auto_complete import create_complete_tomopy
 
 
 def init(args):
@@ -22,7 +23,15 @@ def init(args):
     if not os.path.exists(str(args.config)):
         config.write(args.config)
     else:
-        log.error("{0} already exists".format(args.config))
+        log.error("{0} already exists".format(args.config))    
+    status = create_complete_tomopy.run(str(pathlib.Path.home())+'/complete_tomopy.sh')
+    if(status==0):
+        log.info('Bash autocomplete file created' +str(pathlib.Path.home())+'/complete_tomopy.sh')
+    else:
+        log.error('Bash autocomplete file was not created')                
+    os.system('source '+str(pathlib.Path.home())+'/complete_tomopy.sh'        )
+    print('source '+str(pathlib.Path.home())+'/complete_tomopy.sh'     )
+    log.info('Autocomplete tomopy recon done')
 
 def run_status(args):
 
