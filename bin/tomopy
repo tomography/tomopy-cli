@@ -68,7 +68,7 @@ def run_rec(args):
         if os.path.isfile(args.file_name):    
             log.info("reconstructing a single file: %s" % args.file_name)   
             recon.rec(args)
-            config.update_log(args)
+            config.update_config(args)
         elif os.path.isdir(args.file_name):
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
@@ -93,7 +93,7 @@ def run_rec(args):
                             log.warning("  *** file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
                             index += 1
                             recon.rec(args)
-                            config.update_log(args)
+                            config.update_config(args)
                     log.warning('reconstruction end')
                 else:
                     log.warning("  *** no pre-calculated rotation centers from %s file" % jfname)   
@@ -103,7 +103,7 @@ def run_rec(args):
                         log.warning("  *** file %d/%d;  %s" % (index, len(h5_file_list), fname))
                         index += 1
                         recon.rec(args)
-                        config.update_log(args)
+                        config.update_config(args)
                     log.warning('reconstruction end')
             else:
                 log.error("directory %s does not contain any file" % args.file_name)
