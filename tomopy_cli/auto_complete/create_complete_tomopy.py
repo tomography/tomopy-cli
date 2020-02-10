@@ -1,8 +1,8 @@
 import subprocess
-
+from tomopy_cli import log
 
 def run(fname):
-    # try:
+    try:
         # Form auto-complete for recon
         out = subprocess.Popen(['tomopy', 'recon', '-h'],
                                stdout=subprocess.PIPE,
@@ -15,15 +15,18 @@ def run(fname):
         st = stdout.find("optional")
         while(1):
             st = stdout.find('--', st)
-            end = stdout.find(' ', st)
+            end = min(stdout.find(' ', st),stdout.find('\\n', st))
             if(st < 0):
-                break
-            cmdscan.append(stdout[st:end])
-            st = stdout.find('(default: ', end)
-            end = stdout.find(')', st)
-            parscan.append(stdout[st+10:end])
-            st = end
-
+                break            
+            cmdscan.append(stdout[st:end])            
+            st = stdout.find('(default:', end)                
+            st1 = stdout.find('--', end)                
+            if(st1>st or st1<0):
+                end = stdout.find(')', st)
+                parscan.append(stdout[st+9:end].replace(" ","").replace("\\n",""))                
+            else:
+                parscan.append("") 
+            st = end        
         # Create bash file
         fid = open(fname, 'w')
         fid.write(
@@ -49,6 +52,5 @@ def run(fname):
         fid.write('}\n')
         fid.write('complete -F _tomopy tomopy')
         fid.close()
-    # except:
-        # return 1
-        return 0
+    except:
+        log.error('Autocomplete file was not created')
