@@ -6,9 +6,10 @@ class PostInstallCommand(install):
     """Post-installation for installation mode."""
     def run(self):        
         install.run(self)
-        # print('Add autocomplete for tomopy recon')        
-        # os.system('source ./tomopy_cli/auto_complete/complete_tomopy.sh')
-        # print('Autocomplete done')        
+        from tomopy_cli.auto_complete import create_complete_tomopy        
+        import pathlib
+        create_complete_tomopy.run(str(pathlib.Path.home())+'/complete_tomopy.sh')
+        print('For autocomplete please run: \n\n $ source '+str(pathlib.Path.home())+'/complete_tomopy.sh\n'     )
 
 setup(
     name='tomopy-cli',
