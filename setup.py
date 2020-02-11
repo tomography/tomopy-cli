@@ -1,4 +1,15 @@
 from setuptools import setup, find_packages
+from setuptools.command.install import install
+import os
+
+class PostInstallCommand(install):
+    """Post-installation for installation mode."""
+    def run(self):        
+        install.run(self)
+        from tomopy_cli.auto_complete import create_complete_tomopy        
+        import pathlib
+        create_complete_tomopy.run(str(pathlib.Path.home())+'/complete_tomopy.sh')
+        print('For autocomplete please run: \n\n $ source '+str(pathlib.Path.home())+'/complete_tomopy.sh\n'     )
 
 setup(
     name='tomopy-cli',
@@ -12,5 +23,6 @@ setup(
     scripts=['bin/tomopy', 'bin/tomopy-sacred.py'],
     description='cli for tomopy',
     zip_safe=False,
+    cmdclass={'install': PostInstallCommand},
 )
 
