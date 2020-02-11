@@ -16,6 +16,8 @@ Installation
 
 in a prepared virtualenv or as root for system-wide installation.
 
+.. warning:: If your python installation is in a location different from #!/usr/bin/env python please edit the first line of the bin/tomopy file to match yours.
+
 After the installation you will be prompted to::
 
     $ source /Users/userid/complete_tomopy.sh
@@ -26,12 +28,9 @@ This enable the autocompletition of all tomopy recon options. Just press tab aft
     
 to select and optional parameter and show its default value.
  
-.. warning:: in some systems you are required to set omplete_tomopy.sh as executable::
+.. warning:: in some systems you are required to set omplete_tomopy.sh as executable with::
 
     $ chmod +x /Users/userid/complete_tomopy.sh
-    
-.. warning:: If your python installation is in a location different from #!/usr/bin/env python please edit the first line of the bin/tomopy file to match yours.
-
 
 Update
 ======
