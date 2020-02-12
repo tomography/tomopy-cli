@@ -372,8 +372,8 @@ def find_center_row(params):
     with h5py.File(params.file_name,'r') as hdf_file:
         bright = hdf_file['/exchange/data_white'][...]
     if len(bright.shape) > 2:
-        bright = bright[0,:]
-    vertical_slice = np.sum(bright, axis=1)
+        bright = bright[-1,...]
+    vertical_slice = np.sum(bright, axis=1, dtype=np.float64)
     gaussian_filter = scipy.signal.windows.gaussian(200,20)
     filtered_slice = scipy.signal.convolve(vertical_slice, gaussian_filter,
                                             mode='same')
