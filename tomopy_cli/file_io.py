@@ -291,7 +291,7 @@ def read_rot_center(params):
     if (params.rotation_axis_auto == True):
         log.warning('  *** *** Auto axis location requested')
         log.warning('  *** *** Computing rotation axis')
-        params.rotation_axis = find_center.find_rotation_axis(params) 
+        params = find_center.find_rotation_axis(params) 
     log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params
 

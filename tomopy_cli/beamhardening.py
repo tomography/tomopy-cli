@@ -303,7 +303,7 @@ def ffind_calibration_one_angle(input_spectrum):
     '''Makes a scipy interpolation function to be used to correct images.
     '''
     #Make an array of sample thicknesses
-    sample_thicknesses = np.sort(np.concatenate((-np.logspace(1,0,11), [0], np.logspace(-1,4.5,56))))
+    sample_thicknesses = np.sort(np.concatenate((-np.logspace(1,0,11), [0], np.logspace(-1,4.5,221))))
     #For each thickness, compute the absorbed power in the scintillator
     detected_power = np.zeros_like(sample_thicknesses)
     for i in range(sample_thicknesses.size):
