@@ -20,7 +20,7 @@ setup(
     url='https://github.com/decarlof/tomopy-cli',
     packages=find_packages(),
     include_package_data = True,
-    scripts=['bin/tomopy', 'bin/tomopy-sacred.py'],
+    scripts=['bin/tomopy'],
     description='cli for tomopy',
     zip_safe=False,
     cmdclass={'install': PostInstallCommand},
