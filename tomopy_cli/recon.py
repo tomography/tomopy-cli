@@ -37,7 +37,7 @@ def rec(params):
         #If params.nsino_per_chunk < 1, use # of processor cores
         if params.nsino_per_chunk < 1:
             params.nsino_per_chunk = cpu_count()
-        nSino_per_chunk = params.nsino_per_chunk * pow(2, int(params.binning))
+        nSino_per_chunk = params.nsino_per_chunk
         chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))    
 
     else: # "slice" and "try"       
