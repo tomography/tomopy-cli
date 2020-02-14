@@ -24,14 +24,6 @@ def init(args):
         config.write(args.config)
     else:
         log.error("{0} already exists".format(args.config))    
-    status = create_complete_tomopy.run(str(pathlib.Path.home())+'/complete_tomopy.sh')
-    if(status==0):
-        log.info('Bash autocomplete file created' +str(pathlib.Path.home())+'/complete_tomopy.sh')
-    else:
-        log.error('Bash autocomplete file was not created')                
-    os.system('source '+str(pathlib.Path.home())+'/complete_tomopy.sh'        )
-    print('source '+str(pathlib.Path.home())+'/complete_tomopy.sh'     )
-    log.info('Autocomplete tomopy recon done')
 
 def run_status(args):
 
