@@ -33,12 +33,12 @@ def run(fname):
             '#/usr/bin/env bash\n _tomopy()\n{\n\tlocal cur prev opts\n\tCOMPREPLY=()\n\tcur="${COMP_WORDS[COMP_CWORD]}"\n\tprev="${COMP_WORDS[COMP_CWORD-1]}"\n')
 
         # check all tomopy recon
-        fid.write('\tif [[ ${prev} == "recon" ]] ; then\n')
+        fid.write('\tif [[ ${COMP_WORDS[1]} == "recon" ]] ; then\n')
         fid.write('\t\topts="')
         fid.write(' '.join(cmdscan))
         fid.write('"\n')
         fid.write(
-            '\t\tCOMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )\n\t\treturn 0\n\tfi\n')
+            '\t\tCOMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )\n\tfi\n')
 
         for k in range(len(cmdscan)):
             fid.write('\tif [[ ${prev} == "')
