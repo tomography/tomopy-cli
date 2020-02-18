@@ -50,7 +50,7 @@ def run(fname):
             fid.write(
                 '\t\tCOMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )\n\t\treturn 0\n\tfi\n')
         fid.write('}\n')
-        fid.write('complete -F _tomopy tomopy')
+        fid.write('complete -F _tomopy -A directory tomopy')
         fid.close()
     except:
         log.error('Autocomplete file was not created')
