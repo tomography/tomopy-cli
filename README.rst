@@ -49,6 +49,10 @@ Install the following package::
 
     $ conda install -c conda-forge tomopy
 
+Optionally, *dxchange* may be needed for file I/O::
+
+    $ conda install -c conda-forge dxchange
+
 
 Usage
 =====
@@ -129,4 +133,17 @@ Help
         recon        Run tomographic reconstruction
         find_center  Find rotation axis location for all hdf files in a directory
 
+Testing
+=======
 
+Tomopy-cli contains partial test coverage. For development and
+testing, a developer installation is recommended::
+
+    $ git clone https://github.com/tomography/tomopy-cli.git
+    $ cd tomopy-cli
+    $ python setup.py develop
+
+Tests can be run using the pytest runner::
+
+    $ pip install pytest
+    $ pytest
