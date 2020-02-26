@@ -294,19 +294,19 @@ SECTIONS['beam-hardening']= {
         'help': 'Sample material for beam hardening',
         'choices': ['Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-1-material': {
-        'default': 'none',
+        'default': 'auto',
         'type': str,
         'help': 'Filter 1 material for beam hardening',
-        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-1-thickness': {
         'default': 0.0,
         'type': float,
         'help': 'Filter 1 thickness for beam hardening'},
     'filter-2-material': {
-        'default': 'none',
+        'default': 'auto',
         'type': str,
         'help': 'Filter 2 material for beam hardening',
-        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-2-thickness': {
         'default': 0.0,
         'type': float,
