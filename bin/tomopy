@@ -15,6 +15,7 @@ from tomopy_cli import recon
 from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
+from tomopy_cli.auto_complete import create_complete_tomopy
 
 
 def init(args):
@@ -22,7 +23,7 @@ def init(args):
     if not os.path.exists(str(args.config)):
         config.write(args.config)
     else:
-        log.error("{0} already exists".format(args.config))
+        log.error("{0} already exists".format(args.config))    
 
 def run_status(args):
 
@@ -68,7 +69,7 @@ def run_rec(args):
         if os.path.isfile(args.file_name):    
             log.info("reconstructing a single file: %s" % args.file_name)   
             recon.rec(args)
-            config.update_log(args)
+            config.update_config(args)
         elif os.path.isdir(args.file_name):
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
@@ -93,7 +94,7 @@ def run_rec(args):
                             log.warning("  *** file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
                             index += 1
                             recon.rec(args)
-                            config.update_log(args)
+                            config.update_config(args)
                     log.warning('reconstruction end')
                 else:
                     log.warning("  *** no pre-calculated rotation centers from %s file" % jfname)   
@@ -103,7 +104,7 @@ def run_rec(args):
                         log.warning("  *** file %d/%d;  %s" % (index, len(h5_file_list), fname))
                         index += 1
                         recon.rec(args)
-                        config.update_log(args)
+                        config.update_config(args)
                     log.warning('reconstruction end')
             else:
                 log.error("directory %s does not contain any file" % args.file_name)

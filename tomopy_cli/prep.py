@@ -3,11 +3,9 @@ import json
 import tomopy
 import dxchange
 import numpy as np
-import matplotlib.pyplot as plt
 
 from tomopy_cli import log
 from tomopy_cli import file_io
-from tomopy_cli import prep
 from tomopy_cli import beamhardening
 
 def all(proj, flat, dark, params, sino):
