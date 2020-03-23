@@ -46,14 +46,12 @@ def read_tomo(sino, params, ignore_flip = False):
         log.info("  *** correcting for 180-0 data collection")
         step_size = (theta[1] - theta[0]) 
         theta_size = _read_theta_size(params)
-        theta = np.linspace(np.pi , (0+step_size), theta_size)   
+        theta = np.linspace(np.pi, (0+step_size), theta_size)   
 
     proj, theta = blocked_view(proj, theta, params)
     proj, flat, dark = binning(proj, flat, dark, params)
-
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
     log.info("  *** rotation center: %f" % rotation_axis)
-
     return proj, flat, dark, theta, rotation_axis
 
 
@@ -138,25 +136,27 @@ def flip_and_stitch(params, img360, flat360, dark360):
     dark = np.zeros([dark360.shape[0],dark360.shape[1], new_width],dtype=np.float32)
     # Just add both images, keeping an array to record whether there was an overlap
     weight = np.zeros((1,1,new_width))
+    # Array to blend the overlap region smoothly between 0-180 and 180-360 degrees
+    wedge = np.arange(img360.shape[2], 0, -1)
     # Take care of case where rotation axis is on the left edge of the image
     if params.rotation_axis_flip < img360.shape[2] - 1:
-        img[:,:,:img360.shape[2]] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
-        flat[:,:,:img360.shape[2]] = flat360[...,::-1]
-        dark[:,:,:img360.shape[2]] = dark360[...,::-1]
-        weight[:img360.shape[2]] += 1
-        img[:,:,-img360.shape[2]:] = img360[:num_stitched_angles,:,:]
-        flat[:,:,-img360.shape[2]:] = flat360
-        dark[:,:,-img360.shape[2]:] = dark360
-        weight[-img360.shape[2]:] += 1
+        img[:,:,:img360.shape[2]] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1] * wedge
+        flat[:,:,:img360.shape[2]] = flat360[...,::-1] * wedge
+        dark[:,:,:img360.shape[2]] = dark360[...,::-1] * wedge
+        weight[0,0,:img360.shape[2]] += wedge
+        img[:,:,-img360.shape[2]:] += img360[:num_stitched_angles,:,:] * wedge[::-1]
+        flat[:,:,-img360.shape[2]:] += flat360 * wedge[::-1]
+        dark[:,:,-img360.shape[2]:] += dark360 * wedge[::-1]
+        weight[0,0,-img360.shape[2]:] += wedge[::-1]
     else:
-        img[:,:,:img360.shape[2]] = img360[:num_stitched_angles,:,:]
-        flat[:,:,:img360.shape[2]] = flat360
-        dark[:,:,:img360.shape[2]] = dark360
-        weight[:img360.shape[2]] += 1
-        img[:,:,-img360.shape[2]:] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
-        flat[:,:,-img360.shape[2]:] = flat360[...,::-1]
-        dark[:,:,-img360.shape[2]:] = dark360[...,::-1]
-        weight[-img360.shape[2]:] += 1
+        img[:,:,:img360.shape[2]] = img360[:num_stitched_angles,:,:] * wedge
+        flat[:,:,:img360.shape[2]] = flat360 * wedge
+        dark[:,:,:img360.shape[2]] = dark360 * wedge
+        weight[0,0,:img360.shape[2]] += wedge
+        img[:,:,-img360.shape[2]:] += img360[num_stitched_angles:num_stitched_angles * 2,:,::-1] * wedge[::-1]
+        flat[:,:,-img360.shape[2]:] += flat360[...,::-1] * wedge[::-1]
+        dark[:,:,-img360.shape[2]:] += dark360[...,::-1] * wedge[::-1]
+        weight[-img360.shape[2]:] += wedge[::-1]
 
     # Divide through by the weight to take care of doubled regions
     img = (img / weight).astype(img360.dtype)
