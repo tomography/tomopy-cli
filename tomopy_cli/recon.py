@@ -7,7 +7,6 @@ import threading
 import numpy as np
 import tomopy
 import dxchange
-import matplotlib.pyplot as plt
 
 from tomopy_cli import log
 from tomopy_cli import file_io
@@ -38,7 +37,7 @@ def rec(params):
         #If params.nsino_per_chunk < 1, use # of processor cores
         if params.nsino_per_chunk < 1:
             params.nsino_per_chunk = cpu_count()
-        nSino_per_chunk = params.nsino_per_chunk
+        nSino_per_chunk = params.nsino_per_chunk * pow(2, int(params.binning))
         chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))    
 
     else: # "slice" and "try"       
@@ -115,7 +114,7 @@ def rec(params):
                                                 kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
                 write_thread.start()
                 #dxchange.write_tiff_stack(rec, fname=fname, start=strt)
-                strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+                strt += int((sino[1] - sino[0])) 
             if (params.reconstruction_type == "slice"):
                 fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 'slice_rec', 'recon_'+ Path(params.file_name).stem)
                 # fname = Path.joinpath(Path(params.file_name).parent, 'slice_rec','recon_'+str(Path(params.file_name).stem))

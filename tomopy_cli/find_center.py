@@ -5,7 +5,6 @@ import numpy as np
 import h5py
 from skimage.filters import gaussian
 import skimage.feature
-import matplotlib.pyplot as plt
 
 from tomopy_cli import log
 from tomopy_cli import prep
