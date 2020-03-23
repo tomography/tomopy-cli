@@ -254,7 +254,8 @@ def check_material(material_str):
 def add_filter(symbol, thickness):
     '''Add a filter of a given symbol and thickness.
     '''
-    filters[check_material(symbol)] = float(thickness)
+    if symbol != 'none':
+        filters[check_material(symbol)] = float(thickness)
 
 
 def add_scintillator(symbol, thickness):
