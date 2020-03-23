@@ -74,7 +74,7 @@ def rec(params):
 
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
-
+        extent = (0, data.shape[-1], theta[-1], theta[0])
         # Reconstruct
         if (params.reconstruction_type == "try"):
             # try passes an array of rotation centers and this is only supported by gridrec
@@ -120,6 +120,16 @@ def rec(params):
                 fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 'slice_rec', 'recon_'+ Path(params.file_name).stem)
                 # fname = Path.joinpath(Path(params.file_name).parent, 'slice_rec','recon_'+str(Path(params.file_name).stem))
                 dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
+                # Plot the results, why not
+                fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(12, 6), constrained_layout=True)
+                log.info("  *** Plotting sinogram")
+                img = ax0.imshow(data[:,0,:], extent=extent, aspect='auto')
+                plt.colorbar(ax=ax0, mappable=img)
+                ax0.set_xlabel('Column /px')
+                ax0.set_ylabel('Angle /rad')
+                img = ax1.imshow(rec[0])
+                plt.colorbar(ax=ax1, mappable=img)
+                plt.show()
 
         log.info("  *** reconstructions: %s" % fname)
 
@@ -214,7 +224,7 @@ def reconstruct(data, theta, rot_center, params):
             log.info('  *** *** using gridrec to start astrasirt recon')
             rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
         else:
-            rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+            rec = tomopy.recon(data, theta, algorithm=tomopy.astra, center=params.rotation_axis, options=options)
     elif params.reconstruction_algorithm == 'astrasart':
         extra_options ={}
         try:

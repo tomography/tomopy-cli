@@ -43,6 +43,7 @@ def remove_nan_neg_inf(data, params):
         data = tomopy.remove_nan(data, val=params.fix_nan_and_inf_value)
         data = tomopy.remove_neg(data, val=params.fix_nan_and_inf_value)
         data[np.where(data == np.inf)] = params.fix_nan_and_inf_value
+        data[data > params.fix_nan_and_inf_value] = params.fix_nan_and_inf_value
     else:
         log.warning('  *** *** OFF')
 
@@ -69,6 +70,7 @@ def flat_correction(proj, flat, dark, params):
 
     log.info('  *** normalization')
     if(params.flat_correction_method == 'standard'):
+        #import pdb; pdb.set_trace()
         data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff)
         try:
             if params.bright_exp_ratio != 1:
@@ -82,7 +84,7 @@ def flat_correction(proj, flat, dark, params):
     elif(params.flat_correction_method == 'none'):
         data = proj
         log.warning('  *** *** normalization is turned off')
-
+    #data[data < 1e-4] = 1e-4
     return data
 
 
@@ -103,7 +105,7 @@ def remove_stripe(data, params):
         log.info('  *** ***  *** ti alpha %f ' % params.ti_alpha)
     elif(params.remove_stripe_method == 'sf'):
         log.info('  *** *** smoothing filter')
-        data = tomopy.remove_stripe_sf(data,  size==params.sf_size)
+        data = tomopy.remove_stripe_sf(data,  size=params.sf_size)
         log.info('  *** ***  *** sf size %d ' % params.sf_size)
     elif(params.remove_stripe_method == 'none'):
         log.warning('  *** *** OFF')
