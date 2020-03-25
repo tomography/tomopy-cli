@@ -2,6 +2,7 @@ import os
 import h5py
 import json
 import collections
+import re
 import tomopy
 import dxchange
 import dxchange.reader as dxreader
@@ -261,6 +262,7 @@ def read_rot_centers(params):
 def auto_read_dxchange(params):
     log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
+    params = read_filter_materials(params)
     params = read_scintillator(params)
     params = read_bright_ratio(params)
     params = read_rot_center(params)
@@ -291,9 +293,89 @@ def read_rot_center(params):
     if (params.rotation_axis_auto == True):
         log.warning('  *** *** Auto axis location requested')
         log.warning('  *** *** Computing rotation axis')
-        params.rotation_axis = find_center.find_rotation_axis(params) 
-    log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
+        params = find_center.find_rotation_axis(params)
+    else:
+        log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params
+
+
+def read_filter_materials(params):
+    '''Read the beam filter configuration from the HDF file.
+    
+    If params.filter_1_material and/or params.filter_2_material are
+    'auto', then try to read the filter configuration recorded during
+    acquisition in the HDF5 file.
+    
+    Parameters
+    ==========
+    params
+    
+      The global parameter object, should have *filter_1_material*,
+      *filter_1_thickness*, *filter_2_material*, and
+      *filter_2_thickness* attributes.
+    
+    Returns
+    =======
+    params
+      An equivalent object to the *params* input, optionally with
+      *filter_1_material*, *filter_1_thickness*, *filter_2_material*,
+      and *filter_2_thickness* attributes modified to reflect the HDF5
+      file.
+    
+    '''
+    log.info('  *** auto reading filter configuration')
+    # Read the relevant data from disk
+    filter_path = '/measurement/instrument/filters/Filter_{idx}_Material'
+    param_path = 'filter_{idx}_{attr}'
+    for idx_filter in (1, 2):
+        filter_param = getattr(params, param_path.format(idx=idx_filter, attr='material'))
+        if filter_param == 'auto':
+            # Read recorded filter condition from the HDF5 file
+            filter_str = config.param_from_dxchange(params.file_name,
+                                                    filter_path.format(idx=idx_filter),
+                                                    char_array=True, scalar=False)
+            if filter_str is None:
+                log.warning('  *** *** Could not load filter %d configuration from HDF5 file.' % idx_filter)
+                material, thickness = _filter_str_to_params('Open')
+            else:
+                material, thickness = _filter_str_to_params(filter_str)
+            # Update the params with the loaded values
+            setattr(params, param_path.format(idx=idx_filter, attr='material'), material)
+            setattr(params, param_path.format(idx=idx_filter, attr='thickness'), thickness)
+            log.info('  *** *** Filter %d: (%s %f)' % (idx_filter, material, thickness))
+    return params
+
+
+def _filter_str_to_params(filter_str):
+    # Any material with zero thickness is equivalent to being open
+    open_filter = ('Al', 0.)
+    if filter_str == 'Open':
+        # No filter is installed
+        material, thickness = open_filter
+    else:
+        # Parse the filter string to get the parameters
+        filter_re = '(?P<material>[A-Za-z_]+)_(?P<thickness>[0-9.]+)(?P<unit>[a-z]*)'
+        match = re.match(filter_re, filter_str)
+        if match:
+            material, thickness, unit = match.groups()
+        else:
+            log.warning('  *** *** Cannot interpret filter "%s"' % filter_str)
+            material, thickness = open_filter
+            unit = 'um'
+        # Convert strings into numbers
+        thickness = float(thickness)
+        factors = {
+            'nm': 1e-3,
+            'um': 1,
+            'mm': 1e3,
+        }
+        try:
+            factor = factors[unit]
+        except KeyError:
+            log.warning('  *** *** Cannot interpret filter unit in "%s"' % filter_str)
+            factor = 1
+        thickness *= factor
+    return material, thickness
 
 
 def read_pixel_size(params):
@@ -328,7 +410,7 @@ def read_scintillator(params):
     '''Read the scintillator type and thickness from the HDF file.
     '''
     if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
-        log.info('  *** *** Find scintillator params from the HDF file')
+        log.info('  *** auto reading scintillator params')
         params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
                                             '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
                                             attr = None, scalar = True, char_array=False))
@@ -344,7 +426,7 @@ def read_scintillator(params):
             params.scintillator_material = 'YAG_Ce' 
         else:
             log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
-        log.warning('  *** *** using scintillator {:s}'.format(params.scintillator_material))
+        log.info('  *** *** using scintillator {:s}'.format(params.scintillator_material))
     #Run the initialization for beam hardening.  Needed in case rotation_axis must
     #be computed later.
     if params.beam_hardening_method.lower() == 'standard':
@@ -355,18 +437,18 @@ def read_scintillator(params):
 def read_bright_ratio(params):
     '''Read the ratio between the bright exposure and other exposures.
     '''
-    log.info(params.flat_correction_method)
+    log.info('  *** *** %s' % params.flat_correction_method)
     if params.scintillator_auto and params.flat_correction_method == 'standard':
         log.info('  *** *** Find bright exposure ratio params from the HDF file')
         try:
             bright_exp = config.param_from_dxchange(params.file_name,
                                         '/measurement/instrument/detector/brightfield_exposure_time',
                                         attr = None, scalar = True, char_array = False)
-            log.info(bright_exp)
+            log.info('  *** *** %f' % bright_exp)
             norm_exp = config.param_from_dxchange(params.file_name,
                                         '/measurement/instrument/detector/exposure_time',
                                         attr = None, scalar = True, char_array = False)
-            log.info(norm_exp)
+            log.info('  *** *** %f' % norm_exp)
             params.bright_exp_ratio = bright_exp / norm_exp
             log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
         except:
