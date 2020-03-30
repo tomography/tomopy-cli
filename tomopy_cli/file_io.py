@@ -274,25 +274,35 @@ def read_rot_center(params):
     Return: rotation center from this dataset or None if it doesn't exist.
     """
     log.info('  *** *** rotation axis')
-    #First, try to read from the /process/tomopy-cli parameters
-    with h5py.File(params.file_name, 'r') as file_name:
-        try:
-            dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
-            params.rotation_axis = float(file_name[dataset][0])
-            dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
-            params.rotation_axis_flip = float(file_name[dataset][0])
-            log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
-            log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
-            return params
-        except (KeyError, ValueError):
-            log.warning('  *** *** No rotation center stored in the HDF5 file')
-    #If we get here, we need to either find it automatically or from config file.
-    log.warning('  *** *** No rotation axis stored in the HDF file')
-    if (params.rotation_axis_auto == True):
-        log.warning('  *** *** Auto axis location requested')
+    #Handle case of manual only: this is the easiest
+    if params.rotation_axis_auto == 'manual':
+        log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
+    elif params.rotation_axis_auto == 'auto':
+        log.warning('  *** *** Force auto calculation without reading config value')
         log.warning('  *** *** Computing rotation axis')
         params.rotation_axis = find_center.find_rotation_axis(params) 
-    log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
+    else:
+        #Try to read from HDF5 file
+        log.warning('  *** *** Try to read rotation center from file {:s}'.format(params.file_name))
+        with h5py.File(params.file_name, 'r') as file_name:
+            try:
+                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
+                params.rotation_axis = float(file_name[dataset][0])
+                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
+                params.rotation_axis_flip = float(file_name[dataset][0])
+                log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
+                log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
+                return params
+            except (KeyError, ValueError):
+                log.warning('  *** *** No rotation center stored in the HDF5 file')
+        #If we get here, we need to either find it automatically or from config file.
+        log.warning('  *** *** No rotation axis stored in the HDF file')
+        if (params.rotation_axis_auto == 'read_auto'):
+            log.warning('  *** *** fall back to auto calculation')
+            log.warning('  *** *** Computing rotation axis')
+            params.rotation_axis = find_center.find_rotation_axis(params) 
+        else:
+            log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params
 
 
