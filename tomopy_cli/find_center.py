@@ -62,6 +62,7 @@ def _find_rotation_axis(params):
     data_size = file_io.get_dx_dims(params)
     ssino = int(data_size[1] * params.nsino)
     params = file_io.read_pixel_size(params)
+    params = file_io.read_filter_materials(params)
     params = file_io.read_scintillator(params)
     params = file_io.read_bright_ratio(params)
 

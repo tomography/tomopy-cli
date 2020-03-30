@@ -61,11 +61,17 @@ def rec(params):
             sino_chunk_end = sino_end
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
                 
-        sino = (int(sino_chunk_start), int(sino_chunk_end))
-
+        sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
+        
+        phase_pad = 8 # params.retrieve_phase_pad #Francesco, please add this parameter to the command line, default 8
+        # extra data for padded phase retrieval
+        if(params.retrieve_phase_method=="paganin"):
+                sino[0] -= (iChunk>0)*phase_pad
+                sino[1] += (iChunk<chunks-1)*phase_pad
+                log.info('  *** extra padding for phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
+        # extra data for padded phase retrieval
         # Read APS 32-BM raw data.
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
-
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
             log.warning(" *** Chunk size > remaining data size.")
@@ -73,7 +79,14 @@ def rec(params):
 
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
-        extent = (0, data.shape[-1], theta[-1], theta[0])
+
+        # unpad after phase retrieval
+        if(params.retrieve_phase_method=="paganin"):
+                data = data[:,(iChunk>0)*phase_pad:-(iChunk<chunks-1)*phase_pad-(phase_pad==0)]
+                sino[0] += (iChunk>0)*phase_pad
+                sino[1] -= (iChunk<chunks-1)*phase_pad
+                log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
+ 
         # Reconstruct
         if (params.reconstruction_type == "try"):
             # try passes an array of rotation centers and this is only supported by gridrec
