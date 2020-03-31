@@ -280,7 +280,7 @@ def read_rot_center(params):
     elif params.rotation_axis_auto == 'auto':
         log.warning('  *** *** Force auto calculation without reading config value')
         log.warning('  *** *** Computing rotation axis')
-        params.rotation_axis = find_center.find_rotation_axis(params) 
+        params = find_center.find_rotation_axis(params) 
     else:
         #Try to read from HDF5 file
         log.warning('  *** *** Try to read rotation center from file {:s}'.format(params.file_name))
@@ -300,7 +300,7 @@ def read_rot_center(params):
         if (params.rotation_axis_auto == 'read_auto'):
             log.warning('  *** *** fall back to auto calculation')
             log.warning('  *** *** Computing rotation axis')
-            params.rotation_axis = find_center.find_rotation_axis(params) 
+            params = find_center.find_rotation_axis(params) 
         else:
             log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params

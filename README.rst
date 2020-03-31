@@ -18,6 +18,19 @@ in a prepared virtualenv or as root for system-wide installation.
 
 .. warning:: If your python installation is in a location different from #!/usr/bin/env python please edit the first line of the bin/tomopy file to match yours.
 
+After the installation you will be prompted to::
+
+    $ source /Users/userid/complete_tomopy.sh
+
+This enable the autocompletition of all tomopy recon options. Just press tab after::
+
+    $ tomopy recon --<TAB> <TAB>
+    
+to select and optional parameter and show its default value.
+ 
+.. warning:: in some systems you are required to set omplete_tomopy.sh as executable with::
+
+    $ chmod +x /Users/userid/complete_tomopy.sh
 
 Update
 ======
@@ -35,6 +48,10 @@ Dependencies
 Install the following package::
 
     $ conda install -c conda-forge tomopy
+
+Optionally, *dxchange* may be needed for file I/O::
+
+    $ conda install -c conda-forge dxchange
 
 
 Usage
@@ -116,4 +133,17 @@ Help
         recon        Run tomographic reconstruction
         find_center  Find rotation axis location for all hdf files in a directory
 
+Testing
+=======
 
+Tomopy-cli contains partial test coverage. For development and
+testing, a developer installation is recommended::
+
+    $ git clone https://github.com/tomography/tomopy-cli.git
+    $ cd tomopy-cli
+    $ python setup.py develop
+
+Tests can be run using the pytest runner::
+
+    $ pip install pytest
+    $ pytest
