@@ -39,7 +39,6 @@ def rec(params):
             params.nsino_per_chunk = cpu_count()
         nSino_per_chunk = params.nsino_per_chunk
         chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))    
-
     elif (params.reconstruction_type == 'try'):
         _try_rec(params)
         return
@@ -77,58 +76,27 @@ def rec(params):
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
 
-        # Reconstruct
-        if (params.reconstruction_type == "try"):
-            # try passes an array of rotation centers and this is only supported by gridrec
-            reconstruction_algorithm_org = params.reconstruction_algorithm
-            params.reconstruction_algorithm = 'gridrec'
-
-            center_search_width = params.center_search_width/np.power(2, float(params.binning))
-            center_range = (rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
-            stack = np.empty((len(np.arange(*center_range)), data_shape[0], int(data_shape[2]/ np.power(2, float(params.binning)))))
-            index = 0
-            for axis in np.arange(*center_range):
-                stack[index] = data[:, 0, :]
-                index = index + 1
-            log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' % (ssino, center_range[0], center_range[1], center_range[2]))
-
-            rotation_axis = np.arange(*center_range)
-            rec = padded_rec(stack, theta, rotation_axis, params)
-
-            # Save images to a temporary folder.
-            fname = os.path.dirname(params.file_name) + '_rec' + os.sep + 'try_center' + os.sep + file_io.path_base_name(params.file_name) + os.sep + 'recon_'
-            index = 0
-            for axis in np.arange(*center_range):
-                rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
-                dxchange.write_tiff(rec[index], fname=rfname, overwrite=True)
-                index = index + 1
-
-            # restore original method
-            params.reconstruction_algorithm = reconstruction_algorithm_org
-
-        else: # "slice" and "full"
-            rec = padded_rec(data, theta, rotation_axis, params)
-            # Save images
-            if (params.reconstruction_type == "full"):
-                tail = os.sep + os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec' + os.sep 
-                fname = os.path.dirname(params.file_name) + '_rec' + tail + 'recon'
-                write_thread = threading.Thread(target=dxchange.write_tiff_stack,
-                                                args = (rec,),
-                                                kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
-                write_thread.start()
-                #dxchange.write_tiff_stack(rec, fname=fname, start=strt)
-                strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
-            if (params.reconstruction_type == "slice"):
-                fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 'slice_rec', 'recon_'+ Path(params.file_name).stem)
-                # fname = Path.joinpath(Path(params.file_name).parent, 'slice_rec','recon_'+str(Path(params.file_name).stem))
-                dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
+        # Reconstruct: this is for "slice" and "full" methods
+        rec = padded_rec(data, theta, rotation_axis, params)
+        # Save images
+        if (params.reconstruction_type == "full"):
+            tail = os.sep + os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec' + os.sep 
+            fname = os.path.dirname(params.file_name) + '_rec' + tail + 'recon'
+            write_thread = threading.Thread(target=dxchange.write_tiff_stack,
+                                            args = (rec,),
+                                            kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
+            write_thread.start()
+            strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+        if (params.reconstruction_type == "slice"):
+            fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 
+                                    'slice_rec', 'recon_'+ Path(params.file_name).stem)
+            dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
 
         log.info("  *** reconstructions: %s" % fname)
-
     
 
 def _try_rec(params):
-    
+    log.info("  *** *** starting 'try' reconstruction") 
     data_shape = file_io.get_dx_dims(params)
     # Select sinogram range to reconstruct
     nSino_per_chunk = pow(2, int(params.binning))
@@ -153,8 +121,8 @@ def _try_rec(params):
     data = prep.all(proj, flat, dark, params, sino)
     rec = []
     center_range = []
-    reconstruction_algorithm_org = params.reconstruction_algorithm
     # try passes an array of rotation centers and this is only supported by gridrec
+    reconstruction_algorithm_org = params.reconstruction_algorithm
     params.reconstruction_algorithm = 'gridrec'
 
     if (params.file_type == 'standard'):
@@ -172,9 +140,6 @@ def _try_rec(params):
         rotation_axis = params.rotation_axis_flip // pow(2,int(params.binning))
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
         center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
-        
-        recon_size = np.zeros_like(center_range)
-        org_rotation_axis = params.rotation_axis_flip
         stitched_data = []
         rot_centers = np.zeros_like(center_range)
         #Loop through the assumed rotation centers
@@ -183,19 +148,12 @@ def _try_rec(params):
             stitched_data.append(file_io.flip_and_stitch(params, data, np.ones_like(data[0,...]),
                                                                 np.zeros_like(data[0,...]))[0])
             rot_centers[i] = params.rotation_axis
-        #import pdb; pdb.set_trace()
-        for dat in stitched_data:
-            print(dat.shape)
-        stitched_data_size = [i.shape[2] for i in stitched_data]
-        total_cols = np.min(stitched_data_size)
+        total_cols = np.min([i.shape[2] for i in stitched_data])
         theta180 = theta[:len(theta)//2] # take first half
         stack = np.empty((len(center_range), theta180.shape[0], total_cols))
-        i = 0
-        #while len(stitched_data):
-        #stack[i] = 
         for i in range(center_range.shape[0]):
             stack[i] = stitched_data[i][:theta180.shape[0],0,:total_cols]
-        print(stack.shape)    
+        del(stitched_data)
         rec = padded_rec(stack, theta180, rot_centers, params)
 
     # Save images to a temporary folder.
