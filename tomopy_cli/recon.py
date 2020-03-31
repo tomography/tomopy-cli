@@ -40,7 +40,10 @@ def rec(params):
         nSino_per_chunk = params.nsino_per_chunk
         chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))    
 
-    else: # "slice" and "try"       
+    elif (params.reconstruction_type == 'try'):
+        _try_rec(params)
+        return
+    else: # "slice"        
         nSino_per_chunk = pow(2, int(params.binning))
         chunks = 1
         ssino = int(data_shape[1] * params.nsino)
@@ -123,6 +126,88 @@ def rec(params):
         log.info("  *** reconstructions: %s" % fname)
 
     
+
+def _try_rec(params):
+    
+    data_shape = file_io.get_dx_dims(params)
+    # Select sinogram range to reconstruct
+    nSino_per_chunk = pow(2, int(params.binning))
+    sino_start = int(data_shape[1] * params.nsino)
+    sino_end = sino_start + pow(2, int(params.binning))
+    if sino_end > data_shape[1]:
+        log.warning('  *** *** *** binning would request row past end of data.  Truncating.')
+        sino_start = data_shape[1] - pow(2, int(params.binning)) 
+        sino_end = data_shape[1]
+
+    log.info("reconstructing a slice binned from raw data rows [%d] to [%d]" % \
+               (sino_start, sino_end))
+
+    log.info('  *** binned rows [%i, %i]' % (sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning))))
+            
+    sino = (int(sino_start), int(sino_end))
+
+    #Set up the centers of rotation we will use
+    # Read APS 32-BM raw data.
+    proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params, True)
+    # apply all preprocessing functions
+    data = prep.all(proj, flat, dark, params, sino)
+    rec = []
+    center_range = []
+    reconstruction_algorithm_org = params.reconstruction_algorithm
+    # try passes an array of rotation centers and this is only supported by gridrec
+    params.reconstruction_algorithm = 'gridrec'
+
+    if (params.file_type == 'standard'):
+        center_search_width = params.center_search_width/np.power(2, float(params.binning))
+        center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
+        stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
+        for i, axis in enumerate(center_range):
+            stack[i] = data[:, 0, :]
+        log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' 
+                        % (sino_start, center_range[0], center_range[-1], center_range[1] - center_range[0]))
+
+        rec = padded_rec(stack, theta, center_range, params)
+
+    else:
+        rotation_axis = params.rotation_axis_flip // pow(2,int(params.binning))
+        center_search_width = params.center_search_width/np.power(2, float(params.binning))
+        center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
+        
+        recon_size = np.zeros_like(center_range)
+        org_rotation_axis = params.rotation_axis_flip
+        stitched_data = []
+        rot_centers = np.zeros_like(center_range)
+        #Loop through the assumed rotation centers
+        for i, rot_center in enumerate(center_range): 
+            params.rotation_axis_flip = rot_center
+            stitched_data.append(file_io.flip_and_stitch(params, data, np.ones_like(data[0,...]),
+                                                                np.zeros_like(data[0,...]))[0])
+            rot_centers[i] = params.rotation_axis
+        #import pdb; pdb.set_trace()
+        for dat in stitched_data:
+            print(dat.shape)
+        stitched_data_size = [i.shape[2] for i in stitched_data]
+        total_cols = np.min(stitched_data_size)
+        theta180 = theta[:len(theta)//2] # take first half
+        stack = np.empty((len(center_range), theta180.shape[0], total_cols))
+        i = 0
+        #while len(stitched_data):
+        #stack[i] = 
+        for i in range(center_range.shape[0]):
+            stack[i] = stitched_data[i][:theta180.shape[0],0,:total_cols]
+        print(stack.shape)    
+        rec = padded_rec(stack, theta180, rot_centers, params)
+
+    # Save images to a temporary folder.
+    fname = (os.path.dirname(params.file_name) + '_rec' + os.sep 
+                + 'try_center' + os.sep + file_io.path_base_name(params.file_name) + os.sep + 'recon_')
+    for i,axis in enumerate(center_range):
+        rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
+        dxchange.write_tiff(rec[i], fname=rfname, overwrite=True)
+    # restore original method
+    params.reconstruction_algorithm = reconstruction_algorithm_org
+
+
 def padded_rec(data, theta, rotation_axis, params):
 
     # original shape
