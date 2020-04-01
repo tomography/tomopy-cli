@@ -130,8 +130,8 @@ def flip_and_stitch(params, img360, flat360, dark360):
     num_stitched_angles = img360.shape[0]//2 
     new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
                             params.rotation_axis_flip + 0.5]))
-    log.info('  *** *** new image width = {:d}'.format(new_width))
-    log.info('  *** *** rotation axis flip = {:f}'.format(params.rotation_axis_flip))
+    log.info('  *** *** new image width = {:d}, rotation_axis_flip = {:f}'.format(
+                new_width, params.rotation_axis_flip))
     img = np.zeros([num_stitched_angles,img360.shape[1], new_width],dtype=np.float32)
     flat = np.zeros([flat360.shape[0],flat360.shape[1], new_width],dtype=np.float32)
     dark = np.zeros([dark360.shape[0],dark360.shape[1], new_width],dtype=np.float32)
