@@ -90,11 +90,11 @@ def blocked_view(proj, theta, params):
     log.info("  *** correcting for blocked view data collection")
     if params.blocked_views:
         log.warning('  *** *** ON')
-        miss_angles = [params.missing_angles_start, params.missing_angles_end]
-        
+        miss_angles = [params.blocked_views_start, params.blocked_views_end]
+
         # Manage the missing angles:
-        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
-        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
+        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]:,:,:]), axis=0)
+        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]:]))
     else:
         log.warning('  *** *** OFF')
 
