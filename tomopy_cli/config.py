@@ -57,9 +57,10 @@ SECTIONS['find-rotation-axis'] = {
         'type': float,
         'help': "Location of rotation axis"},
     'rotation-axis-auto': {
-        'default': False,
-        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it.",
-        'action': 'store_true'},
+        'default': 'read_auto',
+        'type': str,
+        'help': "How to get rotation axis: read from HDF5, auto calculate, or take from this file",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto']},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
