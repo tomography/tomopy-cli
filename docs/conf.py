@@ -303,6 +303,7 @@ autodoc_mock_imports = [
     'numpy',
     'tomopy',
     'dxchange',
+    'dxfile',
     'skimage',
     'scipy',
 ]
