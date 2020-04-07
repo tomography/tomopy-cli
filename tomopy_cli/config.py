@@ -218,7 +218,7 @@ SECTIONS['retrieve-phase'] = {
         'default': False,
         'help': "When set, multiple reconstruction of the same slice with different alpha coefficient are generated",
         'action': 'store_true'},
-    'retrieve_phase_pad': {
+    'retrieve-phase-pad': {
         'type': util.positive_int,
         'default': 8,
         'help': "Padding with extra slices in z for phase-retrieval filtering"},
