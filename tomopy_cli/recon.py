@@ -65,7 +65,7 @@ def rec(params):
                 
         sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
         
-        phase_pad = 8 # params.retrieve_phase_pad #Francesco, please add this parameter to the command line, default 8
+        phase_pad = params.retrieve_phase_pad
         # extra data for padded phase retrieval
         if(params.retrieve_phase_method=="paganin"):
                 sino[0] -= (iChunk>0)*phase_pad
