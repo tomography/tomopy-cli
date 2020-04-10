@@ -141,7 +141,14 @@ def _try_rec(params):
     if (params.file_type == 'standard'):
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
         center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
-        stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
+
+        # stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
+        if (params.blocked_views):
+            blocked_views = params.blocked_views_end - params.blocked_views_start
+            stack = np.empty((len(center_range), data_shape[0]-blocked_views, int(data_shape[2])))
+        else:
+            stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
+
         for i, axis in enumerate(center_range):
             stack[i] = data[:, 0, :]
         log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' 
