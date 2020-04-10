@@ -102,7 +102,7 @@ SECTIONS['file-reading'] = {
         'action': 'store_true'},
     'blocked-views': {
         'default': False,
-        'help': 'When set, the missing-angles options are used',
+        'help': 'When set, the blocked-views options are used',
         'action': 'store_true'},
     'dark-zero': {
         'default': False,
@@ -133,12 +133,12 @@ SECTIONS['dx-options'] = {
         'action': 'store_true'},
         }
 
-SECTIONS['missing-angles'] = {
-    'missing-angles-start': {
+SECTIONS['blocked-views'] = {
+    'blocked-views-start': {
         'type': util.positive_int,
         'default': 0,
         'help': "Projection number of the first blocked view"},
-    'missing-angles-end': {
+    'blocked-views-end': {
         'type': util.positive_int,
         'default': 1,
         'help': "Projection number of the first blocked view"},
@@ -462,7 +462,7 @@ SECTIONS['convert'] = {
         'metavar': 'PATH'},
         }
 
-RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-views', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
                 'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')

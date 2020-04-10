@@ -15,19 +15,40 @@ from tomopy_cli import find_center
 from tomopy_cli import config
 from tomopy_cli import beamhardening
 
- 
+__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
+__credits__ = "Pavel Shevchenko"
+__copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
+__docformat__ = 'restructuredtext en'
+__all__ = ['read_tomo',
+           ]
+
+
 def read_tomo(sino, params, ignore_flip = False):
     """
     Read in the tomography data.
-    Inputs:
-    sino: tuple of (start_row, end_row) to be read in
-    params: parameters for reconstruction
-    Output:
-    projection data
-    flat field (bright) data
-    dark field data
-    theta: Numpy array of angle for each projection
-    rotation_axis: location of the rotation axis
+
+    Parameters
+    ----------
+    sino : tuple of (start_row, end_row) to be read in
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D tomographic data.
+
+    ndarray
+        3D flat field data.
+
+    ndarray
+        3D dark field data.
+
+    ndarray
+        1D theta in radian.
+
+    float
+        location of the rotation axis
     """
     if (params.file_type == 'standard' or 
             (params.file_type == 'flip_and_stich' and ignore_flip)):
@@ -90,11 +111,11 @@ def blocked_view(proj, theta, params):
     log.info("  *** correcting for blocked view data collection")
     if params.blocked_views:
         log.warning('  *** *** ON')
-        miss_angles = [params.missing_angles_start, params.missing_angles_end]
-        
+        miss_angles = [params.blocked_views_start, params.blocked_views_end]
+
         # Manage the missing angles:
-        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
-        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
+        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]:,:,:]), axis=0)
+        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]:]))
     else:
         log.warning('  *** *** OFF')
 
