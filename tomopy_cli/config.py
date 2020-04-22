@@ -183,7 +183,7 @@ SECTIONS['flat-correction'] = {
         'help': "Fix nan and inf",
         'action': 'store_true'},
     'fix-nan-and-inf-value': {
-        'default': 0.0,
+        'default': 6.0,
         'type': float,
         'help': "Values to be replaced with negative values in array"},
     'minus-log': {
@@ -295,7 +295,7 @@ SECTIONS['beam-hardening']= {
         'help': 'Sample material for beam hardening',
         'choices': ['Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-1-material': {
-        'default': 'auto',
+        'default': 'none',
         'type': str,
         'help': 'Filter 1 material for beam hardening',
         'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
@@ -304,7 +304,7 @@ SECTIONS['beam-hardening']= {
         'type': float,
         'help': 'Filter 1 thickness for beam hardening'},
     'filter-2-material': {
-        'default': 'auto',
+        'default': 'none',
         'type': str,
         'help': 'Filter 2 material for beam hardening',
         'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
@@ -313,12 +313,12 @@ SECTIONS['beam-hardening']= {
         'type': float,
         'help': 'Filter 2 thickness for beam hardening'},
     'filter-3-material': {
-        'default': 'Be',
+        'default': 'none',
         'type': str,
         'help': 'Filter 3 material for beam hardening',
         'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-3-thickness': {
-        'default': 750.0,
+        'default': 0.0,
         'type': float,
         'help': 'Filter 3 thickness for beam hardening'},
     }
