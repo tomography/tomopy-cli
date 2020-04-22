@@ -39,8 +39,8 @@ def remove_nan_neg_inf(data, params):
         log.info('  *** *** ON')
         log.info('  *** *** replacement value %f ' % params.fix_nan_and_inf_value)
         data = tomopy.remove_nan(data, val=params.fix_nan_and_inf_value)
-        data = tomopy.remove_neg(data, val=params.fix_nan_and_inf_value)
-        data[np.where(data == np.inf)] = params.fix_nan_and_inf_value
+        data = tomopy.remove_neg(data, val= 0.0)
+        data[np.isinf(data)] = params.fix_nan_and_inf_value
         data[data > params.fix_nan_and_inf_value] = params.fix_nan_and_inf_value
     else:
         log.warning('  *** *** OFF')
