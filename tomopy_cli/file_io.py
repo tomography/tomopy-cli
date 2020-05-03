@@ -233,7 +233,6 @@ def get_dx_dims(params):
     dataset='data'
 
     grp = '/'.join(['exchange', dataset])
-    print(params.file_name)
     with h5py.File(params.file_name, "r") as f:
         try:
             data = f[grp]

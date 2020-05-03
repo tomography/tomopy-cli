@@ -102,7 +102,7 @@ def rec(params):
             write_thread.start()
             strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
         elif params.reconstruction_type == "slice":
-            fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 
+            fname = Path.joinpath(Path(os.path.dirname(os.path.abspath(params.file_name)) + '_rec'),
                                     'slice_rec', 'recon_'+ Path(params.file_name).stem)
             dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
         else:
