@@ -18,6 +18,10 @@ def make_params():
     params.rotation_axis = 32
     params.file_type = 'standard'
     params.file_format = 'dx'
+    params.start_row = 0
+    params.end_row = -1
+    params.binning = 0
+    params.nsino_per_chunk = 256
     params.flat_correction_method = 'standard'
     params.reconstruction_algorithm = 'gridrec'
     params.gridrec_filter = 'parzen'
@@ -28,8 +32,13 @@ def make_params():
 
 class ReconTests(TestCase):
     output_dir = Path(__file__).resolve().parent.parent / 'tests_rec'
+    output_hdf = Path(__file__).resolve().parent.parent / 'tests_rec' / 'test_tomogram_rec.hdf5'
+    full_tiff_dir = Path(__file__).resolve().parent.parent / 'tests_rec' / 'test_tomogram_rec'
 
     def setUp(self):
+        # Remove the temporary HDF5 file
+        if os.path.exists(str(HDF_FILE)):
+            os.remove(str(HDF_FILE))
         # Prepare some dummy data
         phantom = tomopy.misc.phantom.shepp3d(size=64)
         phantom = np.exp(-phantom)
@@ -48,9 +57,47 @@ class ReconTests(TestCase):
         if self.output_dir.exists():
             shutil.rmtree(self.output_dir)
         
-    def test_basic_reconstruction(self):
+    def test_slice_reconstruction(self):
         """Check that a basic reconstruction completes and produces output tiff files."""
         params = make_params()
         params.reconstruction_type = 'slice'
         response = rec(params=params)
         self.assertTrue(self.output_dir.exists())
+    
+    def test_full_reconstruction(self):
+        """Check that a basic reconstruction completes and produces output tiff files."""
+        params = make_params()
+        params.reconstruction_type = 'full'
+        params.output_format = 'tiff'
+        response = rec(params=params)
+        print(self.full_tiff_dir)
+        # import pdb; pdb.set_trace()
+        self.assertTrue(self.full_tiff_dir.exists())
+    
+    def test_hdf_output(self):
+        params = make_params()
+        params.reconstruction_type = 'full'
+        response = rec(params=params)
+        expected_hdf5path = self.output_hdf
+        # Check that tiffs are not saved and HDF5 file is saved
+        self.assertFalse(os.path.exists(self.full_tiff_dir))
+        self.assertTrue(os.path.exists(expected_hdf5path))
+        with h5py.File(expected_hdf5path, mode='r') as h5fp:
+            vol = h5fp['volume']
+            self.assertEqual(vol.shape, (64, 64, 64))
+            self.assertFalse(np.any(np.isnan(vol)))
+    
+    def test_hdf_output_chunks(self):
+        # Test with multiple chunks to ensure they're all written
+        params = make_params()
+        params.reconstruction_type = 'full'
+        params.nsino_per_chunk = 16 # 4 chunks
+        response = rec(params=params)
+        expected_hdf5path = self.output_hdf
+        # Check that tiffs are not saved and HDF5 file is saved
+        self.assertFalse(os.path.exists(self.full_tiff_dir))
+        self.assertTrue(os.path.exists(expected_hdf5path))
+        with h5py.File(expected_hdf5path, mode='r') as h5fp:
+            vol = h5fp['volume']
+            self.assertEqual(vol.shape, (64, 64, 64))
+            self.assertFalse(np.any(np.isnan(vol)))

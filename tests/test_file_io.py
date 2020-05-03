@@ -133,8 +133,8 @@ class WriteHDF5Tests(unittest.TestCase):
             # Check that the target data were saved in the right place
             np.testing.assert_array_equal(h5fp['volume'][10:16], data_partial)
             # Check that the rest of the data are zero
-            self.assertFalse(np.any(h5fp['volume'][:10]))
-            self.assertFalse(np.any(h5fp['volume'][16:]))
+            self.assertTrue(np.all(np.isnan(h5fp['volume'][:10])))
+            self.assertTrue(np.all(np.isnan(h5fp['volume'][16:])))
     
     def test_write_hdf5_full_overwrite(self):
         # Create some existing data to overwrite
@@ -153,8 +153,8 @@ class WriteHDF5Tests(unittest.TestCase):
             # Check that the target data were saved in the right place
             np.testing.assert_array_equal(h5fp['volume'][10:16], data_partial)
             # Check that the rest of the data are zero
-            self.assertFalse(np.any(h5fp['volume'][:10]))
-            self.assertFalse(np.any(h5fp['volume'][16:]))
+            self.assertTrue(np.all(np.isnan(h5fp['volume'][:10])))
+            self.assertTrue(np.all(np.isnan(h5fp['volume'][16:])))
     
     def test_write_hdf5_partial_overwrite(self):
         # Create some existing data to overwrite
@@ -174,9 +174,9 @@ class WriteHDF5Tests(unittest.TestCase):
             self.assertIn('volume', h5fp)
             # Check that the target data were saved in the right place
             np.testing.assert_array_equal(h5fp['volume'][10:16], data_partial)
-            # Check that the rest of the data are zero
-            self.assertFalse(np.any(h5fp['volume'][:10]))
-            self.assertFalse(np.any(h5fp['volume'][16:]))
+            # Check that the rest of the data are np.nan
+            self.assertTrue(np.all(np.isnan(h5fp['volume'][:10])))
+            self.assertTrue(np.all(np.isnan(h5fp['volume'][16:])))
     
     def test_write_hdf5_mismatched_dtypes(self):
         """Try to write partial data with mismatch dtypes should fail."""

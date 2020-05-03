@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import h5py
 import json
 import collections
@@ -555,6 +556,8 @@ def write_hdf5(data, fname, dname='volume', dtype=None,
         dtype = data.dtype
     if dest_idx is None:
         dest_idx = ()
+    # Create parent directory if necessary
+    Path(fname).parent.mkdir(parents=True, exist_ok=True)
     # Open the HDF5 file so we can save data to it
     with h5py.File(fname, mode='a') as h5fp:
         # Delete the dataset if it already exists and is being overwritten
@@ -562,7 +565,7 @@ def write_hdf5(data, fname, dname='volume', dtype=None,
             del h5fp[dname]
         # Create a new dataset if necessary
         try:
-            ds = h5fp.require_dataset(dname, shape=maxsize, dtype=dtype, fillvalue=0, exact=True)
+            ds = h5fp.require_dataset(dname, shape=maxsize, dtype=dtype, fillvalue=np.nan, exact=True)
         except TypeError as e:
             msg = str(e) + ". Use *overwrite=True* to overwrite existing dataset."
             raise type(e)(msg)
