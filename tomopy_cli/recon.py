@@ -10,6 +10,7 @@ import dxchange
 
 from tomopy_cli import log
 from tomopy_cli import file_io
+from tomopy_cli import config
 from tomopy_cli import prep
 from tomopy_cli import beamhardening
 from tomopy_cli import find_center
@@ -67,7 +68,7 @@ def rec(params):
         
         phase_pad = params.retrieve_phase_pad
         # extra data for padded phase retrieval
-        if(params.retrieve_phase_method=="paganin"):
+        if params.retrieve_phase_method == "paganin":
                 sino[0] -= (iChunk>0)*phase_pad
                 sino[1] += (iChunk<chunks-1)*phase_pad
                 log.info('  *** extra padding for phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
@@ -83,7 +84,7 @@ def rec(params):
         data = prep.all(proj, flat, dark, params, sino)
 
         # unpad after phase retrieval
-        if(params.retrieve_phase_method=="paganin"):
+        if params.retrieve_phase_method == "paganin":
                 data = data[:,(iChunk>0)*phase_pad:-(iChunk<chunks-1)*phase_pad-(phase_pad==0)]
                 sino[0] += (iChunk>0)*phase_pad
                 sino[1] -= (iChunk<chunks-1)*phase_pad
@@ -92,7 +93,7 @@ def rec(params):
         # Reconstruct: this is for "slice" and "full" methods
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
-        if (params.reconstruction_type == "full"):
+        if params.reconstruction_type == "full":
             tail = os.sep + os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec' + os.sep 
             fname = os.path.dirname(params.file_name) + '_rec' + tail + 'recon'
             write_thread = threading.Thread(target=dxchange.write_tiff_stack,
@@ -100,11 +101,15 @@ def rec(params):
                                             kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
             write_thread.start()
             strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
-        if (params.reconstruction_type == "slice"):
-            fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 
+        elif params.reconstruction_type == "slice":
+            fname = Path.joinpath(Path(os.path.dirname(os.path.abspath(params.file_name)) + '_rec'),
                                     'slice_rec', 'recon_'+ Path(params.file_name).stem)
             dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
-
+        else:
+            raise ValueError("Unknown value for *reconstruction type*: {}. "
+                             "Valid options are {}"
+                             "".format(params.reconstruction_type,
+                                       config.SECTIONS['reconstruction']['reconstruction-type']['choices']))
         log.info("  *** reconstructions: %s" % fname)
     
 
