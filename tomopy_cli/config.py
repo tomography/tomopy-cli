@@ -346,7 +346,13 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
-        }
+    'output-format': {
+        'default': 'tiff_stack',
+        'type': str,
+        'help': "How to save the reconstructed data. Only applies when ``reconstruction-type == 'full'``.",
+        'choices': ['tiff_stack', 'hdf5'],
+        },
+    }
 
 SECTIONS['gridrec'] = {
     'gridrec-filter': {
