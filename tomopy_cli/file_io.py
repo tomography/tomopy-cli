@@ -92,14 +92,14 @@ def _read_tomo(params, sino):
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
-        #Check if the flat and dark fields are single images or sets
+        # Check if the flat and dark fields are single images or sets
         if len(flat.shape) == len(proj.shape):
             log.info('  *** median filter flat images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
@@ -233,7 +233,6 @@ def get_dx_dims(params):
     dataset='data'
 
     grp = '/'.join(['exchange', dataset])
-
     with h5py.File(params.file_name, "r") as f:
         try:
             data = f[grp]
