@@ -59,7 +59,6 @@ def rec(params):
     if chunks == 0:
         log.warning("  *** 0 chunks selected for reconstruction, check your *start_row*, "
                     "*end_row*, and *nsino_per_chunk*.")
-    print(chunks)
     for iChunk in range(0, chunks):
         log.info('chunk # %i/%i' % (iChunk + 1, chunks))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
