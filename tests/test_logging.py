@@ -31,7 +31,7 @@ class LogFormattingTests(unittest.TestCase):
         # Do some logging both with and without setting up custom logger
         try:
             tplogging.warning("No danger, Will Robinson")
-            tplogging.setup_custom_logger(self.temp_logfile)
+            tplogging.setup_custom_logger(lfname=None)
             tplogging.warning("Formatted danger, Will Robinson")
         finally:
             # Restore stderr
