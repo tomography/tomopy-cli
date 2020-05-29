@@ -52,6 +52,7 @@ Usage:
 from copy import deepcopy
 import os
 from pathlib import Path, PurePath
+import logging
 
 import numpy as np
 import scipy.interpolate
@@ -62,8 +63,11 @@ from scipy.signal import convolve
 from scipy.signal.windows import gaussian
 
 from tomopy.util import mproc
-from tomopy_cli import log
 from tomopy_cli import config
+
+
+logging.getLogger(__name__)
+
 
 #Global variables we need for computing LUT
 filters = {}

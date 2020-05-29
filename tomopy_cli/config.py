@@ -4,14 +4,18 @@ import shutil
 import pathlib
 import argparse
 import configparser
+from collections import OrderedDict
+import logging
+
 import h5py
 import numpy as np
 
-from collections import OrderedDict
-
-from tomopy_cli import log
 from tomopy_cli import util
 from tomopy_cli import __version__
+
+
+log = logging.getLogger(__name__)
+
 
 LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
 CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
@@ -662,8 +666,8 @@ def write_hdf(args=None, sections=None):
                         try:
                             hdf_file[dataset][0] = np.string_(str(value))
                         except TypeError:
-                            print(value)
-                            raise TypeError
+                            log.error("Could not convert value {}".format(value))
+                            raise
 
 
 def log_values(args):

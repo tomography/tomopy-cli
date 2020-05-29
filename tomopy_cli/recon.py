@@ -4,16 +4,21 @@ import shutil
 from pathlib import Path
 from multiprocessing import cpu_count
 import threading
+import logging
+
 import numpy as np
 import tomopy
 import dxchange
 
-from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import config
 from tomopy_cli import prep
 from tomopy_cli import beamhardening
 from tomopy_cli import find_center
+
+
+log = logging.getLogger(__name__)
+
 
 def rec(params):
     

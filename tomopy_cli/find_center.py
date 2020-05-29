@@ -1,15 +1,19 @@
 import os
 import json
+import logging
+
 import tomopy
 import numpy as np
 import h5py
 from skimage.filters import gaussian
 import skimage.feature
 
-from tomopy_cli import log
 from tomopy_cli import prep
 from tomopy_cli import config
 from tomopy_cli import file_io
+
+
+log = logging.getLogger(__name__)
 
 
 def find_rotation_axis(params):

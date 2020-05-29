@@ -1,49 +1,18 @@
 '''Customized logging for the tomopy_cli library.
 
 Logging in tomopy_cli is built upon the standard logging functionality
-in python. This module provides a ``getLogger`` module that can be
-used to get a logger object with the usual *debug*, *info*, etc.,
-methods. If ``setup_custom_logger`` is called, all subsequent calls to
-``getLogger`` will produce a logger that reflects these
-customizations.
+in python. This module provides the standard ``getLogger`` function
+that can be used to get a logger object with the usual *debug*,
+*info*, etc., methods. If ``setup_custom_logger`` is called, all
+``tomopy_cli.*`` loggers will use color terminal logging and/or a
+logfile.
 
 '''
 import logging
-import warnings
+from logging import *
 
 
-logger = logging.getLogger(__name__)
-
-
-def old_logging(func):
-    def inside(*args, **kwargs):
-        warnings.warn(
-            "``tomopy_cli.log.{}`` is deprecated, use the python logging module directly."
-            "".format(str(func)[10:17]),
-            DeprecationWarning,
-        )
-        return func(*args, **kwargs)
-    return inside
-
-
-@old_logging
-def debug(msg):
-    logger.debug(msg)
-
-
-@old_logging
-def info(msg):
-    logger.info(msg)
-
-
-@old_logging
-def error(msg):
-    logger.error(msg)
-
-
-@old_logging
-def warning(msg):
-    logger.warning(msg)
+__all__ = ['setup_custom_logger', 'ColoredLogFormatter'] + logging.__all__
 
 
 def setup_custom_logger(lfname: str=None, stream_to_console: bool=True, level=logging.DEBUG):
@@ -51,7 +20,9 @@ def setup_custom_logger(lfname: str=None, stream_to_console: bool=True, level=lo
     
     This adds handlers to the *tomopy_cli* parent logger. Any logger
     inside tomopy_cli will produce output based on this functions
-    customization parameters.
+    customization parameters. The file given in *lfname* will receive
+    all log message levels, while the console will receive messages
+    based on *level*.
     
     Parameters
     ----------
@@ -62,24 +33,26 @@ def setup_custom_logger(lfname: str=None, stream_to_console: bool=True, level=lo
       If true, logs will be output to the console with color
       formatting.
     level
-      A logging level for the handler. This can be either a string
-      ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"), or an actual
-      level defined in the python logging framework.
-    
+      A logging level for the stream handler. This can be either a
+      string ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"), or an
+      actual level defined in the python logging framework.
+
     """
     parent_name = __name__.split('.')[0]  # Nominally "tomopy_cli"
     parent_logger = logging.getLogger(parent_name)
-    parent_logger.setLevel(level)
+    parent_logger.setLevel(logging.DEBUG)
     # Set up normal output to a file
     if lfname is not None:
         fHandler = logging.FileHandler(lfname)
         file_formatter = logging.Formatter('%(asctime)s - %(name)s(%(lineno)s) - %(levelname)s: %(message)s')
         fHandler.setFormatter(file_formatter)
+        fHandler.setLevel(logging.DEBUG)
         parent_logger.addHandler(fHandler)
     # Set up formatted output to the console
     if stream_to_console:
         ch = logging.StreamHandler()
         ch.setFormatter(ColoredLogFormatter('%(asctime)s - %(message)s'))
+        ch.setLevel(level)
         parent_logger.addHandler(ch)
 
 
