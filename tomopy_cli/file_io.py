@@ -1,16 +1,17 @@
 import os
+import logging
 from pathlib import Path
-import h5py
 import json
 import collections
 import re
+
+import h5py
 import tomopy
 import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
 
-from tomopy_cli import log
 from tomopy_cli import __version__
 from tomopy_cli import find_center
 from tomopy_cli import config
@@ -20,8 +21,10 @@ __author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
 __credits__ = "Pavel Shevchenko"
 __copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['read_tomo',
-           ]
+__all__ = ['read_tomo',]
+
+
+log = logging.getLogger(__name__)
 
 
 def read_tomo(sino, params, ignore_flip = False):

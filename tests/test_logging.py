@@ -4,7 +4,7 @@ import logging
 import sys
 import os
 
-from tomopy_cli import log as tplogging
+from tomopy_cli import logging as tplogging
 
 
 # Set up variables to capture logging output
@@ -12,14 +12,27 @@ from tomopy_cli import log as tplogging
 class LogFormattingTests(unittest.TestCase):
     temp_logfile = 'tests-temp.log'
     
-    # def setUp(self):
-    #     self.log_capture = io.StringIO()
-
-    
-    # def tearDown(self):
-    #     # Remove temporary log files
-    #     if os.path.exists(self.temp_logfile):
-    #         os.remove(self.temp_logfile)
+    def test_setup_custom_logger_level(self):
+        """Verify that setting up a custom logger produces formatted output."""
+        # Capture stderr to a string
+        stderr_io = io.StringIO()
+        old_stderr = sys.stderr
+        sys.stderr = stderr_io
+        try:
+            # Do some logging after setting up custom logger
+            logger = logging.getLogger('tomopy_cli.fancy_logger')
+            tplogging.setup_custom_logger(lfname=None, level="INFO")
+            logger.debug("Debugging logs, Will Robinson")
+            logger.info("Information, Will Robinson")
+        finally:
+            # Restore stderr
+            sys.stderr = old_stderr
+        # Read the logged output to check for correctness
+        stderr_io.seek(0)
+        loglines = stderr_io.readlines()
+        self.assertEqual(len(loglines), 1)
+        self.assertIn("Information", loglines[0])
+        self.assertNotIn("Debugging", loglines[0])
     
     def test_setup_custom_logger(self):
         """Verify that setting up a custom logger produces formatted output."""
