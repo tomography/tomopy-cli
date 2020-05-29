@@ -513,10 +513,8 @@ def parse_known_args(parser, subparser=False):
         subparser_value = [sys.argv[1]] if subparser else []
         config_values = config_to_list(config_name=get_config_name())
         values = subparser_value + config_values + sys.argv[1:]
-        #print(subparser_value, config_values, values)
     else:
-        values = ""
-
+        raise TypeError("A command is required. See ``tomopy --help`` for detailed usage.")
     return parser.parse_known_args(values)[0]
 
 
