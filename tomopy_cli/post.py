@@ -1,8 +1,11 @@
 import os
+import logging
+
 import tomopy
 import numpy as np
 
-from tomopy_cli import log
+
+log = logging.getLogger(__name__)
 
 
 # this module will host post reconstuction data analysis (segmentation, etc.)

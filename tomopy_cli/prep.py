@@ -1,13 +1,18 @@
 import os
 import json
+import logging
+
 import tomopy
 import dxchange
 import numpy as np
 
-from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import beamhardening
 from tomopy_cli import config
+
+
+log = logging.getLogger(__name__)
+
 
 def all(proj, flat, dark, params, sino):
     # zinger_removal
