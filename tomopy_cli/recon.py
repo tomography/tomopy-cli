@@ -103,7 +103,7 @@ def rec(params):
         if params.reconstruction_type == "full":
             recon_base_dir = os.path.dirname(params.file_name) + '_rec'
             tail = os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec'
-            if params.output_format == 'tiff':
+            if params.output_format == 'tiff_stack':
                 fname = os.path.join(recon_base_dir, tail, 'recon')
                 print(f"Full tiff dir: {fname}")
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
