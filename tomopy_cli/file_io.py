@@ -1,15 +1,17 @@
 import os
-import h5py
+import logging
+from pathlib import Path
 import json
 import collections
 import re
+
+import h5py
 import tomopy
 import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
 
-from tomopy_cli import log
 from tomopy_cli import __version__
 from tomopy_cli import find_center
 from tomopy_cli import config
@@ -19,8 +21,10 @@ __author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
 __credits__ = "Pavel Shevchenko"
 __copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['read_tomo',
-           ]
+__all__ = ['read_tomo',]
+
+
+log = logging.getLogger(__name__)
 
 
 def read_tomo(sino, params, ignore_flip = False):
@@ -92,14 +96,14 @@ def _read_tomo(params, sino):
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
-        #Check if the flat and dark fields are single images or sets
+        # Check if the flat and dark fields are single images or sets
         if len(flat.shape) == len(proj.shape):
             log.info('  *** median filter flat images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
@@ -280,7 +284,6 @@ def get_dx_dims(params):
     dataset='data'
 
     grp = '/'.join(['exchange', dataset])
-
     with h5py.File(params.file_name, "r") as f:
         try:
             data = f[grp]
@@ -564,3 +567,57 @@ def convert(params):
     f.add_entry(dx.Entry.data(theta={'value': theta, 'units':'degrees'}))
 
     f.close()
+
+
+def write_hdf5(data, fname, dname='volume', dtype=None,
+               dest_idx=None, maxsize=None, overwrite=False):
+    """Write data to hdf5 file in a specific dataset.
+    
+    This function supports partial writing of data through a
+    combination of *maxsize* and *dest_idx* options. For example, to
+    write slices 10 to 16 of a (32, 32, 32) volume::
+    
+        assert data.shape == (32, 32, 32)
+        file_io.write_hdf5(data[10:16], maxsize=data.shape, dest_idx=slice(10,16), ...)
+    
+    Parameters
+    ----------
+    data : ndarray
+        Array data to be saved.
+    fname : str
+        File name to which the data is saved. ``.h5`` extension
+        will be appended if it does not already have one.
+    dname : str, optional
+        Name for dataset where data will be written.
+    dtype : data-type, optional
+        By default, the data-type is inferred from the input data.
+    dest_idx : optional
+        A valid index for the dataset such that ``dataset[target_idx]
+        = data`` will properly write the data to the dataset.
+    maxsize : int, optional
+        Maximum size that the dataset can be resized to along the
+        given axis.
+    
+    """
+    # Extract default values if not given
+    if maxsize is None:
+        maxsize = data.shape
+    if dtype is None:
+        dtype = data.dtype
+    if dest_idx is None:
+        dest_idx = ()
+    # Create parent directory if necessary
+    Path(fname).parent.mkdir(parents=True, exist_ok=True)
+    # Open the HDF5 file so we can save data to it
+    with h5py.File(fname, mode='a') as h5fp:
+        # Delete the dataset if it already exists and is being overwritten
+        if dname in h5fp.keys() and overwrite:
+            del h5fp[dname]
+        # Create a new dataset if necessary
+        try:
+            ds = h5fp.require_dataset(dname, shape=maxsize, dtype=dtype, fillvalue=np.nan, exact=True)
+        except TypeError as e:
+            msg = str(e) + ". Use *overwrite=True* to overwrite existing dataset."
+            raise type(e)(msg)
+        # Save the data
+        ds[dest_idx] = data

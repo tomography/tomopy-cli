@@ -4,18 +4,20 @@ import os
 import re
 import sys
 import argparse
-import logging
 import time
 import pathlib
 from datetime import datetime
 
 from tomopy_cli import config, __version__
-from tomopy_cli import log
+from tomopy_cli import logging
 from tomopy_cli import recon
 from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
 from tomopy_cli.auto_complete import create_complete_tomopy
+
+
+log = logging.getLogger('tomopy_cli.bin.tomopy')
 
 
 def init(args):
@@ -154,8 +156,10 @@ def main():
         os.makedirs(logs_home)
 
     lfname = os.path.join(logs_home, 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H_%M_%S") + '.log')
- 
-    log.setup_custom_logger(lfname)
+
+    log_level = 'DEBUG' if args.verbose else "INFO"
+    logging.setup_custom_logger(lfname, level=log_level)
+    log.debug("Started tomopy_cli")
     log.info("Saving log at %s" % lfname)
 
     try:

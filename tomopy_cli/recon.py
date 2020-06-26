@@ -4,15 +4,21 @@ import shutil
 from pathlib import Path
 from multiprocessing import cpu_count
 import threading
+import logging
+
 import numpy as np
 import tomopy
 import dxchange
 
-from tomopy_cli import log
 from tomopy_cli import file_io
+from tomopy_cli import config
 from tomopy_cli import prep
 from tomopy_cli import beamhardening
 from tomopy_cli import find_center
+
+
+log = logging.getLogger(__name__)
+
 
 def rec(params):
     
@@ -38,7 +44,7 @@ def rec(params):
         if params.nsino_per_chunk < 1:
             params.nsino_per_chunk = cpu_count()
         nSino_per_chunk = params.nsino_per_chunk * pow(2, int(params.binning))
-        chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))    
+        chunks = int(np.ceil((sino_end - sino_start)/nSino_per_chunk))
     elif (params.reconstruction_type == 'try'):
         _try_rec(params)
         return
@@ -49,11 +55,15 @@ def rec(params):
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
 
-    log.info("reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
+    log.info("  *** reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
                ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
                chunks, nSino_per_chunk/pow(2, int(params.binning))))            
 
     strt = sino_start
+    write_threads = []
+    if chunks == 0:
+        log.warning("  *** 0 chunks selected for reconstruction, check your *start_row*, "
+                    "*end_row*, and *nsino_per_chunk*.")
     for iChunk in range(0, chunks):
         log.info('chunk # %i/%i' % (iChunk + 1, chunks))
         sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
@@ -64,10 +74,9 @@ def rec(params):
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
                 
         sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
-        
         phase_pad = params.retrieve_phase_pad
         # extra data for padded phase retrieval
-        if(params.retrieve_phase_method=="paganin"):
+        if params.retrieve_phase_method == "paganin":
                 sino[0] -= (iChunk>0)*phase_pad
                 sino[1] += (iChunk<chunks-1)*phase_pad
                 log.info('  *** extra padding for phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
@@ -76,14 +85,13 @@ def rec(params):
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
-            log.warning(" *** Chunk size > remaining data size.")
+            log.warning("  *** Chunk size > remaining data size.")
             sino = (sino[0], sino[0] + proj.shape[1])
 
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
-
         # unpad after phase retrieval
-        if(params.retrieve_phase_method=="paganin"):
+        if params.retrieve_phase_method == "paganin":
                 data = data[:,(iChunk>0)*phase_pad:-(iChunk<chunks-1)*phase_pad-(phase_pad==0)]
                 sino[0] += (iChunk>0)*phase_pad
                 sino[1] -= (iChunk<chunks-1)*phase_pad
@@ -92,21 +100,39 @@ def rec(params):
         # Reconstruct: this is for "slice" and "full" methods
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
-        if (params.reconstruction_type == "full"):
-            tail = os.sep + os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec' + os.sep 
-            fname = os.path.dirname(params.file_name) + '_rec' + tail + 'recon'
-            write_thread = threading.Thread(target=dxchange.write_tiff_stack,
-                                            args = (rec,),
-                                            kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
+        if params.reconstruction_type == "full":
+            recon_base_dir = os.path.dirname(params.file_name) + '_rec'
+            tail = os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec'
+            if params.output_format == 'tiff':
+                fname = os.path.join(recon_base_dir, tail, 'recon')
+                print(f"Full tiff dir: {fname}")
+                write_thread = threading.Thread(target=dxchange.write_tiff_stack,
+                                                args = (rec,),
+                                                kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
+            else:
+                fname = os.path.join(recon_base_dir, tail + '.hdf5')
+                write_thread = threading.Thread(target=file_io.write_hdf5,
+                                                args = (rec,),
+                                                kwargs = {'fname':fname,
+                                                          'dest_idx': slice(strt, strt+rec.shape[0]),
+                                                          'maxsize': (sino_end, *rec.shape[1:]),
+                                                          'overwrite': iChunk==0})
             write_thread.start()
+            write_threads.append(write_thread)
             strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
-        if (params.reconstruction_type == "slice"):
-            fname = Path.joinpath(Path(os.path.dirname(params.file_name) + '_rec'), 
+        elif params.reconstruction_type == "slice":
+            fname = Path.joinpath(Path(os.path.dirname(os.path.abspath(params.file_name)) + '_rec'),
                                     'slice_rec', 'recon_'+ Path(params.file_name).stem)
             dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
-
+        else:
+            raise ValueError("Unknown value for *reconstruction type*: {}. "
+                             "Valid options are {}"
+                             "".format(params.reconstruction_type,
+                                       config.SECTIONS['reconstruction']['reconstruction-type']['choices']))
         log.info("  *** reconstructions: %s" % fname)
-    
+    # Wait until the all threads are done writing data
+    for thread in write_threads:
+        thread.join()
 
 def _try_rec(params):
     log.info("  *** *** starting 'try' reconstruction") 
