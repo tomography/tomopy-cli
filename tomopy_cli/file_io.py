@@ -123,7 +123,30 @@ def blocked_view(proj, theta, params):
 
 
 def binning(proj, flat, dark, params):
+    """
+    Bin the tomography data.
 
+    Parameters
+    ----------
+    proj : projection data, 3D Numpy array
+
+    flat : projection flatfield data, 2D Numpy array
+    
+    dark : projection dark field data, 2D Numpy array
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D binned projection data.
+
+    ndarray
+        2D binned flat field data.
+
+    ndarray
+        2D binned dark field data.
+    """
     log.info("  *** binning")
     if(params.binning == 0):
         log.info('  *** *** OFF')
@@ -133,8 +156,8 @@ def binning(proj, flat, dark, params):
         proj = _binning(proj, params)
         flat = _binning(flat, params)
         dark = _binning(dark, params)
-
     return proj, flat, dark
+
 
 def _binning(data, params):
 
@@ -145,9 +168,33 @@ def _binning(data, params):
 
 
 def flip_and_stitch(params, img360, flat360, dark360):
-    '''Code to take a 0-360 flip and stitch scan and provide stitched
-    0-180 degree projections.
-    '''
+    """
+    Stitch together data for flip-and-stitch (0-360 degree offset center) scan.
+
+    Parameters
+    ----------
+    params : dict of reconstruction parameters
+
+    img360 : projection data from 0-360 degrees, 3D Numpy array
+
+    flat360 : flatfield data, 2D Numpy array
+    
+    dark360 : dark field data, 2D Numpy array
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D binned projection data stitched together, 0-180 degree domain
+
+    ndarray
+        2D binned flat field data stitched together, 0-180 degree domain
+
+    ndarray
+        2D binned dark field data stitched together, 0-180 degree domain
+
+    """
     num_stitched_angles = img360.shape[0]//2 
     new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
                             params.rotation_axis_flip + 0.5]))
