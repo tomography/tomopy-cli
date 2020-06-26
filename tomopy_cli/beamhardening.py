@@ -65,8 +65,7 @@ from scipy.signal.windows import gaussian
 from tomopy.util import mproc
 from tomopy_cli import config
 
-
-logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 #Global variables we need for computing LUT
