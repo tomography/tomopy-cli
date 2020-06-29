@@ -65,8 +65,7 @@ from scipy.signal.windows import gaussian
 from tomopy.util import mproc
 from tomopy_cli import config
 
-
-logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 #Global variables we need for computing LUT
@@ -367,9 +366,9 @@ def fcorrect_as_pathlength(input_trans):
     First, use fconvert_data to get in terms of pathlength assuming we are
     in the ring plane.  Then, use this function to correct.
     '''
-    angles = np.abs(np.arange(pathlength_image.shape[0]) - center_row)
+    angles = np.abs(np.arange(input_trans.shape[0]) - center_row)
     angles *= pixel_size / d_source
-    correction_factor = angle_spline(angles)
+    correction_factor = angular_spline(angles)
     return centerline_spline(input_trans) * correction_factor[:,None]
 
 
