@@ -63,8 +63,8 @@ SECTIONS['find-rotation-axis'] = {
     'rotation-axis-auto': {
         'default': 'read_auto',
         'type': str,
-        'help': "How to get rotation axis: read from HDF5, auto calculate, or take from this file",
-        'choices': ['read_auto', 'read_manual', 'manual', 'auto']},
+        'help': "How to get rotation axis: read from HDF5, auto calculate, read from json file, or take from this file",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'json']},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,

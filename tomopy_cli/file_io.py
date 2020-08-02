@@ -308,26 +308,31 @@ def path_base_name(path):
     return file_base_name(fname)
 
 
-def read_rot_centers(params):
-
-    # Add a trailing slash if missing
-    top = os.path.join(params.file_name, '')
-
-    # Load the the rotation axis positions.
-    jfname = top + params.rotation_axis_file
-    
+def read_rot_centers_json(json_path):
     try:
-        with open(jfname) as json_file:
+        with open(json_path) as json_file:
             json_string = json_file.read()
             dictionary = json.loads(json_string)
+    except FileNotFoundError:
+        log.error("the json %s file containing the rotation axis locations is missing" % json_path)
+        log.error("to create one run:")
+        log.error("$ tomopy find_center")
+        exit()
+    except json.decoder.JSONDecodeError as e:
+        log.error("the json %s file containing the rotation axis locations is malformed" % json_path)
+        log.error(e)
+        exit()
+    else:
+        return dictionary
+    
 
-        return collections.OrderedDict(sorted(dictionary.items()))
-
-    except Exception as error: 
-        log.warning("the json %s file containing the rotation axis locations is missing" % jfname)
-        log.warning("to create one run:")
-        log.warning("$ tomopy find_center --file-name %s" % top)
-        # exit()
+def read_rot_centers(params):
+    # Prepend the data directory to the json path
+    fpath = Path(params.file_name)
+    jfpath = fpath / params.rotation_axis_file
+    # Load and return the json data
+    dictionary = read_rot_centers_json(jfpath)
+    return collections.OrderedDict(sorted(dictionary.items()))
 
 
 def auto_read_dxchange(params):
@@ -347,15 +352,19 @@ def read_rot_center(params):
     Return: rotation center from this dataset or None if it doesn't exist.
     """
     log.info('  *** *** rotation axis')
-    #Handle case of manual only: this is the easiest
+    # Handle case of manual only: this is the easiest
     if params.rotation_axis_auto == 'manual':
         log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
     elif params.rotation_axis_auto == 'auto':
         log.warning('  *** *** Force auto calculation without reading config value')
         log.warning('  *** *** Computing rotation axis')
-        params = find_center.find_rotation_axis(params) 
+        params = find_center.find_rotation_axis(params)
+    elif params.rotation_axis_auto == 'json':
+        log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
+        all_centers = read_rot_centers_json(Path(params.rotation_axis_file))
+        params.rotation_axis = all_centers[params.file_name]
     else:
-        #Try to read from HDF5 file
+        # Try to read from HDF5 file
         log.warning('  *** *** Try to read rotation center from file {:s}'.format(params.file_name))
         with h5py.File(params.file_name, 'r') as file_name:
             try:
