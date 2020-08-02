@@ -5,6 +5,7 @@ from multiprocessing import cpu_count
 import threading
 import logging
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tomopy
 import dxchange
@@ -304,11 +305,12 @@ def reconstruct(data, theta, rot_center, params):
             rec = tomopy.misc.corr.gaussian_filter(rec, axis=2)
         shift = (int((data.shape[2]/2 - rot_center)+.5))
         data = np.roll(data, shift, axis=2)
+        recon_kw = dict(center=rot_center, algorithm=tomopy.astra,
+                        options=options)
         if params.astrasirt_bootstrap:
             log.info('  *** *** using gridrec to start astrasirt recon')
-            rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
-        else:
-            rec = tomopy.recon(data, theta, algorithm=tomopy.astra, center=params.rotation_axis, options=options)
+            recon_kw['init_recon'] = rec
+        rec = tomopy.recon(data, theta, **recon_kw)
     elif params.reconstruction_algorithm == 'astrasart':
         extra_options ={}
         try:
