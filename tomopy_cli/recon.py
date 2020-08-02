@@ -158,10 +158,10 @@ def _try_rec(params):
             
     sino = (int(sino_start), int(sino_end))
 
-    #Set up the centers of rotation we will use
+    # Set up the centers of rotation we will use
     # Read APS 32-BM raw data.
     proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params, True)
-    # apply all preprocessing functions
+    # Apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)
     rec = []
     center_range = []
