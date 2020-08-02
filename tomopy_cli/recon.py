@@ -135,7 +135,7 @@ def rec(params):
         thread.join()
 
 def _try_rec(params):
-    log.info("  *** *** starting 'try' reconstruction") 
+    log.info("  *** *** starting 'try' reconstruction")
     data_shape = file_io.get_dx_dims(params)
     # Select sinogram range to reconstruct
     nSino_per_chunk = pow(2, int(params.binning))
@@ -173,7 +173,7 @@ def _try_rec(params):
             blocked_views = params.blocked_views_end - params.blocked_views_start
             stack = np.empty((len(center_range), data_shape[0]-blocked_views, int(data_shape[2])))
         else:
-            stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
+            stack = np.empty((len(center_range), data.shape[0], int(data.shape[2])))
 
         for i, axis in enumerate(center_range):
             stack[i] = data[:, 0, :]
