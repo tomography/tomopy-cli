@@ -1,4 +1,3 @@
-import os
 import sys
 import shutil
 from pathlib import Path
@@ -24,7 +23,7 @@ def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
 
-    #Read parameters from DXchange file if requested
+    # Read parameters from DXchange file if requested
     params = file_io.auto_read_dxchange(params)
     if params.rotation_axis <= 0:
         params.rotation_axis =  data_shape[2]/2
@@ -40,7 +39,7 @@ def rec(params):
             sino_end = data_shape[1]
         else:
             sino_end = params.end_row 
-        #If params.nsino_per_chunk < 1, use # of processor cores
+        # If params.nsino_per_chunk < 1, use # of processor cores
         if params.nsino_per_chunk < 1:
             params.nsino_per_chunk = cpu_count()
         nSino_per_chunk = params.nsino_per_chunk * pow(2, int(params.binning))
@@ -55,10 +54,12 @@ def rec(params):
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
 
-    log.info("  *** reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
-               ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
-               chunks, nSino_per_chunk/pow(2, int(params.binning))))            
-
+    log.info("  *** reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % (
+        (sino_end - sino_start) / pow(2, int(params.binning)),
+        sino_start/pow(2, int(params.binning)),
+        sino_end/pow(2, int(params.binning)),
+        chunks, nSino_per_chunk/pow(2, int(params.binning))))
+    
     strt = sino_start
     write_threads = []
     if chunks == 0:
@@ -101,19 +102,22 @@ def rec(params):
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
         if params.reconstruction_type == "full":
-            recon_base_dir = os.path.dirname(params.file_name) + '_rec'
-            tail = os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec'
+            fpath = Path(params.file_name).resolve()
+            recon_base_dir = fpath.parent / '_rec'
+            tail = "{}_rec".format(fpath.stem)
             if params.output_format == 'tiff_stack':
-                fname = os.path.join(recon_base_dir, tail, 'recon')
-                print(f"Full tiff dir: {fname}")
+                fname = recon_base_dir / tail / 'recon'
+                log.debug("Full tiff dir: %s", fname)
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
-                                                kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
+                                                kwargs = {'fname': str(fname),
+                                                          'start': strt,
+                                                          'overwrite': True})
             else:
-                fname = os.path.join(recon_base_dir, tail + '.hdf5')
+                fname = recon_base_dir / "{}.hdf".format(tail)
                 write_thread = threading.Thread(target=file_io.write_hdf5,
                                                 args = (rec,),
-                                                kwargs = {'fname':fname,
+                                                kwargs = {'fname': str(fname),
                                                           'dest_idx': slice(strt, strt+rec.shape[0]),
                                                           'maxsize': (sino_end, *rec.shape[1:]),
                                                           'overwrite': iChunk==0})
@@ -121,8 +125,9 @@ def rec(params):
             write_threads.append(write_thread)
             strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
         elif params.reconstruction_type == "slice":
-            fname = Path.joinpath(Path(os.path.dirname(os.path.abspath(params.file_name)) + '_rec'),
-                                    'slice_rec', 'recon_'+ Path(params.file_name).stem)
+            # Construct the path for where to save the tiffs
+            fname = Path(params.file_name)
+            fname = fname.resolve().parent / '_rec' / 'slice_rec' / 'recon_{}'.format(fname.stem)
             dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
         else:
             raise ValueError("Unknown value for *reconstruction type*: {}. "
@@ -203,11 +208,12 @@ def _try_rec(params):
         rec = padded_rec(stack, theta180, rot_centers, params)
 
     # Save images to a temporary folder.
-    fname = (os.path.dirname(params.file_name) + '_rec' + os.sep 
-                + 'try_center' + os.sep + file_io.path_base_name(params.file_name) + os.sep + 'recon_')
+    fpath = Path(params.file_name).resolve()
+    fbase = fpath.parent / '_rec' / 'try_center' / fpath.stem
     for i,axis in enumerate(center_range):
-        rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
-        dxchange.write_tiff(rec[i], fname=rfname, overwrite=True)
+        this_center = axis * np.power(2, float(params.binning))
+        rfname = fbase / "recon_{:.2f}.tiff".format(this_center)
+        dxchange.write_tiff(rec[i], fname=str(rfname), overwrite=True)
     # restore original method
     params.reconstruction_algorithm = reconstruction_algorithm_org
 
