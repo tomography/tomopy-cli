@@ -60,6 +60,25 @@ After using **find_center**, to do a tomographic reconstruction of all tomograph
     $ tomopy recon --file-name /local/data/
 
 
+Manually Specifying Rotation Center
+===================================
+
+The rotation center can be specified using the ``--rotation-axis``
+argument, or through a JSON file with a schema resembling::
+
+    {
+      "path_to_my_data_file_A.h5": 1017.0,
+      "path_to_my_data_file_B.h5": 1025.0,
+    }
+
+Including a JSON file can be beneficial if rotation centers cannot be
+accurately determined automatically. The path to this JSON file can
+either be given as ``--rotation-axis-file``, in which case only the
+file given by ``--file-name`` is reconstructed, or directly as the
+argument to ``--file-name``, in which case all files in the JSON
+object will be reconstructed.
+
+
 Help
 ====
 
