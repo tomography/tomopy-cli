@@ -167,13 +167,12 @@ def _try_rec(params):
     rec = []
     center_range = []
     # try passes an array of rotation centers and this is only supported by gridrec
-    reconstruction_algorithm_org = params.reconstruction_algorithm
-    params.reconstruction_algorithm = 'gridrec'
+    # reconstruction_algorithm_org = params.reconstruction_algorithm
+    # params.reconstruction_algorithm = 'gridrec'
 
     if (params.file_type == 'standard'):
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
         center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
-
         # stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
         if (params.blocked_views):
             blocked_views = params.blocked_views_end - params.blocked_views_start
@@ -185,9 +184,14 @@ def _try_rec(params):
             stack[i] = data[:, 0, :]
         log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' 
                         % (sino_start, center_range[0], center_range[-1], center_range[1] - center_range[0]))
-
-        rec = padded_rec(stack, theta, center_range, params)
-
+        if params.reconstruction_algorithm == 'gridrec':
+            rec = padded_rec(stack, theta, center_range, params)
+        else:
+            log.warning("  *** Doing try_center with '%s' instead of 'gridrec' is slow.", params.reconstruction_algorithm)
+            rec = []
+            for center in center_range:
+                rec.append(padded_rec(data[:, 0:1, :], theta, center, params))
+            rec = np.asarray(rec)
     else:
         rotation_axis = params.rotation_axis_flip // pow(2,int(params.binning))
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
@@ -216,7 +220,7 @@ def _try_rec(params):
         rfname = fbase / "recon_{:.2f}.tiff".format(this_center)
         dxchange.write_tiff(rec[i], fname=str(rfname), overwrite=True)
     # restore original method
-    params.reconstruction_algorithm = reconstruction_algorithm_org
+    # params.reconstruction_algorithm = reconstruction_algorithm_org
 
 
 def padded_rec(data, theta, rotation_axis, params):
@@ -303,8 +307,8 @@ def reconstruct(data, theta, rot_center, params):
                             filter_name=params.gridrec_filter)
             rec = tomopy.misc.corr.gaussian_filter(rec, axis=1)
             rec = tomopy.misc.corr.gaussian_filter(rec, axis=2)
-        shift = (int((data.shape[2]/2 - rot_center)+.5))
-        data = np.roll(data, shift, axis=2)
+        # shift = (int((data.shape[2]/2 - rot_center)+.5))
+        # data = np.roll(data, shift, axis=2)
         recon_kw = dict(center=rot_center, algorithm=tomopy.astra,
                         options=options)
         if params.astrasirt_bootstrap:
@@ -380,7 +384,7 @@ def reconstruct(data, theta, rot_center, params):
         params.reconstruction_algorithm = 'gridrec'
         log.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
-        rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
+        rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.gridrec_filter)
     log.info("  *** reconstruction finished")
     return rec
 
