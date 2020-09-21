@@ -309,6 +309,7 @@ def path_base_name(path):
 
 
 def read_rot_centers_json(json_path):
+    print(json_path)
     try:
         with open(json_path) as json_file:
             json_string = json_file.read()
@@ -329,10 +330,18 @@ def read_rot_centers_json(json_path):
 def read_rot_centers(params):
     # Prepend the data directory to the json path
     fpath = Path(params.file_name)
-    jfpath = fpath / params.rotation_axis_file
+    if fpath.is_dir():
+        jfpath = fpath / params.rotation_axis_file
+    else:
+        jfpath = params.rotation_axis_file
     # Load and return the json data
     dictionary = read_rot_centers_json(jfpath)
-    return collections.OrderedDict(sorted(dictionary.items()))
+    dictionary = collections.OrderedDict(sorted(dictionary.items()))
+    subdict = collections.OrderedDict()
+    for idx, payload in dictionary.items():
+        key, val = next(iter(payload.items()))
+        subdict[key] = val
+    return subdict
 
 
 def auto_read_dxchange(params):
@@ -361,11 +370,11 @@ def read_rot_center(params):
         params = find_center.find_rotation_axis(params)
     elif params.rotation_axis_auto == 'json':
         log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
-        all_centers = read_rot_centers_json(Path(params.rotation_axis_file))
-        params.rotation_axis = all_centers[params.file_name]
+        all_centers = read_rot_centers(params)
+        params.rotation_axis = all_centers[params.file_name.name]
     else:
         # Try to read from HDF5 file
-        log.warning('  *** *** Try to read rotation center from file {:s}'.format(params.file_name))
+        log.warning('  *** *** Try to read rotation center from file {}'.format(params.file_name))
         with h5py.File(params.file_name, 'r') as file_name:
             try:
                 dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
