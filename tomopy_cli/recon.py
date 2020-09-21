@@ -114,8 +114,10 @@ def rec(params):
                                                 kwargs = {'fname': str(fname),
                                                           'start': strt,
                                                           'overwrite': True})
-            else:
+            elif params.output_format == "hdf5":
+                # HDF5 output
                 fname = recon_base_dir / "{}.hdf".format(tail)
+                print(fname)
                 # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
                 #                    maxsize=(sino_end, *rec.shape[1:]), overwrite=(iChunk==0))
                 ds_end = int(np.ceil(sino_end / pow(2, int(params.binning))))
@@ -125,9 +127,15 @@ def rec(params):
                                                           'dest_idx': slice(strt, strt+rec.shape[0]),
                                                           'maxsize': (ds_end, *rec.shape[1:]),
                                                           'overwrite': iChunk==0})
-            # strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
-            write_thread.start()
-            write_threads.append(write_thread)
+            else:
+                log.error("  *** Unknown output_format '%s'", params.output_format)
+                fname = "<Not saved (bad output-format)>"
+                write_thread = None
+            # Save the data to disk
+            if write_thread is not None:
+                write_thread.start()
+                write_threads.append(write_thread)
+            # Increment counter for which chunks to save
             strt += (sino[1] - sino[0])
         elif params.reconstruction_type == "slice":
             # Construct the path for where to save the tiffs

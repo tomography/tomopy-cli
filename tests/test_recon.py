@@ -31,9 +31,9 @@ def make_params():
 
 
 class ReconTests(TestCase):
-    output_dir = Path(__file__).resolve().parent.parent / 'tests_rec'
-    output_hdf = Path(__file__).resolve().parent.parent / 'tests_rec' / 'test_tomogram_rec.hdf5'
-    full_tiff_dir = Path(__file__).resolve().parent.parent / 'tests_rec' / 'test_tomogram_rec'
+    output_dir = Path(__file__).resolve().parent / '_rec'
+    output_hdf = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec.hdf'
+    full_tiff_dir = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec'
 
     def setUp(self):
         # Remove the temporary HDF5 file
@@ -62,21 +62,22 @@ class ReconTests(TestCase):
         params = make_params()
         params.reconstruction_type = 'slice'
         response = rec(params=params)
+        print(self.output_dir)
         self.assertTrue(self.output_dir.exists())
     
     def test_full_reconstruction(self):
         """Check that a basic reconstruction completes and produces output tiff files."""
         params = make_params()
         params.reconstruction_type = 'full'
-        params.output_format = 'tiff'
+        params.output_format = 'tiff_stack'
         response = rec(params=params)
-        print(self.full_tiff_dir)
         # import pdb; pdb.set_trace()
         self.assertTrue(self.full_tiff_dir.exists())
     
     def test_hdf_output(self):
         params = make_params()
         params.reconstruction_type = 'full'
+        params.output_format = "hdf5"
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
         # Check that tiffs are not saved and HDF5 file is saved
@@ -91,6 +92,7 @@ class ReconTests(TestCase):
         # Test with multiple chunks to ensure they're all written
         params = make_params()
         params.reconstruction_type = 'full'
+        params.output_format = 'hdf5'
         params.nsino_per_chunk = 16 # 4 chunks
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
