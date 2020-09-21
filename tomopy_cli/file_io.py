@@ -309,7 +309,6 @@ def path_base_name(path):
 
 
 def read_rot_centers_json(json_path):
-    print(json_path)
     try:
         with open(json_path) as json_file:
             json_string = json_file.read()
@@ -339,7 +338,10 @@ def read_rot_centers(params):
     dictionary = collections.OrderedDict(sorted(dictionary.items()))
     subdict = collections.OrderedDict()
     for idx, payload in dictionary.items():
-        key, val = next(iter(payload.items()))
+        try:
+            key, val = next(iter(payload.items()))
+        except AttributeError:
+            raise RuntimeError("Malformed rotation-axis file.")
         subdict[key] = val
     return subdict
 

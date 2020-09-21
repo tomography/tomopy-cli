@@ -1,7 +1,7 @@
 import os
 import sys
 import shutil
-import pathlib
+from pathlib import Path
 import argparse
 import configparser
 from collections import OrderedDict
@@ -17,8 +17,8 @@ from tomopy_cli import __version__
 log = logging.getLogger(__name__)
 
 
-LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
-CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
+LOGS_HOME = Path.home()/'logs'
+CONFIG_FILE_NAME = Path.home()/'tomopy.conf'
 ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
@@ -74,7 +74,7 @@ SECTIONS['find-rotation-axis'] = {
 SECTIONS['file-reading'] = {
     'file-name': {
         'default': '.',
-        'type': str,
+        'type': Path,
         'help': "Name of the last used hdf file or directory containing multiple hdf files",
         'metavar': 'PATH'},
     'file-format': {
