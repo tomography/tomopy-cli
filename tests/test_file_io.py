@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
 import os
+from pathlib import Path
 
 import h5py
 import numpy as np
@@ -9,6 +10,25 @@ from tomopy import misc, project
 import matplotlib.pyplot as plt
 
 from tomopy_cli import file_io
+
+
+def make_params():
+    params = mock.MagicMock()
+    params.file_name = "test_tomogram.h5"
+    params.rotation_axis = 32
+    params.file_type = 'standard'
+    params.file_format = 'dx'
+    params.start_row = 0
+    params.end_row = -1
+    params.binning = 0
+    params.nsino_per_chunk = 256
+    params.flat_correction_method = 'standard'
+    params.reconstruction_algorithm = 'gridrec'
+    params.gridrec_filter = 'parzen'
+    params.reconstruction_mask_ratio = 1.0
+    params.reconstruction_type = 'slice'
+    return params
+
 
 class FlipAndStitchTests(unittest.TestCase):
     def test_tomogram_360(self):
@@ -29,15 +49,25 @@ class FlipAndStitchTests(unittest.TestCase):
 
 
 class ReadParamTests(unittest.TestCase):
-    test_hdf_file = 'filter-tests.hdf5'
+    test_hdf_file = Path('filter-tests.hdf5')
+    rot_axis_file = Path(__file__).resolve().parent / 'rotation_axis.json'
     # Sample filters from 7-BM-B for 'open' and 'Cu_1000um' filters
     filter_open = np.array([[79, 112, 101, 110,] + [0,] * 252], dtype='int8')
     filter_Cu_1000um = np.array([[67, 117,  95,  49,  48,  48, 48, 117, 109,] + [0,] * 247], dtype='int8')
+
+    def setUp(self):
+        if self.rot_axis_file.exists():
+            self.rot_axis_file.unlink()
+        # Create a rotation_axis.json file
+        with open(self.rot_axis_file, mode='x') as fp:
+            fp.write('{"0": {"filter-tests.hdf5": 1287.25}}')
     
     def tearDown(self):
         # Clean up the mocked HDF5 file
         if os.path.exists(self.test_hdf_file):
             os.remove(self.test_hdf_file)
+        if self.rot_axis_file.exists():
+            self.rot_axis_file.unlink()            
     
     def prepare_hdf_file(self, filter_1=None, filter_2=None):
         with h5py.File(self.test_hdf_file, mode='x') as h5fp:
@@ -105,6 +135,13 @@ class ReadParamTests(unittest.TestCase):
         self.assertEqual(params.filter_1_thickness, 0.)
         self.assertEqual(params.filter_2_material, 'Al')
         self.assertEqual(params.filter_2_thickness, 0.)
+
+    def test_read_rot_center_json(self):
+        params = make_params()
+        params.rotation_axis_auto = 'json'
+        params.file_name = self.test_hdf_file
+        params.rotation_axis_file = self.rot_axis_file
+        file_io.read_rot_center(params)
 
 
 class WriteHDF5Tests(unittest.TestCase):
@@ -189,3 +226,5 @@ class WriteHDF5Tests(unittest.TestCase):
             file_io.write_hdf5(data[10:13], fname=self.hdf_filename,
                                maxsize=data.shape, dest_idx=slice(10,13),
                                overwrite=False, dtype='int')
+
+

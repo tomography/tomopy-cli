@@ -117,7 +117,6 @@ def rec(params):
             elif params.output_format == "hdf5":
                 # HDF5 output
                 fname = recon_base_dir / "{}.hdf".format(tail)
-                print(fname)
                 # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
                 #                    maxsize=(sino_end, *rec.shape[1:]), overwrite=(iChunk==0))
                 ds_end = int(np.ceil(sino_end / pow(2, int(params.binning))))

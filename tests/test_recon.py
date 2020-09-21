@@ -10,11 +10,12 @@ import tomopy
 from tomopy_cli.recon import rec
 
 HDF_FILE = Path(__file__).resolve().parent / 'test_tomogram.h5'
+ROT_AXIS_FILE = Path(__file__).resolve().parent / 'rotation_axis.json'
 
 
 def make_params():
     params = mock.MagicMock()
-    params.file_name = str(HDF_FILE)
+    params.file_name = HDF_FILE
     params.rotation_axis = 32
     params.file_type = 'standard'
     params.file_format = 'dx'
@@ -37,22 +38,22 @@ class ReconTests(TestCase):
 
     def setUp(self):
         # Remove the temporary HDF5 file
-        if os.path.exists(str(HDF_FILE)):
-            os.remove(str(HDF_FILE))
+        if HDF_FILE.exists():
+            HDF_FILE.unlink()
         # Prepare some dummy data
         phantom = tomopy.misc.phantom.shepp3d(size=64)
         phantom = np.exp(-phantom)
         flat = np.ones((2, *phantom.shape[1:]))
         dark = np.zeros((2, *phantom.shape[1:]))
-        with h5py.File(str(HDF_FILE), mode='w-') as fp:
+        with h5py.File(HDF_FILE, mode='w-') as fp:
             fp.create_dataset('/exchange/data', data=phantom)
             fp.create_dataset('/exchange/data_white', data=flat)
             fp.create_dataset('/exchange/data_dark', data=dark)
     
     def tearDown(self):
         # Remove the temporary HDF5 file
-        if os.path.exists(str(HDF_FILE)):
-            os.remove(str(HDF_FILE))
+        if HDF_FILE.exists():
+            HDF_FILE.unlink()
         # Remove the reconstructed output
         if self.output_dir.exists():
             shutil.rmtree(self.output_dir)
