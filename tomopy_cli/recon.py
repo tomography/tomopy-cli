@@ -116,15 +116,19 @@ def rec(params):
                                                           'overwrite': True})
             else:
                 fname = recon_base_dir / "{}.hdf".format(tail)
+                # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
+                #                    maxsize=(sino_end, *rec.shape[1:]), overwrite=(iChunk==0))
+                ds_end = int(np.ceil(sino_end / pow(2, int(params.binning))))
                 write_thread = threading.Thread(target=file_io.write_hdf5,
                                                 args = (rec,),
                                                 kwargs = {'fname': str(fname),
                                                           'dest_idx': slice(strt, strt+rec.shape[0]),
-                                                          'maxsize': (sino_end, *rec.shape[1:]),
+                                                          'maxsize': (ds_end, *rec.shape[1:]),
                                                           'overwrite': iChunk==0})
+            # strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
             write_thread.start()
             write_threads.append(write_thread)
-            strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+            strt += (sino[1] - sino[0])
         elif params.reconstruction_type == "slice":
             # Construct the path for where to save the tiffs
             fname = Path(params.file_name)
