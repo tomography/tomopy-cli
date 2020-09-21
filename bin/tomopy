@@ -74,6 +74,7 @@ def run_rec(args):
             # Load the list of files from a given JSON rotation_axis file
             log.info("Reconstructing files listed in: %s" % args.file_name)
             file_dict = file_io.read_rot_centers_json(file_path)
+            args.rotation_axis_file = str(file_path)
             for new_file_name, rot_center in file_dict.items():
                 args.file_name = str(file_path.parent / new_file_name)
                 args.rotation_axis = rot_center
