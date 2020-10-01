@@ -20,8 +20,7 @@ def find_rotation_axis(params):
 
     fname = params.file_name
     ra_fname = params.rotation_axis_file
-
-    if os.path.isfile(fname):  
+    if os.path.isfile(fname):
         return _find_rotation_axis(params)
         
     elif os.path.isdir(fname):
