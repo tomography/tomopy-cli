@@ -1,4 +1,3 @@
-import os
 import sys
 import shutil
 from pathlib import Path
@@ -6,6 +5,7 @@ from multiprocessing import cpu_count
 import threading
 import logging
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tomopy
 import dxchange
@@ -24,7 +24,7 @@ def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
 
-    #Read parameters from DXchange file if requested
+    # Read parameters from DXchange file if requested
     params = file_io.auto_read_dxchange(params)
     if params.rotation_axis <= 0:
         params.rotation_axis =  data_shape[2]/2
@@ -40,7 +40,7 @@ def rec(params):
             sino_end = data_shape[1]
         else:
             sino_end = params.end_row 
-        #If params.nsino_per_chunk < 1, use # of processor cores
+        # If params.nsino_per_chunk < 1, use # of processor cores
         if params.nsino_per_chunk < 1:
             params.nsino_per_chunk = cpu_count()
         nSino_per_chunk = params.nsino_per_chunk * pow(2, int(params.binning))
@@ -55,10 +55,12 @@ def rec(params):
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
 
-    log.info("  *** reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % \
-               ((sino_end - sino_start)/pow(2, int(params.binning)), sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning)), \
-               chunks, nSino_per_chunk/pow(2, int(params.binning))))            
-
+    log.info("  *** reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % (
+        (sino_end - sino_start) / pow(2, int(params.binning)),
+        sino_start/pow(2, int(params.binning)),
+        sino_end/pow(2, int(params.binning)),
+        chunks, nSino_per_chunk/pow(2, int(params.binning))))
+    
     strt = sino_start
     write_threads = []
     if chunks == 0:
@@ -101,28 +103,43 @@ def rec(params):
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
         if params.reconstruction_type == "full":
-            recon_base_dir = os.path.dirname(params.file_name) + '_rec'
-            tail = os.path.splitext(os.path.basename(params.file_name))[0]+ '_rec'
+            fpath = Path(params.file_name).resolve()
+            recon_base_dir = fpath.parent / '_rec'
+            tail = "{}_rec".format(fpath.stem)
             if params.output_format == 'tiff_stack':
-                fname = os.path.join(recon_base_dir, tail, 'recon')
-                print(f"Full tiff dir: {fname}")
+                fname = recon_base_dir / tail / 'recon'
+                log.debug("Full tiff dir: %s", fname)
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
-                                                kwargs = {'fname':fname, 'start':strt, 'overwrite':True})
-            else:
-                fname = os.path.join(recon_base_dir, tail + '.hdf5')
+                                                kwargs = {'fname': str(fname),
+                                                          'start': strt,
+                                                          'overwrite': True})
+            elif params.output_format == "hdf5":
+                # HDF5 output
+                fname = recon_base_dir / "{}.hdf".format(tail)
+                # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
+                #                    maxsize=(sino_end, *rec.shape[1:]), overwrite=(iChunk==0))
+                ds_end = int(np.ceil(sino_end / pow(2, int(params.binning))))
                 write_thread = threading.Thread(target=file_io.write_hdf5,
                                                 args = (rec,),
-                                                kwargs = {'fname':fname,
+                                                kwargs = {'fname': str(fname),
                                                           'dest_idx': slice(strt, strt+rec.shape[0]),
-                                                          'maxsize': (sino_end, *rec.shape[1:]),
+                                                          'maxsize': (ds_end, *rec.shape[1:]),
                                                           'overwrite': iChunk==0})
-            write_thread.start()
-            write_threads.append(write_thread)
-            strt += int((sino[1] - sino[0]) / np.power(2, float(params.binning)))
+            else:
+                log.error("  *** Unknown output_format '%s'", params.output_format)
+                fname = "<Not saved (bad output-format)>"
+                write_thread = None
+            # Save the data to disk
+            if write_thread is not None:
+                write_thread.start()
+                write_threads.append(write_thread)
+            # Increment counter for which chunks to save
+            strt += (sino[1] - sino[0])
         elif params.reconstruction_type == "slice":
-            fname = Path.joinpath(Path(os.path.dirname(os.path.abspath(params.file_name)) + '_rec'),
-                                    'slice_rec', 'recon_'+ Path(params.file_name).stem)
+            # Construct the path for where to save the tiffs
+            fname = Path(params.file_name)
+            fname = fname.resolve().parent / '_rec' / 'slice_rec' / 'recon_{}'.format(fname.stem)
             dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
         else:
             raise ValueError("Unknown value for *reconstruction type*: {}. "
@@ -135,7 +152,7 @@ def rec(params):
         thread.join()
 
 def _try_rec(params):
-    log.info("  *** *** starting 'try' reconstruction") 
+    log.info("  *** *** starting 'try' reconstruction")
     data_shape = file_io.get_dx_dims(params)
     # Select sinogram range to reconstruct
     nSino_per_chunk = pow(2, int(params.binning))
@@ -153,35 +170,39 @@ def _try_rec(params):
             
     sino = (int(sino_start), int(sino_end))
 
-    #Set up the centers of rotation we will use
+    # Set up the centers of rotation we will use
     # Read APS 32-BM raw data.
     proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params, True)
-    # apply all preprocessing functions
+    # Apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)
     rec = []
     center_range = []
     # try passes an array of rotation centers and this is only supported by gridrec
-    reconstruction_algorithm_org = params.reconstruction_algorithm
-    params.reconstruction_algorithm = 'gridrec'
+    # reconstruction_algorithm_org = params.reconstruction_algorithm
+    # params.reconstruction_algorithm = 'gridrec'
 
     if (params.file_type == 'standard'):
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
         center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
-
         # stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
         if (params.blocked_views):
             blocked_views = params.blocked_views_end - params.blocked_views_start
             stack = np.empty((len(center_range), data_shape[0]-blocked_views, int(data_shape[2])))
         else:
-            stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
+            stack = np.empty((len(center_range), data.shape[0], int(data.shape[2])))
 
         for i, axis in enumerate(center_range):
             stack[i] = data[:, 0, :]
         log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' 
                         % (sino_start, center_range[0], center_range[-1], center_range[1] - center_range[0]))
-
-        rec = padded_rec(stack, theta, center_range, params)
-
+        if params.reconstruction_algorithm == 'gridrec':
+            rec = padded_rec(stack, theta, center_range, params)
+        else:
+            log.warning("  *** Doing try_center with '%s' instead of 'gridrec' is slow.", params.reconstruction_algorithm)
+            rec = []
+            for center in center_range:
+                rec.append(padded_rec(data[:, 0:1, :], theta, center, params))
+            rec = np.asarray(rec)
     else:
         rotation_axis = params.rotation_axis_flip // pow(2,int(params.binning))
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
@@ -203,13 +224,14 @@ def _try_rec(params):
         rec = padded_rec(stack, theta180, rot_centers, params)
 
     # Save images to a temporary folder.
-    fname = (os.path.dirname(params.file_name) + '_rec' + os.sep 
-                + 'try_center' + os.sep + file_io.path_base_name(params.file_name) + os.sep + 'recon_')
+    fpath = Path(params.file_name).resolve()
+    fbase = fpath.parent / '_rec' / 'try_center' / fpath.stem
     for i,axis in enumerate(center_range):
-        rfname = fname + str('{0:.2f}'.format(axis*np.power(2, float(params.binning))) + '.tiff')
-        dxchange.write_tiff(rec[i], fname=rfname, overwrite=True)
+        this_center = axis * np.power(2, float(params.binning))
+        rfname = fbase / "recon_{:.2f}.tiff".format(this_center)
+        dxchange.write_tiff(rec[i], fname=str(rfname), overwrite=True)
     # restore original method
-    params.reconstruction_algorithm = reconstruction_algorithm_org
+    # params.reconstruction_algorithm = reconstruction_algorithm_org
 
 
 def padded_rec(data, theta, rotation_axis, params):
@@ -296,13 +318,14 @@ def reconstruct(data, theta, rot_center, params):
                             filter_name=params.gridrec_filter)
             rec = tomopy.misc.corr.gaussian_filter(rec, axis=1)
             rec = tomopy.misc.corr.gaussian_filter(rec, axis=2)
-        shift = (int((data.shape[2]/2 - rot_center)+.5))
-        data = np.roll(data, shift, axis=2)
+        # shift = (int((data.shape[2]/2 - rot_center)+.5))
+        # data = np.roll(data, shift, axis=2)
+        recon_kw = dict(center=rot_center, algorithm=tomopy.astra,
+                        options=options)
         if params.astrasirt_bootstrap:
             log.info('  *** *** using gridrec to start astrasirt recon')
-            rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
-        else:
-            rec = tomopy.recon(data, theta, algorithm=tomopy.astra, center=params.rotation_axis, options=options)
+            recon_kw['init_recon'] = rec
+        rec = tomopy.recon(data, theta, **recon_kw)
     elif params.reconstruction_algorithm == 'astrasart':
         extra_options ={}
         try:
@@ -372,7 +395,7 @@ def reconstruct(data, theta, rot_center, params):
         params.reconstruction_algorithm = 'gridrec'
         log.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
-        rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.filter)
+        rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.gridrec_filter)
     log.info("  *** reconstruction finished")
     return rec
 

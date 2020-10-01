@@ -10,11 +10,12 @@ import tomopy
 from tomopy_cli.recon import rec
 
 HDF_FILE = Path(__file__).resolve().parent / 'test_tomogram.h5'
+ROT_AXIS_FILE = Path(__file__).resolve().parent / 'rotation_axis.json'
 
 
 def make_params():
     params = mock.MagicMock()
-    params.file_name = str(HDF_FILE)
+    params.file_name = HDF_FILE
     params.rotation_axis = 32
     params.file_type = 'standard'
     params.file_format = 'dx'
@@ -31,28 +32,28 @@ def make_params():
 
 
 class ReconTests(TestCase):
-    output_dir = Path(__file__).resolve().parent.parent / 'tests_rec'
-    output_hdf = Path(__file__).resolve().parent.parent / 'tests_rec' / 'test_tomogram_rec.hdf5'
-    full_tiff_dir = Path(__file__).resolve().parent.parent / 'tests_rec' / 'test_tomogram_rec'
+    output_dir = Path(__file__).resolve().parent / '_rec'
+    output_hdf = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec.hdf'
+    full_tiff_dir = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec'
 
     def setUp(self):
         # Remove the temporary HDF5 file
-        if os.path.exists(str(HDF_FILE)):
-            os.remove(str(HDF_FILE))
+        if HDF_FILE.exists():
+            HDF_FILE.unlink()
         # Prepare some dummy data
         phantom = tomopy.misc.phantom.shepp3d(size=64)
         phantom = np.exp(-phantom)
         flat = np.ones((2, *phantom.shape[1:]))
         dark = np.zeros((2, *phantom.shape[1:]))
-        with h5py.File(str(HDF_FILE), mode='w-') as fp:
+        with h5py.File(HDF_FILE, mode='w-') as fp:
             fp.create_dataset('/exchange/data', data=phantom)
             fp.create_dataset('/exchange/data_white', data=flat)
             fp.create_dataset('/exchange/data_dark', data=dark)
     
     def tearDown(self):
         # Remove the temporary HDF5 file
-        if os.path.exists(str(HDF_FILE)):
-            os.remove(str(HDF_FILE))
+        if HDF_FILE.exists():
+            HDF_FILE.unlink()
         # Remove the reconstructed output
         if self.output_dir.exists():
             shutil.rmtree(self.output_dir)
@@ -62,21 +63,22 @@ class ReconTests(TestCase):
         params = make_params()
         params.reconstruction_type = 'slice'
         response = rec(params=params)
+        print(self.output_dir)
         self.assertTrue(self.output_dir.exists())
     
     def test_full_reconstruction(self):
         """Check that a basic reconstruction completes and produces output tiff files."""
         params = make_params()
         params.reconstruction_type = 'full'
-        params.output_format = 'tiff'
+        params.output_format = 'tiff_stack'
         response = rec(params=params)
-        print(self.full_tiff_dir)
         # import pdb; pdb.set_trace()
         self.assertTrue(self.full_tiff_dir.exists())
     
     def test_hdf_output(self):
         params = make_params()
         params.reconstruction_type = 'full'
+        params.output_format = "hdf5"
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
         # Check that tiffs are not saved and HDF5 file is saved
@@ -91,6 +93,7 @@ class ReconTests(TestCase):
         # Test with multiple chunks to ensure they're all written
         params = make_params()
         params.reconstruction_type = 'full'
+        params.output_format = 'hdf5'
         params.nsino_per_chunk = 16 # 4 chunks
         response = rec(params=params)
         expected_hdf5path = self.output_hdf

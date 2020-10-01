@@ -5,7 +5,7 @@ import re
 import sys
 import argparse
 import time
-import pathlib
+from pathlib import Path
 from datetime import datetime
 
 from tomopy_cli import config, __version__
@@ -20,24 +20,25 @@ from tomopy_cli.auto_complete import create_complete_tomopy
 log = logging.getLogger('tomopy_cli.bin.tomopy')
 
 
-def init(args):
+KNOWN_FORMATS = ['dx', 'aps2bm', 'aps7bm', 'aps32id']
 
+
+def init(args):
     if not os.path.exists(str(args.config)):
         config.write(args.config)
     else:
         log.error("{0} already exists".format(args.config))    
 
-def run_status(args):
 
+def run_status(args):
     config.log_values(args)
 
-def run_find_center(args):
 
-    if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+def run_find_center(args):
+    if (str(args.file_format) in KNOWN_FORMATS):
         log.warning('find center start')
         args = find_center.find_rotation_axis(args)
         log.warning('find center end')
-
         # update tomopy.conf
         sections = config.RECON_PARAMS
         config.write(args.config, args=args, sections=sections)
@@ -67,15 +68,25 @@ def run_rec(args):
 
     log.warning('reconstruction start')
 
-    if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
-        if os.path.isfile(args.file_name):    
-            log.info("reconstructing a single file: %s" % args.file_name)   
+    if str(args.file_format) in KNOWN_FORMATS:
+        file_path = Path(args.file_name)
+        if file_path.suffix == '.json':
+            # Load the list of files from a given JSON rotation_axis file
+            log.info("Reconstructing files listed in: %s" % args.file_name)
+            file_dict = file_io.read_rot_centers_json(file_path)
+            # args.rotation_axis_file = str(file_path)
+            for filename_idx, file_info in file_dict.items():
+                new_file_name = list(file_info.keys())[0]
+                args.file_name = file_path.parent / new_file_name
+                recon.rec(args)
+            config.update_config(args)
+        elif os.path.isfile(args.file_name):
+            log.info("reconstructing a single file: %s" % args.file_name)
             recon.rec(args)
             config.update_config(args)
         elif os.path.isdir(args.file_name):
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
-
             h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf', 'hdf5')), os.listdir(top)))
             if (h5_file_list):
                 h5_file_list.sort()
@@ -115,7 +126,7 @@ def run_rec(args):
     else:
         # add here support for other file formats
         log.error("  *** %s is not a supported file format" % args.file_format)
-        log.error("supported data formats are: %s, %s, %s, %s" % ('dx', 'aps2bm', 'aps7bm', 'aps32id'))
+        log.error("supported data formats are: %s, %s, %s, %s" % tuple(KNOWN_FORMATS))
 
 
 def main():
