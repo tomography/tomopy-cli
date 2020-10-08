@@ -52,6 +52,7 @@ Usage:
 from copy import deepcopy
 import os
 from pathlib import Path, PurePath
+import logging
 
 import numpy as np
 import scipy.interpolate
@@ -62,8 +63,10 @@ from scipy.signal import convolve
 from scipy.signal.windows import gaussian
 
 from tomopy.util import mproc
-from tomopy_cli import log
 from tomopy_cli import config
+
+log = logging.getLogger(__name__)
+
 
 #Global variables we need for computing LUT
 filters = {}
@@ -71,6 +74,7 @@ sample_material = None
 scintillator_material = None
 scintillator_thickness = None
 ref_trans = None
+threshold_trans = None
 d_source = 0
 pixel_size = 0
 center_row = 0
@@ -123,7 +127,7 @@ class Material:
         raw_data = np.genfromtxt(os.path.join(data_path, self.name + '_properties_xCrossSec.dat'))
         self.energy_array = raw_data[:,0] / 1000.0      #in keV
         self.absorption_array = raw_data[:,3]   #in cm^2/g, from XCOM in XOP
-        self.attenuation_array = raw_data[:,6]  #in cm^2/g, from XCOM in XOP, ignoring coherent scattering
+        self.attenuation_array = raw_data[:,7]  #in cm^2/g, from XCOM in XOP, ignoring coherent scattering
     
     def interp_function(self,energies,absorptions):
         '''Return a function to interpolate logs of energies into logs of absorptions.
@@ -175,9 +179,8 @@ class Material:
         #Compute filter projected density
         filter_proj_density = self.fcompute_proj_density(thickness)
         #Find the spectral transmission using Beer-Lambert law
-        output_spectrum.spectral_power = (input_spectrum.spectral_power -
-                - np.exp(-self.finterpolate_absorption(input_spectrum.energies) * filter_proj_density) 
-                * input_spectrum.spectral_power)
+        ext_lengths = self.finterpolate_absorption(input_spectrum.energies) * filter_proj_density 
+        output_spectrum.spectral_power *= (1.0 - np.exp(-ext_lengths))
         return output_spectrum
     
     def fcompute_absorbed_power(self,thickness,input_spectrum):
@@ -216,7 +219,9 @@ def fread_config_file(config_filename=None):
             elif line.startswith('ref_trans'):
                 global ref_trans
                 ref_trans = float(line.split(':')[1].strip())
-
+            elif line.startswith('threshold_trans'):
+                global threshold_trans
+                threshold_trans = float(line.split(':')[1].strip())
 
 def fread_source_data():
     '''Reads the spectral power data from files.
@@ -304,7 +309,7 @@ def ffind_calibration_one_angle(input_spectrum):
     '''Makes a scipy interpolation function to be used to correct images.
     '''
     #Make an array of sample thicknesses
-    sample_thicknesses = np.sort(np.concatenate((-np.logspace(1,0,11), [0], np.logspace(-1,4.5,221))))
+    sample_thicknesses = np.sort(np.concatenate((-np.logspace(1,0,21), [0], np.logspace(-1,4.5,441))))
     #For each thickness, compute the absorbed power in the scintillator
     detected_power = np.zeros_like(sample_thicknesses)
     for i in range(sample_thicknesses.size):
@@ -315,11 +320,12 @@ def ffind_calibration_one_angle(input_spectrum):
     #Compute an effective transmission vs. thickness
     sample_effective_trans = detected_power / scintillator_material.fcompute_absorbed_power(scintillator_thickness,
                                                                                             input_spectrum)
+    #Threshold the transmission we accept to keep the spline from getting unstable
+    usable_trans = sample_effective_trans[sample_effective_trans > threshold_trans]
+    usable_thicknesses = sample_thicknesses[sample_effective_trans > threshold_trans]
     #Return a spline, but make sure things are sorted in ascending order
-    inds = np.argsort(sample_effective_trans)
-    #for i in inds:
-    #    print(sample_effective_trans[i], sample_thicknesses[i])
-    return InterpolatedUnivariateSpline(sample_effective_trans[inds], sample_thicknesses[inds])
+    inds = np.argsort(usable_trans)
+    return InterpolatedUnivariateSpline(usable_trans[inds], usable_thicknesses[inds], ext='const')
 
 
 def ffind_calibration(spectra_dict):
@@ -360,9 +366,9 @@ def fcorrect_as_pathlength(input_trans):
     First, use fconvert_data to get in terms of pathlength assuming we are
     in the ring plane.  Then, use this function to correct.
     '''
-    angles = np.abs(np.arange(pathlength_image.shape[0]) - center_row)
+    angles = np.abs(np.arange(input_trans.shape[0]) - center_row)
     angles *= pixel_size / d_source
-    correction_factor = angle_spline(angles)
+    correction_factor = angular_spline(angles)
     return centerline_spline(input_trans) * correction_factor[:,None]
 
 

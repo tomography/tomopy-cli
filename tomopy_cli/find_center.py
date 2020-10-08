@@ -1,23 +1,26 @@
 import os
 import json
+import logging
+
 import tomopy
 import numpy as np
 import h5py
 from skimage.filters import gaussian
 import skimage.feature
 
-from tomopy_cli import log
 from tomopy_cli import prep
 from tomopy_cli import config
 from tomopy_cli import file_io
+
+
+log = logging.getLogger(__name__)
 
 
 def find_rotation_axis(params):
 
     fname = params.file_name
     ra_fname = params.rotation_axis_file
-
-    if os.path.isfile(fname):  
+    if os.path.isfile(fname):
         return _find_rotation_axis(params)
         
     elif os.path.isdir(fname):
@@ -36,10 +39,10 @@ def find_rotation_axis(params):
         for fname in h5_file_list:
             h5fname = top + fname
             params.file_name = h5fname
-            rot_center = _find_rotation_axis(params)
+            params = _find_rotation_axis(params)
             params.file_name = top
-            case =  {fname : rot_center}
-            log.info("  *** file: %s; rotation axis %f" % (fname, rot_center))
+            case =  {fname : params.rotation_axis}
+            log.info("  *** file: %s; rotation axis %f" % (fname, params.rotation_axis))
             dic_centers[i] = case
             i += 1
 
@@ -51,6 +54,7 @@ def find_rotation_axis(params):
         f.write(json_dump)
         f.close()
         log.info("Rotation axis locations save in: %s" % jfname)
+        return params
 
     else:
         log.info("Directory or File Name does not exist: %s " % fname)

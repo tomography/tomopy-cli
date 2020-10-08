@@ -1,15 +1,17 @@
 import os
-import h5py
+import logging
+from pathlib import Path
 import json
 import collections
 import re
+
+import h5py
 import tomopy
 import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
 
-from tomopy_cli import log
 from tomopy_cli import __version__
 from tomopy_cli import find_center
 from tomopy_cli import config
@@ -19,8 +21,10 @@ __author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
 __credits__ = "Pavel Shevchenko"
 __copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['read_tomo',
-           ]
+__all__ = ['read_tomo',]
+
+
+log = logging.getLogger(__name__)
 
 
 def read_tomo(sino, params, ignore_flip = False):
@@ -92,14 +96,14 @@ def _read_tomo(params, sino):
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
-        #Check if the flat and dark fields are single images or sets
+        # Check if the flat and dark fields are single images or sets
         if len(flat.shape) == len(proj.shape):
             log.info('  *** median filter flat images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
@@ -123,7 +127,30 @@ def blocked_view(proj, theta, params):
 
 
 def binning(proj, flat, dark, params):
+    """
+    Bin the tomography data.
 
+    Parameters
+    ----------
+    proj : projection data, 3D Numpy array
+
+    flat : projection flatfield data, 2D Numpy array
+    
+    dark : projection dark field data, 2D Numpy array
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D binned projection data.
+
+    ndarray
+        2D binned flat field data.
+
+    ndarray
+        2D binned dark field data.
+    """
     log.info("  *** binning")
     if(params.binning == 0):
         log.info('  *** *** OFF')
@@ -133,8 +160,8 @@ def binning(proj, flat, dark, params):
         proj = _binning(proj, params)
         flat = _binning(flat, params)
         dark = _binning(dark, params)
-
     return proj, flat, dark
+
 
 def _binning(data, params):
 
@@ -145,9 +172,33 @@ def _binning(data, params):
 
 
 def flip_and_stitch(params, img360, flat360, dark360):
-    '''Code to take a 0-360 flip and stitch scan and provide stitched
-    0-180 degree projections.
-    '''
+    """
+    Stitch together data for flip-and-stitch (0-360 degree offset center) scan.
+
+    Parameters
+    ----------
+    params : dict of reconstruction parameters
+
+    img360 : projection data from 0-360 degrees, 3D Numpy array
+
+    flat360 : flatfield data, 2D Numpy array
+    
+    dark360 : dark field data, 2D Numpy array
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D binned projection data stitched together, 0-180 degree domain
+
+    ndarray
+        2D binned flat field data stitched together, 0-180 degree domain
+
+    ndarray
+        2D binned dark field data stitched together, 0-180 degree domain
+
+    """
     num_stitched_angles = img360.shape[0]//2 
     new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
                             params.rotation_axis_flip + 0.5]))
@@ -233,7 +284,6 @@ def get_dx_dims(params):
     dataset='data'
 
     grp = '/'.join(['exchange', dataset])
-
     with h5py.File(params.file_name, "r") as f:
         try:
             data = f[grp]
@@ -258,26 +308,42 @@ def path_base_name(path):
     return file_base_name(fname)
 
 
-def read_rot_centers(params):
-
-    # Add a trailing slash if missing
-    top = os.path.join(params.file_name, '')
-
-    # Load the the rotation axis positions.
-    jfname = top + params.rotation_axis_file
-    
+def read_rot_centers_json(json_path):
     try:
-        with open(jfname) as json_file:
+        with open(json_path) as json_file:
             json_string = json_file.read()
             dictionary = json.loads(json_string)
+    except FileNotFoundError:
+        log.error("the json %s file containing the rotation axis locations is missing" % json_path)
+        log.error("to create one run:")
+        log.error("$ tomopy find_center")
+        exit()
+    except json.decoder.JSONDecodeError as e:
+        log.error("the json %s file containing the rotation axis locations is malformed" % json_path)
+        log.error(e)
+        exit()
+    else:
+        return dictionary
+    
 
-        return collections.OrderedDict(sorted(dictionary.items()))
-
-    except Exception as error: 
-        log.warning("the json %s file containing the rotation axis locations is missing" % jfname)
-        log.warning("to create one run:")
-        log.warning("$ tomopy find_center --file-name %s" % top)
-        # exit()
+def read_rot_centers(params):
+    # Prepend the data directory to the json path
+    fpath = Path(params.file_name)
+    if fpath.is_dir():
+        jfpath = fpath / params.rotation_axis_file
+    else:
+        jfpath = params.rotation_axis_file
+    # Load and return the json data
+    dictionary = read_rot_centers_json(jfpath)
+    dictionary = collections.OrderedDict(sorted(dictionary.items()))
+    subdict = collections.OrderedDict()
+    for idx, payload in dictionary.items():
+        try:
+            key, val = next(iter(payload.items()))
+        except AttributeError:
+            raise RuntimeError("Malformed rotation-axis file.")
+        subdict[key] = val
+    return subdict
 
 
 def auto_read_dxchange(params):
@@ -297,16 +363,20 @@ def read_rot_center(params):
     Return: rotation center from this dataset or None if it doesn't exist.
     """
     log.info('  *** *** rotation axis')
-    #Handle case of manual only: this is the easiest
+    # Handle case of manual only: this is the easiest
     if params.rotation_axis_auto == 'manual':
         log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
     elif params.rotation_axis_auto == 'auto':
         log.warning('  *** *** Force auto calculation without reading config value')
         log.warning('  *** *** Computing rotation axis')
-        params = find_center.find_rotation_axis(params) 
+        params = find_center.find_rotation_axis(params)
+    elif params.rotation_axis_auto == 'json':
+        log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
+        all_centers = read_rot_centers(params)
+        params.rotation_axis = all_centers[params.file_name.name]
     else:
-        #Try to read from HDF5 file
-        log.warning('  *** *** Try to read rotation center from file {:s}'.format(params.file_name))
+        # Try to read from HDF5 file
+        log.warning('  *** *** Try to read rotation center from file {}'.format(params.file_name))
         with h5py.File(params.file_name, 'r') as file_name:
             try:
                 dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
@@ -517,3 +587,57 @@ def convert(params):
     f.add_entry(dx.Entry.data(theta={'value': theta, 'units':'degrees'}))
 
     f.close()
+
+
+def write_hdf5(data, fname, dname='volume', dtype=None,
+               dest_idx=None, maxsize=None, overwrite=False):
+    """Write data to hdf5 file in a specific dataset.
+    
+    This function supports partial writing of data through a
+    combination of *maxsize* and *dest_idx* options. For example, to
+    write slices 10 to 16 of a (32, 32, 32) volume::
+    
+        assert data.shape == (32, 32, 32)
+        file_io.write_hdf5(data[10:16], maxsize=data.shape, dest_idx=slice(10,16), ...)
+    
+    Parameters
+    ----------
+    data : ndarray
+        Array data to be saved.
+    fname : str
+        File name to which the data is saved. ``.h5`` extension
+        will be appended if it does not already have one.
+    dname : str, optional
+        Name for dataset where data will be written.
+    dtype : data-type, optional
+        By default, the data-type is inferred from the input data.
+    dest_idx : optional
+        A valid index for the dataset such that ``dataset[target_idx]
+        = data`` will properly write the data to the dataset.
+    maxsize : int, optional
+        Maximum size that the dataset can be resized to along the
+        given axis.
+    
+    """
+    # Extract default values if not given
+    if maxsize is None:
+        maxsize = data.shape
+    if dtype is None:
+        dtype = data.dtype
+    if dest_idx is None:
+        dest_idx = ()
+    # Create parent directory if necessary
+    Path(fname).parent.mkdir(parents=True, exist_ok=True)
+    # Open the HDF5 file so we can save data to it
+    with h5py.File(fname, mode='a') as h5fp:
+        # Delete the dataset if it already exists and is being overwritten
+        if dname in h5fp.keys() and overwrite:
+            del h5fp[dname]
+        # Create a new dataset if necessary
+        try:
+            ds = h5fp.require_dataset(dname, shape=maxsize, dtype=dtype, fillvalue=np.nan, exact=True)
+        except TypeError as e:
+            msg = str(e) + ". Use *overwrite=True* to overwrite existing dataset."
+            raise type(e)(msg)
+        # Save the data
+        ds[dest_idx] = data
