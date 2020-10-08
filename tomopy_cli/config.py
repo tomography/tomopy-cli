@@ -1,20 +1,24 @@
 import os
 import sys
 import shutil
-import pathlib
+from pathlib import Path
 import argparse
 import configparser
+from collections import OrderedDict
+import logging
+
 import h5py
 import numpy as np
 
-from collections import OrderedDict
-
-from tomopy_cli import log
 from tomopy_cli import util
 from tomopy_cli import __version__
 
-LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
-CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
+
+log = logging.getLogger(__name__)
+
+
+LOGS_HOME = Path.home()/'logs'
+CONFIG_FILE_NAME = Path.home()/'tomopy.conf'
 ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
@@ -59,8 +63,8 @@ SECTIONS['find-rotation-axis'] = {
     'rotation-axis-auto': {
         'default': 'read_auto',
         'type': str,
-        'help': "How to get rotation axis: read from HDF5, auto calculate, or take from this file",
-        'choices': ['read_auto', 'read_manual', 'manual', 'auto']},
+        'help': "How to get rotation axis: read from HDF5, auto calculate, read from json file, or take from this file",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'json']},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
@@ -70,7 +74,7 @@ SECTIONS['find-rotation-axis'] = {
 SECTIONS['file-reading'] = {
     'file-name': {
         'default': '.',
-        'type': str,
+        'type': Path,
         'help': "Name of the last used hdf file or directory containing multiple hdf files",
         'metavar': 'PATH'},
     'file-format': {
@@ -183,7 +187,7 @@ SECTIONS['flat-correction'] = {
         'help': "Fix nan and inf",
         'action': 'store_true'},
     'fix-nan-and-inf-value': {
-        'default': 0.0,
+        'default': 6.0,
         'type': float,
         'help': "Values to be replaced with negative values in array"},
     'minus-log': {
@@ -299,7 +303,7 @@ SECTIONS['beam-hardening']= {
         'help': 'Sample material for beam hardening',
         'choices': ['Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-1-material': {
-        'default': 'auto',
+        'default': 'none',
         'type': str,
         'help': 'Filter 1 material for beam hardening',
         'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
@@ -308,7 +312,7 @@ SECTIONS['beam-hardening']= {
         'type': float,
         'help': 'Filter 1 thickness for beam hardening'},
     'filter-2-material': {
-        'default': 'auto',
+        'default': 'none',
         'type': str,
         'help': 'Filter 2 material for beam hardening',
         'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
@@ -317,12 +321,12 @@ SECTIONS['beam-hardening']= {
         'type': float,
         'help': 'Filter 2 thickness for beam hardening'},
     'filter-3-material': {
-        'default': 'Be',
+        'default': 'none',
         'type': str,
         'help': 'Filter 3 material for beam hardening',
         'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-3-thickness': {
-        'default': 750.0,
+        'default': 0.0,
         'type': float,
         'help': 'Filter 3 thickness for beam hardening'},
     }
@@ -346,7 +350,13 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
-        }
+    'output-format': {
+        'default': 'tiff_stack',
+        'type': str,
+        'help': "How to save the reconstructed data. Only applies when ``reconstruction-type == 'full'``.",
+        'choices': ['tiff_stack', 'hdf5'],
+        },
+    }
 
 SECTIONS['gridrec'] = {
     'gridrec-filter': {
@@ -503,10 +513,8 @@ def parse_known_args(parser, subparser=False):
         subparser_value = [sys.argv[1]] if subparser else []
         config_values = config_to_list(config_name=get_config_name())
         values = subparser_value + config_values + sys.argv[1:]
-        #print(subparser_value, config_values, values)
     else:
-        values = ""
-
+        raise TypeError("A command is required. See ``tomopy --help`` for detailed usage.")
     return parser.parse_known_args(values)[0]
 
 
@@ -526,7 +534,7 @@ def config_to_list(config_name=CONFIG_FILE_NAME):
         for name, opts in ((n, o) for n, o in SECTIONS[section].items() if config.has_option(section, n)):
             value = config.get(section, name)
 
-            if value is not '' and value != 'None':
+            if value != '' and value != 'None':
                 action = opts.get('action', None)
 
                 if action == 'store_true' and value == 'True':
@@ -608,7 +616,7 @@ def write(config_file, args=None, sections=None):
             else:
                 value = opts['default'] if opts['default'] is not None else ''
 
-            prefix = '# ' if value is '' else ''
+            prefix = '# ' if value == '' else ''
 
             if name != 'config':
                 config.set(section, prefix + name, str(value))
@@ -645,7 +653,7 @@ def write_hdf(args=None, sections=None):
                     else:
                         value = opts['default'] if opts['default'] is not None else ''
 
-                    prefix = '# ' if value is '' else ''
+                    prefix = '# ' if value == '' else ''
 
                     if name != 'config':
                         dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + section + '/'+ name
@@ -656,8 +664,8 @@ def write_hdf(args=None, sections=None):
                         try:
                             hdf_file[dataset][0] = np.string_(str(value))
                         except TypeError:
-                            print(value)
-                            raise TypeError
+                            log.error("Could not convert value {}".format(value))
+                            raise
 
 
 def log_values(args):

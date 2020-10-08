@@ -1,5 +1,9 @@
+import logging
 import subprocess
-from tomopy_cli import log
+
+
+log = logging.getLogger(__name__)
+
 
 def run(fname):
     try:

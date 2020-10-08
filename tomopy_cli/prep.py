@@ -1,12 +1,18 @@
 import os
 import json
+import logging
+
 import tomopy
 import dxchange
 import numpy as np
 
-from tomopy_cli import log
 from tomopy_cli import file_io
 from tomopy_cli import beamhardening
+from tomopy_cli import config
+
+
+log = logging.getLogger(__name__)
+
 
 def all(proj, flat, dark, params, sino):
     # zinger_removal
@@ -39,8 +45,8 @@ def remove_nan_neg_inf(data, params):
         log.info('  *** *** ON')
         log.info('  *** *** replacement value %f ' % params.fix_nan_and_inf_value)
         data = tomopy.remove_nan(data, val=params.fix_nan_and_inf_value)
-        data = tomopy.remove_neg(data, val=params.fix_nan_and_inf_value)
-        data[np.where(data == np.inf)] = params.fix_nan_and_inf_value
+        data = tomopy.remove_neg(data, val= 0.0)
+        data[np.isinf(data)] = params.fix_nan_and_inf_value
         data[data > params.fix_nan_and_inf_value] = params.fix_nan_and_inf_value
     else:
         log.warning('  *** *** OFF')
@@ -82,7 +88,11 @@ def flat_correction(proj, flat, dark, params):
     elif(params.flat_correction_method == 'none'):
         data = proj
         log.warning('  *** *** normalization is turned off')
-    #data[data < 1e-4] = 1e-4
+    else:
+        raise ValueError("Unknown value for *flat_correction_method*: {}. "
+                         "Valid options are {}"
+                         "".format(params.flat_correction_method,
+                                   config.SECTIONS['flat-correction']['flat-correction-method']['choices']))
     return data
 
 

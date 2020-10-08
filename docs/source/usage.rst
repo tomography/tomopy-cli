@@ -47,8 +47,8 @@ To automatically find the rotation axis location of all tomographic hdf data set
 this generates in the /local/data/ directory a **rotation_axis.json** file containing all the automatically calculated centers::
 
             {"0": {"proj_0000.hdf": 1287.25}, "1": {"proj_0001.hdf": 1297.75},
-            {"2": {"proj_0002.hdf": 1287.25}, "3": {"proj_0003.hdf": 1297.75},
-            {"4": {"proj_0004.hdf": 1287.25}, "5": {"proj_0005.hdf": 1297.75}}
+             "2": {"proj_0002.hdf": 1287.25}, "3": {"proj_0003.hdf": 1297.75},
+             "4": {"proj_0004.hdf": 1287.25}, "5": {"proj_0005.hdf": 1297.75}}
 
 to list of all available options::
 
@@ -59,6 +59,24 @@ After using **find_center**, to do a tomographic reconstruction of all tomograph
 
     $ tomopy recon --file-name /local/data/
 
+
+Manually Specifying Rotation Center
+===================================
+
+The rotation center can be specified using the ``--rotation-axis``
+argument, or through a JSON file with a schema resembling::
+
+           {"0": {"proj_0000.hdf": 1287.25}, "1": {"proj_0001.hdf": 1297.75},
+            "2": {"proj_0002.hdf": 1287.25}, "3": {"proj_0003.hdf": 1297.75},
+            "4": {"proj_0004.hdf": 1287.25}, "5": {"proj_0005.hdf": 1297.75}}
+
+Including a JSON file can be beneficial if rotation centers cannot be
+accurately determined automatically. The path to this JSON file can be
+given as ``--rotation-axis-file`` with
+``--rotation-axis-auto=json``. If ``--file-name`` points to a source
+data file, only the file given by ``--file-name`` is reconstructed.
+If the JSON file is also given as the argument to ``--file-name``,
+then all data files listed in the JSON file will be reconstructed.
 
 Help
 ====
