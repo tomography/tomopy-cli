@@ -487,6 +487,14 @@ def read_pixel_size(params):
     if params.pixel_size_auto != True:
         log.info('  *** *** OFF')
         return params
+    
+    if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detection_system/objective/resolution'):
+        params.pixel_size = config.param_from_dxchange(params.file_name,
+                                            '/measurement/instrument/detection_system/objective/resolution')
+        log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
+        return(params)
+    log.warning('  *** tomoScan resolution parameter not found.  Try old format')
     pixel_size = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detector/pixel_size_x')
     mag = config.param_from_dxchange(params.file_name,
@@ -509,15 +517,27 @@ def read_pixel_size(params):
 def read_scintillator(params):
     '''Read the scintillator type and thickness from the HDF file.
     '''
-    if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
+    if params.scintillator_auto:
         log.info('  *** auto reading scintillator params')
         params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
                                             '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
                                             attr = None, scalar = True, char_array=False))
         log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
-        scint_material_string = config.param_from_dxchange(params.file_name,
-                                            '/measurement/instrument/detection_system/scintillator/description',
-                                            scalar = False, char_array = True)
+        tomoscan_path = '/measurement/instrument/detection_system/scintillator/name'
+        scint_material_string = ''
+        try:
+            scint_material_string = config.param_from_dxchange(params.file_name,
+                                            tomoscan_path, scalar = False, char_array = True)
+        except KeyError:
+            log.warning('  *** *** scintillator material not in tomoscan form.  Try old format')
+        if not scint_material_string: 
+            old_path = '/measurement/instrument/detection_system/scintillator/description'
+            try:
+                scint_material_string = config.param_from_dxchange(params.file_name,
+                                            old_path, scalar = False, char_array = True)
+            except KeyError:
+                log.warning('  *** *** no scintillator material found')
+                return(params)
         if scint_material_string.lower().startswith('luag'):
             params.scintillator_material = 'LuAG_Ce'
         elif scint_material_string.lower().startswith('lyso'):
@@ -538,27 +558,52 @@ def read_bright_ratio(params):
     '''Read the ratio between the bright exposure and other exposures.
     '''
     log.info('  *** *** %s' % params.flat_correction_method)
-    if params.scintillator_auto and params.flat_correction_method == 'standard':
-        log.info('  *** *** Find bright exposure ratio params from the HDF file')
-        try:
+    if params.flat_correction_method != 'standard' or (not params.scintillator_auto):
+        log.warning('  *** *** skip finding exposure ratio')
+        params.bright_exp_ratio = 1
+        return params
+    log.info('  *** *** Find bright exposure ratio params from the HDF file')
+    try:
+        if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/different_flat_exposure'):
+            diff_bright_exp = config.param_from_dxchange(params.file_name,
+                                '/measurement/instrument/detector/different_flat_exposure',
+                                    attr = None, scalar = False, char_array = True)
+            if diff_bright_exp.lower() == 'same':
+                log.error('  *** *** used same flat and data exposures')
+                params.bright_exp_ratio = 1
+                return params
+        if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/exposure_time_flat'):
             bright_exp = config.param_from_dxchange(params.file_name,
-                                        '/measurement/instrument/detector/brightfield_exposure_time',
-                                        attr = None, scalar = True, char_array = False)
-            log.info('  *** *** %f' % bright_exp)
-            norm_exp = config.param_from_dxchange(params.file_name,
-                                        '/measurement/instrument/detector/exposure_time',
-                                        attr = None, scalar = True, char_array = False)
-            log.info('  *** *** %f' % norm_exp)
-            params.bright_exp_ratio = bright_exp / norm_exp
-            log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
-        except:
-            log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
-            params.bright_exp_ratio = 1
-    else:
-            params.bright_exp_ratio = 1
+                                    '/measurement/instrument/detector/exposure_time_flat',
+                                    attr = None, scalar = True, char_array = False)
+        else: 
+            bright_exp = config.param_from_dxchange(params.file_name,
+                                    '/measurement/instrument/detector/brightfield_exposure_time',
+                                    attr = None, scalar = True, char_array = False)
+        log.info('  *** *** %f' % bright_exp)
+        norm_exp = config.param_from_dxchange(params.file_name,
+                                    '/measurement/instrument/detector/exposure_time',
+                                    attr = None, scalar = True, char_array = False)
+        log.info('  *** *** %f' % norm_exp)
+        params.bright_exp_ratio = bright_exp / norm_exp
+        log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
+    except:
+        log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
+        params.bright_exp_ratio = 1
     return params
 
 
+def check_item_exists_hdf(hdf_filename, item_name):
+    '''Checks if an item exists in an HDF file.
+    Inputs
+    hdf_filename: str filename or pathlib.Path object for HDF file to check
+    item_name: name of item whose existence needs to be checked
+    path: str path to check.  Default to None
+    '''
+    with h5py.File(hdf_filename, 'r') as hdf_file:
+        return item_name in hdf_file
 def convert(params):
 
     head_tail = os.path.split(params.old_projection_file_name)

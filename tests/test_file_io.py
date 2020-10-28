@@ -1,7 +1,9 @@
 import unittest
 from unittest import mock
 import os
+import shutil
 from pathlib import Path
+import copy
 
 import h5py
 import numpy as np
@@ -143,6 +145,71 @@ class ReadParamTests(unittest.TestCase):
         params.rotation_axis_file = self.rot_axis_file
         file_io.read_rot_center(params)
 
+
+class ReadTomoScanParamTests(unittest.TestCase):
+    test_hdf_file = Path('meta_mock.h5')
+
+    def setUp(self):
+        self.burner_hdf_file = Path('meta_mock2.h5')
+        shutil.copy(self.test_hdf_file, self.burner_hdf_file) 
+
+
+    def tearDown(self):
+        os.remove(self.burner_hdf_file)
+
+ 
+    def test_check_item_exists_hdf(self):
+        self.assertTrue(file_io.check_item_exists_hdf(self.test_hdf_file,
+                                    '/exchange/data'))
+        self.assertFalse(file_io.check_item_exists_hdf(self.test_hdf_file,
+                                    '/exchange/bob'))
+
+
+    def test_pixel_size(self):
+        params = mock.MagicMock()
+        params.file_name = str(self.test_hdf_file)
+        params.pixel_size_auto = False
+        params.pixel_size = 0
+        self.assertEqual(file_io.read_pixel_size(params).pixel_size, 0)
+        params.pixel_size_auto = True
+        self.assertAlmostEqual(file_io.read_pixel_size(params).pixel_size, 
+                                    1.1806373, 5)
+        
+    def test_scintillator_to_params(self):
+        params = mock.MagicMock()
+        params.file_name = str(self.test_hdf_file)
+        params.scintillator_auto = False
+        params.scintillator_thickness = 0
+        new_params = file_io.read_scintillator(params)
+        self.assertEqual(new_params.scintillator_thickness, 0)
+        params.scintillator_auto = True
+        new_params = file_io.read_scintillator(params)
+        self.assertEqual(new_params.scintillator_thickness, 100.)
+
+
+    def test_exposure_ratio_to_params(self):
+        params = mock.MagicMock()
+        params.file_name = self.burner_hdf_file
+        params.scintillator_auto = False 
+        params.flat_correction_method = 'standard'
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,1.)
+        params.scintillator_auto = True 
+        params.flat_correction_method = 'none'
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,1.)
+        params.flat_correction_method = 'standard'
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,1.)
+        with h5py.File(self.burner_hdf_file, 'r+') as hdf_file:
+            hdf_file['/measurement/instrument/detector/different_flat_exposure'][0] = 'Different'.encode()
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,0.)
+        with h5py.File(self.burner_hdf_file, 'r+') as hdf_file:
+            hdf_file['/measurement/instrument/detector/exposure_time_flat'][...] = 0.004
+        new_params = file_io.read_bright_ratio(params)
+        self.assertAlmostEqual(new_params.bright_exp_ratio,0.5, 3)
+        
 
 class WriteHDF5Tests(unittest.TestCase):
     hdf_filename = 'test_output.h5'
