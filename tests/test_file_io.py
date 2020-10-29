@@ -225,7 +225,6 @@ class ReadTomoScanParamTests(unittest.TestCase):
         self.assertEqual(new_params.filter_3_thickness, 1000)
         
 
-
 class WriteHDF5Tests(unittest.TestCase):
     hdf_filename = 'test_output.h5'
     
