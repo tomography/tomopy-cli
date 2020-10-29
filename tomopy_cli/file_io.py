@@ -87,7 +87,6 @@ def _read_theta_size(params):
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
-
     return theta_size
 
 
@@ -400,6 +399,83 @@ def read_rot_center(params):
 
 
 def read_filter_materials(params):
+    '''Read the beam filter configuration.
+    This discriminates between files created with tomoScan and
+    the previous meta data format.
+    '''
+    if check_item_exists_hdf(params.file_name, '/measurement/instrument/attenuator_1'):
+        return read_filter_materials_tomoscan(params)
+    else:
+        return read_filter_materials_old(params)
+    
+
+def read_filter_materials_tomoscan(params):
+    '''Read the beam filter configuration from the HDF file.
+    
+    If params.filter_{n}_auto for n in [1,2,3] is True,
+    then try to read the filter configuration recorded during
+    acquisition in the HDF5 file.
+    
+    Parameters
+    ==========
+    params
+    
+      The global parameter object, should have *filter_n_material*,
+      *filter_n_thickness*, and *filter_n_auto* for n in [1,2,3]
+    
+    Returns
+    =======
+    params
+      An equivalent object to the *params* input, optionally with
+      *filter_n_material* and *filter_n_thickness*
+      attributes modified to reflect the HDF5 file.
+    
+    '''
+    log.info('  *** auto reading filter configuration')
+    # Read the relevant data from disk
+    filter_path = '/measurement/instrument/attenuator_{idx}'
+    param_path = 'filter_{idx}_{attr}'
+    for idx_filter in range(1,4,1):
+        if not check_item_exists_hdf(params.file_name, filter_path.format(idx = idx_filter)):
+            log.warning('  *** *** Filter {idx} not found in HDF file.  Set this filter to none'
+                                    .format(idx = idx_filter))
+            setattr(params, param_path.format(idx=idx_filter, attr='material'), 'Al')
+            setattr(params, param_path.format(idx=idx_filter, attr='thickness'), 0.0)
+            continue
+        filter_auto = getattr(params, param_path.format(idx=idx_filter, attr='auto'))
+        if filter_auto != 'True' and filter_auto != True:
+            log.warning('  *** *** do not auto read filter {n}'.format(n=idx_filter))
+            continue
+        log.warning('  *** *** auto reading parameters for filter {0}'.format(idx_filter))
+        # See if there are description and thickness fields
+        if check_item_exists_hdf(params.file_name, filter_path.format(idx = idx_filter) + '/description'):
+            filt_material = config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/description',
+                                        char_array = True, scalar = False)
+            filt_thickness = int(config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/thickness',
+                                        char_array = False, scalar = True))
+        else:
+            #The filter info is just the raw string from the filter unit.
+            log.warning('  *** *** filter {idx} info must be read from the raw string'
+                            .format(idx = idx_filter))
+            filter_str = config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/setup/filter_unit_text',
+                                        char_array = True, scalar = False)
+            if filter_str is None:
+                log.warning('  *** *** Could not load filter %d configuration from HDF5 file.' % idx_filter)
+                filt_material, filt_thickness = _filter_str_to_params('Open')
+            else: 
+                filt_material, filt_thickness = _filter_str_to_params(filter_str)
+
+        # Update the params with the loaded values
+        setattr(params, param_path.format(idx=idx_filter, attr='material'), filt_material)
+        setattr(params, param_path.format(idx=idx_filter, attr='thickness'), filt_thickness)
+        log.info('  *** *** Filter %d: (%s %f)' % (idx_filter, filt_material, filt_thickness))
+    return params
+
+
+def read_filter_materials_old(params):
     '''Read the beam filter configuration from the HDF file.
     
     If params.filter_1_material and/or params.filter_2_material are
@@ -604,6 +680,8 @@ def check_item_exists_hdf(hdf_filename, item_name):
     '''
     with h5py.File(hdf_filename, 'r') as hdf_file:
         return item_name in hdf_file
+
+
 def convert(params):
 
     head_tail = os.path.split(params.old_projection_file_name)

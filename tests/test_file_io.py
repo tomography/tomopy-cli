@@ -211,6 +211,21 @@ class ReadTomoScanParamTests(unittest.TestCase):
         self.assertAlmostEqual(new_params.bright_exp_ratio,0.5, 3)
         
 
+    def test_auto_filter(self):
+        params = mock.MagicMock()
+        params.file_name = str(self.test_hdf_file)
+        print(params.file_name)
+        params.filter_1_auto = True
+        params.filter_2_auto = True
+        params.filter_3_auto = True
+        new_params = file_io.read_filter_materials_tomoscan(params) 
+        #import pdb; pdb.set_trace()
+        self.assertEqual(new_params.filter_1_material, 'Be')
+        self.assertEqual(new_params.filter_2_thickness, 0)
+        self.assertEqual(new_params.filter_3_thickness, 1000)
+        
+
+
 class WriteHDF5Tests(unittest.TestCase):
     hdf_filename = 'test_output.h5'
     
