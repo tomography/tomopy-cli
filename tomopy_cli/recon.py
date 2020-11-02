@@ -104,10 +104,11 @@ def rec(params):
         # Save images
         if params.reconstruction_type == "full":
             fpath = Path(params.file_name).resolve()
-            recon_base_dir = fpath.parent / '_rec'
-            tail = "{}_rec".format(fpath.stem)
+            recon_base_dir = Path("{}_rec".format(fpath.parent)) / "{}_rec".format(fpath.stem) 
+            
+
             if params.output_format == 'tiff_stack':
-                fname = recon_base_dir / tail / 'recon'
+                fname = recon_base_dir / 'recon'
                 log.debug("Full tiff dir: %s", fname)
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
@@ -116,7 +117,7 @@ def rec(params):
                                                           'overwrite': True})
             elif params.output_format == "hdf5":
                 # HDF5 output
-                fname = recon_base_dir / "{}.hdf".format(tail)
+                fname = "{}.hdf".format(recon_base_dir)
                 # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
                 #                    maxsize=(sino_end, *rec.shape[1:]), overwrite=(iChunk==0))
                 ds_end = int(np.ceil(sino_end / pow(2, int(params.binning))))
@@ -138,9 +139,9 @@ def rec(params):
             strt += (sino[1] - sino[0])
         elif params.reconstruction_type == "slice":
             # Construct the path for where to save the tiffs
-            fname = Path(params.file_name)
-            fname = fname.resolve().parent / '_rec' / 'slice_rec' / 'recon_{}'.format(fname.stem)
-            dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
+            fpath = Path(params.file_name).resolve()
+            fname = Path("{}_rec".format(fpath.parent))  / 'slice_rec' / 'recon_{}'.format(fpath.stem)
+            dxchange.write_tiff(rec, fname=str(fname), overwrite=True)
         else:
             raise ValueError("Unknown value for *reconstruction type*: {}. "
                              "Valid options are {}"
@@ -225,7 +226,9 @@ def _try_rec(params):
 
     # Save images to a temporary folder.
     fpath = Path(params.file_name).resolve()
-    fbase = fpath.parent / '_rec' / 'try_center' / fpath.stem
+    fbase = Path("{}_rec".format(fpath.parent)) / 'try_center' / fpath.stem
+     # fname = fname.resolve().parent / 'slice_rec' / 'recon_{}'.format(fname.stem)
+
     for i,axis in enumerate(center_range):
         this_center = axis * np.power(2, float(params.binning))
         rfname = fbase / "recon_{:.2f}.tiff".format(this_center)
