@@ -356,6 +356,13 @@ SECTIONS['reconstruction'] = {
         'help': "How to save the reconstructed data. Only applies when ``reconstruction-type == 'full'``.",
         'choices': ['tiff_stack', 'hdf5'],
         },
+    'output-folder': {
+        'default': "{file_name_parent}_rec",
+        'type': str,
+        'help': ("Where to save the reconstructed data. Can accept other parameters "
+                 "and extra tokens (file_name_parent). "
+                 "Eg: \"{file_name_parent}_rec/{reconstruction_algorithm}/\"")
+        },
     }
 
 SECTIONS['gridrec'] = {
