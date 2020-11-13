@@ -7,7 +7,7 @@ import numpy as np
 import h5py
 
 import tomopy
-from tomopy_cli.recon import rec
+from tomopy_cli.recon import rec, reconstruction_folder
 
 HDF_FILE = Path(__file__).resolve().parent / 'test_tomogram.h5'
 ROT_AXIS_FILE = Path(__file__).resolve().parent / 'rotation_axis.json'
@@ -16,6 +16,7 @@ ROT_AXIS_FILE = Path(__file__).resolve().parent / 'rotation_axis.json'
 def make_params():
     params = mock.MagicMock()
     params.file_name = HDF_FILE
+    params.output_folder = "{file_name_parent}/_rec"
     params.rotation_axis = 32
     params.file_type = 'standard'
     params.file_format = 'dx'
@@ -63,7 +64,6 @@ class ReconTests(TestCase):
         params = make_params()
         params.reconstruction_type = 'slice'
         response = rec(params=params)
-        print(self.output_dir)
         self.assertTrue(self.output_dir.exists())
     
     def test_full_reconstruction(self):
@@ -104,3 +104,31 @@ class ReconTests(TestCase):
             vol = h5fp['volume']
             self.assertEqual(vol.shape, (64, 64, 64))
             self.assertFalse(np.any(np.isnan(vol)))
+
+    def test_reconstruction_folder(self):
+        params = make_params()
+        params.output_folder = "_rec"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), "_rec")
+        # Check config parameters
+        params = make_params()
+        params.output_folder = "_rec_{reconstruction_algorithm}/"
+        params.reconstruction_algorithm = "sirt"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), "_rec_sirt")
+        # Check parent file name for a file
+        this_file = Path(__file__).resolve()
+        params = make_params()
+        params.file_name = str(this_file)
+        params.output_folder = "{file_name_parent}_rec/"
+        params.reconstruction_algorithm = "sirt"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), "/home/mwolf/src/tomopy-cli/tests_rec")
+        # Check parent file name for a directory
+        this_file = Path(__file__).resolve()
+        params = make_params()
+        params.file_name = str(this_file.parent) + '/'
+        params.output_folder = "{file_name_parent}_rec/"
+        params.reconstruction_algorithm = "sirt"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), "/home/mwolf/src/tomopy-cli/tests_rec")

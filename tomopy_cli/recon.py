@@ -102,13 +102,12 @@ def rec(params):
         # Reconstruct: this is for "slice" and "full" methods
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
+        recon_base_dir = reconstruction_folder(params)
+        fpath = Path(params.file_name).resolve()
         if params.reconstruction_type == "full":
-            fpath = Path(params.file_name).resolve()
-            recon_base_dir = Path("{}_rec".format(fpath.parent)) / "{}_rec".format(fpath.stem) 
-            
-
+            recon_dir = recon_base_dir / "{}_rec".format(fpath.stem)
             if params.output_format == 'tiff_stack':
-                fname = recon_base_dir / 'recon'
+                fname = recon_dir / 'recon'
                 log.debug("Full tiff dir: %s", fname)
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
@@ -117,7 +116,7 @@ def rec(params):
                                                           'overwrite': True})
             elif params.output_format == "hdf5":
                 # HDF5 output
-                fname = "{}.hdf".format(recon_base_dir)
+                fname = "{}.hdf".format(recon_dir)
                 # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
                 #                    maxsize=(sino_end, *rec.shape[1:]), overwrite=(iChunk==0))
                 ds_end = int(np.ceil(sino_end / pow(2, int(params.binning))))
@@ -139,9 +138,8 @@ def rec(params):
             strt += (sino[1] - sino[0])
         elif params.reconstruction_type == "slice":
             # Construct the path for where to save the tiffs
-            fpath = Path(params.file_name).resolve()
-            fname = Path("{}_rec".format(fpath.parent))  / 'slice_rec' / 'recon_{}'.format(fpath.stem)
-            dxchange.write_tiff(rec, fname=str(fname), overwrite=True)
+            fname = recon_base_dir / 'slice_rec' / 'recon_{}'.format(fpath.stem)
+            dxchange.write_tiff(rec, fname=str(fname), overwrite=False)
         else:
             raise ValueError("Unknown value for *reconstruction type*: {}. "
                              "Valid options are {}"
@@ -416,7 +414,6 @@ def reconstruct(data, theta, rot_center, params):
 
 
 def mask(data, params):
-
     log.info("  *** mask")
     if(params.reconstruction_mask):
         log.info('  *** *** ON')
@@ -429,3 +426,18 @@ def mask(data, params):
     else:
         log.warning('  *** *** OFF')
     return data
+
+
+def reconstruction_folder(params):
+    """Build the path to the folder that will receive the reconstruction.
+    
+    """
+    file_path = Path(params.file_name).resolve()
+    folder_fmt = params.output_folder
+    # Format the folder name with the config parameters
+    if file_path.is_dir():
+        file_name_parent = file_path
+    else:
+        file_name_parent = file_path.parent
+    folder_fmt = folder_fmt.format(file_name_parent=file_name_parent, **params.__dict__)
+    return Path(folder_fmt)

@@ -36,6 +36,26 @@ To run a reconstruction with a different and previously stored configuration fil
     $ tomopy recon --config old_tomopy.conf
 
 
+Output Folder
+=============
+
+The output folder for reconstructed data can be given with the
+``--output-folder`` option. The other configuration parameters can be
+inserted with curly braces::
+
+  $ tomopy recon --output-folder={file_name}_rec
+
+An additional parameter (``{file_name_parent}``) is given with the
+path of the parent directory. If ``--file-name`` is a directory, then
+``{file_name_parent}`` will contain the directory itself. If
+``--file-name`` is a file, then ``{file_name_parent}`` will be the
+parent directory of the file. The following lines will both place
+reconstructed data in the directory */path/to/my/data_rec/*::
+
+   $ tomopy recon --file-name=/path/to/my/data/file.hdf --output-folder={file_name_parent}_rec/
+   $ tomopy recon --file-name=/path/to/my/data/ --output-folder={file_name_parent}_rec/
+
+
 Find Center
 ===========
 
