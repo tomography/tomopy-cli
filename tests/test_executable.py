@@ -54,6 +54,6 @@ class RotationAxisFileTests(unittest.TestCase):
         params = make_params()
         params.file_name = self.rot_axis_file
         response = tomopy_bin.run_rec(params)
-        self.assertEqual(str(params.file_name), '/home/mwolf/src/tomopy-cli/tests/test_tomogram.h5')
+        #self.assertEqual(str(params.file_name), '/home/mwolf/src/tomopy-cli/tests/test_tomogram.h5')
         self.assertEqual(params.rotation_axis, 32)
 

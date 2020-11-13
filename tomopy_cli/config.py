@@ -302,6 +302,9 @@ SECTIONS['beam-hardening']= {
         'type': str,
         'help': 'Sample material for beam hardening',
         'choices': ['Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+    'filter-1-auto': {
+        'default': False,
+        'help': 'If True, read filter 1 from HDF meta data',},
     'filter-1-material': {
         'default': 'none',
         'type': str,
@@ -311,6 +314,9 @@ SECTIONS['beam-hardening']= {
         'default': 0.0,
         'type': float,
         'help': 'Filter 1 thickness for beam hardening'},
+    'filter-2-auto': {
+        'default': False,
+        'help': 'If True, read filter 2 from HDF meta data',},
     'filter-2-material': {
         'default': 'none',
         'type': str,
@@ -320,6 +326,9 @@ SECTIONS['beam-hardening']= {
         'default': 0.0,
         'type': float,
         'help': 'Filter 2 thickness for beam hardening'},
+    'filter-3-auto': {
+        'default': False,
+        'help': 'If True, read filter 3 from HDF meta data',},
     'filter-3-material': {
         'default': 'none',
         'type': str,

@@ -64,7 +64,8 @@ def rec(params):
     strt = sino_start
     write_threads = []
     if chunks == 0:
-        log.warning("  *** 0 chunks selected for reconstruction, check your *start_row*, "
+        log.warning("  *** 0 chunks selected for reconstruction, "
+                    "check your *start_row*, "
                     "*end_row*, and *nsino_per_chunk*.")
     for iChunk in range(0, chunks):
         log.info('chunk # %i/%i' % (iChunk + 1, chunks))
@@ -74,7 +75,6 @@ def rec(params):
             log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
             sino_chunk_end = sino_end
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
-                
         sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
         phase_pad = params.retrieve_phase_pad
         # extra data for padded phase retrieval
@@ -296,18 +296,24 @@ def reconstruct(data, theta, rot_center, params):
         sinogram_order = True
     else:
         sinogram_order = False
-               
+    # Check for sane input values
+    if not np.all(np.isfinite(data)):
+        log.warning("  *** nan/inf found in input data. "
+                    "Consider using ``--fix-nan-and-inf True``.")
     log.info("  *** algorithm: %s" % params.reconstruction_algorithm)
+    # Apply the various reconstruction algorithms
     if params.reconstruction_algorithm == 'astrasirt':
         extra_options ={}
         try:
             extra_options['MinConstraint'] = float(params.astrasirt_min_constraint)
         except ValueError:
-            log.warning('Invalid astrasirt_min_constraint value.  Ignoring.')
+            log.warning("  *** *** invalid astrasirt_min_constraint value..."
+                        "ignoring.")
         try:
             extra_options['MaxConstraint'] = float(params.astrasirt_max_constraint)
         except ValueError:
-            log.warning('Invalid astrasirt_max_constraint value.  Ignoring.')
+            log.warning("  *** *** invalid astrasirt_max_constraint value..."
+                        "ignoring.")
         options = {'proj_type':params.astrasirt_proj_type,
                     'method': params.astrasirt_method,
                     'num_iter': params.astrasirt_num_iter,
@@ -334,11 +340,13 @@ def reconstruct(data, theta, rot_center, params):
         try:
             extra_options['MinConstraint'] = float(params.astrasart_min_constraint)
         except ValueError:
-            log.warning('Invalid astrasart_min_constraint value.  Ignoring.')
+            log.warning("  *** *** invalid astrasart_min_constraint value..."
+                        "ignoring.")
         try:
             extra_options['MaxConstraint'] = float(params.astrasart_max_constraint)
         except ValueError:
-            log.warning('Invalid astrasart_max_constraint value.  Ignoring.')
+            log.warning("  *** *** invalid astrasart_max_constraint value..."
+                        "ignoring.")
         options = {'proj_type':params.astrasart_proj_type,
                     'method': params.astrasart_method,
                     'num_iter': params.astrasart_num_iter * data.shape[0],
@@ -380,6 +388,7 @@ def reconstruct(data, theta, rot_center, params):
             rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        # import pdb; pdb.set_trace()
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
@@ -399,6 +408,9 @@ def reconstruct(data, theta, rot_center, params):
         log.warning("  *** *** using: %s instead" % params.reconstruction_algorithm)
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
         rec = tomopy.recon(data, theta, center=rot_center, sinogram_order=sinogram_order, algorithm=params.reconstruction_algorithm, filter_name=params.gridrec_filter)
+    # Check for sane values
+    if np.all(np.isnan(rec)):
+        log.error("  *** *** reconstruction produced all NaN")
     log.info("  *** reconstruction finished")
     return rec
 
