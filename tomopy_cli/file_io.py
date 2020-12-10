@@ -1,32 +1,58 @@
 import os
-import h5py
+import logging
+from pathlib import Path
 import json
 import collections
+import re
+
+import h5py
 import tomopy
 import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
 
-from tomopy_cli import log
 from tomopy_cli import __version__
 from tomopy_cli import find_center
 from tomopy_cli import config
 from tomopy_cli import beamhardening
 
- 
+__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
+__credits__ = "Pavel Shevchenko"
+__copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
+__docformat__ = 'restructuredtext en'
+__all__ = ['read_tomo',]
+
+
+log = logging.getLogger(__name__)
+
+
 def read_tomo(sino, params, ignore_flip = False):
     """
     Read in the tomography data.
-    Inputs:
-    sino: tuple of (start_row, end_row) to be read in
-    params: parameters for reconstruction
-    Output:
-    projection data
-    flat field (bright) data
-    dark field data
-    theta: Numpy array of angle for each projection
-    rotation_axis: location of the rotation axis
+
+    Parameters
+    ----------
+    sino : tuple of (start_row, end_row) to be read in
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D tomographic data.
+
+    ndarray
+        3D flat field data.
+
+    ndarray
+        3D dark field data.
+
+    ndarray
+        1D theta in radian.
+
+    float
+        location of the rotation axis
     """
     if (params.file_type == 'standard' or 
             (params.file_type == 'flip_and_stich' and ignore_flip)):
@@ -46,14 +72,12 @@ def read_tomo(sino, params, ignore_flip = False):
         log.info("  *** correcting for 180-0 data collection")
         step_size = (theta[1] - theta[0]) 
         theta_size = _read_theta_size(params)
-        theta = np.linspace(np.pi , (0+step_size), theta_size)   
+        theta = np.linspace(np.pi, (0+step_size), theta_size)   
 
     proj, theta = blocked_view(proj, theta, params)
     proj, flat, dark = binning(proj, flat, dark, params)
-
     rotation_axis = params.rotation_axis / np.power(2, float(params.binning))
     log.info("  *** rotation center: %f" % rotation_axis)
-
     return proj, flat, dark, theta, rotation_axis
 
 
@@ -63,7 +87,6 @@ def _read_theta_size(params):
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
-
     return theta_size
 
 
@@ -72,14 +95,14 @@ def _read_tomo(params, sino):
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
-        #Check if the flat and dark fields are single images or sets
+        # Check if the flat and dark fields are single images or sets
         if len(flat.shape) == len(proj.shape):
             log.info('  *** median filter flat images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
-            #Do a median filter on the first dimension
+            # Do a median filter on the first dimension
             dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
@@ -91,11 +114,11 @@ def blocked_view(proj, theta, params):
     log.info("  *** correcting for blocked view data collection")
     if params.blocked_views:
         log.warning('  *** *** ON')
-        miss_angles = [params.missing_angles_start, params.missing_angles_end]
-        
+        miss_angles = [params.blocked_views_start, params.blocked_views_end]
+
         # Manage the missing angles:
-        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]+1:-1,:,:]), axis=0)
-        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]+1:-1]))
+        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]:,:,:]), axis=0)
+        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]:]))
     else:
         log.warning('  *** *** OFF')
 
@@ -103,7 +126,30 @@ def blocked_view(proj, theta, params):
 
 
 def binning(proj, flat, dark, params):
+    """
+    Bin the tomography data.
 
+    Parameters
+    ----------
+    proj : projection data, 3D Numpy array
+
+    flat : projection flatfield data, 2D Numpy array
+    
+    dark : projection dark field data, 2D Numpy array
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D binned projection data.
+
+    ndarray
+        2D binned flat field data.
+
+    ndarray
+        2D binned dark field data.
+    """
     log.info("  *** binning")
     if(params.binning == 0):
         log.info('  *** *** OFF')
@@ -113,8 +159,8 @@ def binning(proj, flat, dark, params):
         proj = _binning(proj, params)
         flat = _binning(flat, params)
         dark = _binning(dark, params)
-
     return proj, flat, dark
+
 
 def _binning(data, params):
 
@@ -125,38 +171,64 @@ def _binning(data, params):
 
 
 def flip_and_stitch(params, img360, flat360, dark360):
-    '''Code to take a 0-360 flip and stitch scan and provide stitched
-    0-180 degree projections.
-    '''
+    """
+    Stitch together data for flip-and-stitch (0-360 degree offset center) scan.
+
+    Parameters
+    ----------
+    params : dict of reconstruction parameters
+
+    img360 : projection data from 0-360 degrees, 3D Numpy array
+
+    flat360 : flatfield data, 2D Numpy array
+    
+    dark360 : dark field data, 2D Numpy array
+    
+    params : parameters for reconstruction
+    
+    Returns
+    -------
+    ndarray
+        3D binned projection data stitched together, 0-180 degree domain
+
+    ndarray
+        2D binned flat field data stitched together, 0-180 degree domain
+
+    ndarray
+        2D binned dark field data stitched together, 0-180 degree domain
+
+    """
     num_stitched_angles = img360.shape[0]//2 
     new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
                             params.rotation_axis_flip + 0.5]))
-    log.info('  *** *** new image width = {:d}'.format(new_width))
-    log.info('  *** *** rotation axis flip = {:f}'.format(params.rotation_axis_flip))
+    log.info('  *** *** new image width = {:d}, rotation_axis_flip = {:f}'.format(
+                new_width, params.rotation_axis_flip))
     img = np.zeros([num_stitched_angles,img360.shape[1], new_width],dtype=np.float32)
     flat = np.zeros([flat360.shape[0],flat360.shape[1], new_width],dtype=np.float32)
     dark = np.zeros([dark360.shape[0],dark360.shape[1], new_width],dtype=np.float32)
     # Just add both images, keeping an array to record whether there was an overlap
     weight = np.zeros((1,1,new_width))
+    # Array to blend the overlap region smoothly between 0-180 and 180-360 degrees
+    wedge = np.arange(img360.shape[2], 0, -1)
     # Take care of case where rotation axis is on the left edge of the image
     if params.rotation_axis_flip < img360.shape[2] - 1:
-        img[:,:,:img360.shape[2]] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
-        flat[:,:,:img360.shape[2]] = flat360[...,::-1]
-        dark[:,:,:img360.shape[2]] = dark360[...,::-1]
-        weight[:img360.shape[2]] += 1
-        img[:,:,-img360.shape[2]:] = img360[:num_stitched_angles,:,:]
-        flat[:,:,-img360.shape[2]:] = flat360
-        dark[:,:,-img360.shape[2]:] = dark360
-        weight[-img360.shape[2]:] += 1
+        img[:,:,:img360.shape[2]] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1] * wedge
+        flat[:,:,:img360.shape[2]] = flat360[...,::-1] * wedge
+        dark[:,:,:img360.shape[2]] = dark360[...,::-1] * wedge
+        weight[0,0,:img360.shape[2]] += wedge
+        img[:,:,-img360.shape[2]:] += img360[:num_stitched_angles,:,:] * wedge[::-1]
+        flat[:,:,-img360.shape[2]:] += flat360 * wedge[::-1]
+        dark[:,:,-img360.shape[2]:] += dark360 * wedge[::-1]
+        weight[0,0,-img360.shape[2]:] += wedge[::-1]
     else:
-        img[:,:,:img360.shape[2]] = img360[:num_stitched_angles,:,:]
-        flat[:,:,:img360.shape[2]] = flat360
-        dark[:,:,:img360.shape[2]] = dark360
-        weight[:img360.shape[2]] += 1
-        img[:,:,-img360.shape[2]:] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1]
-        flat[:,:,-img360.shape[2]:] = flat360[...,::-1]
-        dark[:,:,-img360.shape[2]:] = dark360[...,::-1]
-        weight[-img360.shape[2]:] += 1
+        img[:,:,:img360.shape[2]] = img360[:num_stitched_angles,:,:] * wedge
+        flat[:,:,:img360.shape[2]] = flat360 * wedge
+        dark[:,:,:img360.shape[2]] = dark360 * wedge
+        weight[0,0,:img360.shape[2]] += wedge
+        img[:,:,-img360.shape[2]:] += img360[num_stitched_angles:num_stitched_angles * 2,:,::-1] * wedge[::-1]
+        flat[:,:,-img360.shape[2]:] += flat360[...,::-1] * wedge[::-1]
+        dark[:,:,-img360.shape[2]:] += dark360[...,::-1] * wedge[::-1]
+        weight[-img360.shape[2]:] += wedge[::-1]
 
     # Divide through by the weight to take care of doubled regions
     img = (img / weight).astype(img360.dtype)
@@ -211,7 +283,6 @@ def get_dx_dims(params):
     dataset='data'
 
     grp = '/'.join(['exchange', dataset])
-
     with h5py.File(params.file_name, "r") as f:
         try:
             data = f[grp]
@@ -236,31 +307,48 @@ def path_base_name(path):
     return file_base_name(fname)
 
 
-def read_rot_centers(params):
-
-    # Add a trailing slash if missing
-    top = os.path.join(params.file_name, '')
-
-    # Load the the rotation axis positions.
-    jfname = top + params.rotation_axis_file
-    
+def read_rot_centers_json(json_path):
     try:
-        with open(jfname) as json_file:
+        with open(json_path) as json_file:
             json_string = json_file.read()
             dictionary = json.loads(json_string)
+    except FileNotFoundError:
+        log.error("the json %s file containing the rotation axis locations is missing" % json_path)
+        log.error("to create one run:")
+        log.error("$ tomopy find_center")
+        exit()
+    except json.decoder.JSONDecodeError as e:
+        log.error("the json %s file containing the rotation axis locations is malformed" % json_path)
+        log.error(e)
+        exit()
+    else:
+        return dictionary
+    
 
-        return collections.OrderedDict(sorted(dictionary.items()))
-
-    except Exception as error: 
-        log.warning("the json %s file containing the rotation axis locations is missing" % jfname)
-        log.warning("to create one run:")
-        log.warning("$ tomopy find_center --file-name %s" % top)
-        # exit()
+def read_rot_centers(params):
+    # Prepend the data directory to the json path
+    fpath = Path(params.file_name)
+    if fpath.is_dir():
+        jfpath = fpath / params.rotation_axis_file
+    else:
+        jfpath = params.rotation_axis_file
+    # Load and return the json data
+    dictionary = read_rot_centers_json(jfpath)
+    dictionary = collections.OrderedDict(sorted(dictionary.items()))
+    subdict = collections.OrderedDict()
+    for idx, payload in dictionary.items():
+        try:
+            key, val = next(iter(payload.items()))
+        except AttributeError:
+            raise RuntimeError("Malformed rotation-axis file.")
+        subdict[key] = val
+    return subdict
 
 
 def auto_read_dxchange(params):
     log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
+    params = read_filter_materials(params)
     params = read_scintillator(params)
     params = read_bright_ratio(params)
     params = read_rot_center(params)
@@ -274,26 +362,196 @@ def read_rot_center(params):
     Return: rotation center from this dataset or None if it doesn't exist.
     """
     log.info('  *** *** rotation axis')
-    #First, try to read from the /process/tomopy-cli parameters
-    with h5py.File(params.file_name, 'r') as file_name:
-        try:
-            dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
-            params.rotation_axis = float(file_name[dataset][0])
-            dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
-            params.rotation_axis_flip = float(file_name[dataset][0])
-            log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
-            log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
-            return params
-        except (KeyError, ValueError):
-            log.warning('  *** *** No rotation center stored in the HDF5 file')
-    #If we get here, we need to either find it automatically or from config file.
-    log.warning('  *** *** No rotation axis stored in the HDF file')
-    if (params.rotation_axis_auto == True):
-        log.warning('  *** *** Auto axis location requested')
+    # Handle case of manual only: this is the easiest
+    if params.rotation_axis_auto == 'manual':
+        log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
+    elif params.rotation_axis_auto == 'auto':
+        log.warning('  *** *** Force auto calculation without reading config value')
         log.warning('  *** *** Computing rotation axis')
-        params.rotation_axis = find_center.find_rotation_axis(params) 
-    log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
+        params = find_center.find_rotation_axis(params)
+    elif params.rotation_axis_auto == 'json':
+        log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
+        all_centers = read_rot_centers(params)
+        params.rotation_axis = all_centers[params.file_name.name]
+    else:
+        # Try to read from HDF5 file
+        log.warning('  *** *** Try to read rotation center from file {}'.format(params.file_name))
+        with h5py.File(params.file_name, 'r') as file_name:
+            try:
+                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
+                params.rotation_axis = float(file_name[dataset][0])
+                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
+                params.rotation_axis_flip = float(file_name[dataset][0])
+                log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
+                log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
+                return params
+            except (KeyError, ValueError):
+                log.warning('  *** *** No rotation center stored in the HDF5 file')
+        #If we get here, we need to either find it automatically or from config file.
+        log.warning('  *** *** No rotation axis stored in the HDF file')
+        if (params.rotation_axis_auto == 'read_auto'):
+            log.warning('  *** *** fall back to auto calculation')
+            log.warning('  *** *** Computing rotation axis')
+            params = find_center.find_rotation_axis(params) 
+        else:
+            log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params
+
+
+def read_filter_materials(params):
+    '''Read the beam filter configuration.
+    This discriminates between files created with tomoScan and
+    the previous meta data format.
+    '''
+    if check_item_exists_hdf(params.file_name, '/measurement/instrument/attenuator_1'):
+        return read_filter_materials_tomoscan(params)
+    else:
+        return read_filter_materials_old(params)
+    
+
+def read_filter_materials_tomoscan(params):
+    '''Read the beam filter configuration from the HDF file.
+    
+    If params.filter_{n}_auto for n in [1,2,3] is True,
+    then try to read the filter configuration recorded during
+    acquisition in the HDF5 file.
+    
+    Parameters
+    ==========
+    params
+    
+      The global parameter object, should have *filter_n_material*,
+      *filter_n_thickness*, and *filter_n_auto* for n in [1,2,3]
+    
+    Returns
+    =======
+    params
+      An equivalent object to the *params* input, optionally with
+      *filter_n_material* and *filter_n_thickness*
+      attributes modified to reflect the HDF5 file.
+    
+    '''
+    log.info('  *** auto reading filter configuration')
+    # Read the relevant data from disk
+    filter_path = '/measurement/instrument/attenuator_{idx}'
+    param_path = 'filter_{idx}_{attr}'
+    for idx_filter in range(1,4,1):
+        if not check_item_exists_hdf(params.file_name, filter_path.format(idx = idx_filter)):
+            log.warning('  *** *** Filter {idx} not found in HDF file.  Set this filter to none'
+                                    .format(idx = idx_filter))
+            setattr(params, param_path.format(idx=idx_filter, attr='material'), 'Al')
+            setattr(params, param_path.format(idx=idx_filter, attr='thickness'), 0.0)
+            continue
+        filter_auto = getattr(params, param_path.format(idx=idx_filter, attr='auto'))
+        if filter_auto != 'True' and filter_auto != True:
+            log.warning('  *** *** do not auto read filter {n}'.format(n=idx_filter))
+            continue
+        log.warning('  *** *** auto reading parameters for filter {0}'.format(idx_filter))
+        # See if there are description and thickness fields
+        if check_item_exists_hdf(params.file_name, filter_path.format(idx = idx_filter) + '/description'):
+            filt_material = config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/description',
+                                        char_array = True, scalar = False)
+            filt_thickness = int(config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/thickness',
+                                        char_array = False, scalar = True))
+        else:
+            #The filter info is just the raw string from the filter unit.
+            log.warning('  *** *** filter {idx} info must be read from the raw string'
+                            .format(idx = idx_filter))
+            filter_str = config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/setup/filter_unit_text',
+                                        char_array = True, scalar = False)
+            if filter_str is None:
+                log.warning('  *** *** Could not load filter %d configuration from HDF5 file.' % idx_filter)
+                filt_material, filt_thickness = _filter_str_to_params('Open')
+            else: 
+                filt_material, filt_thickness = _filter_str_to_params(filter_str)
+
+        # Update the params with the loaded values
+        setattr(params, param_path.format(idx=idx_filter, attr='material'), filt_material)
+        setattr(params, param_path.format(idx=idx_filter, attr='thickness'), filt_thickness)
+        log.info('  *** *** Filter %d: (%s %f)' % (idx_filter, filt_material, filt_thickness))
+    return params
+
+
+def read_filter_materials_old(params):
+    '''Read the beam filter configuration from the HDF file.
+    
+    If params.filter_1_material and/or params.filter_2_material are
+    'auto', then try to read the filter configuration recorded during
+    acquisition in the HDF5 file.
+    
+    Parameters
+    ==========
+    params
+    
+      The global parameter object, should have *filter_1_material*,
+      *filter_1_thickness*, *filter_2_material*, and
+      *filter_2_thickness* attributes.
+    
+    Returns
+    =======
+    params
+      An equivalent object to the *params* input, optionally with
+      *filter_1_material*, *filter_1_thickness*, *filter_2_material*,
+      and *filter_2_thickness* attributes modified to reflect the HDF5
+      file.
+    
+    '''
+    log.info('  *** auto reading filter configuration')
+    # Read the relevant data from disk
+    filter_path = '/measurement/instrument/filters/Filter_{idx}_Material'
+    param_path = 'filter_{idx}_{attr}'
+    for idx_filter in (1, 2):
+        filter_param = getattr(params, param_path.format(idx=idx_filter, attr='material'))
+        if filter_param == 'auto':
+            # Read recorded filter condition from the HDF5 file
+            filter_str = config.param_from_dxchange(params.file_name,
+                                                    filter_path.format(idx=idx_filter),
+                                                    char_array=True, scalar=False)
+            if filter_str is None:
+                log.warning('  *** *** Could not load filter %d configuration from HDF5 file.' % idx_filter)
+                material, thickness = _filter_str_to_params('Open')
+            else:
+                material, thickness = _filter_str_to_params(filter_str)
+            # Update the params with the loaded values
+            setattr(params, param_path.format(idx=idx_filter, attr='material'), material)
+            setattr(params, param_path.format(idx=idx_filter, attr='thickness'), thickness)
+            log.info('  *** *** Filter %d: (%s %f)' % (idx_filter, material, thickness))
+    return params
+
+
+def _filter_str_to_params(filter_str):
+    # Any material with zero thickness is equivalent to being open
+    open_filter = ('Al', 0.)
+    if filter_str == 'Open':
+        # No filter is installed
+        material, thickness = open_filter
+    else:
+        # Parse the filter string to get the parameters
+        filter_re = '(?P<material>[A-Za-z_]+)_(?P<thickness>[0-9.]+)(?P<unit>[a-z]*)'
+        match = re.match(filter_re, filter_str)
+        if match:
+            material, thickness, unit = match.groups()
+        else:
+            log.warning('  *** *** Cannot interpret filter "%s"' % filter_str)
+            material, thickness = open_filter
+            unit = 'um'
+        # Convert strings into numbers
+        thickness = float(thickness)
+        factors = {
+            'nm': 1e-3,
+            'um': 1,
+            'mm': 1e3,
+        }
+        try:
+            factor = factors[unit]
+        except KeyError:
+            log.warning('  *** *** Cannot interpret filter unit in "%s"' % filter_str)
+            factor = 1
+        thickness *= factor
+    return material, thickness
 
 
 def read_pixel_size(params):
@@ -305,6 +563,14 @@ def read_pixel_size(params):
     if params.pixel_size_auto != True:
         log.info('  *** *** OFF')
         return params
+    
+    if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detection_system/objective/resolution'):
+        params.pixel_size = config.param_from_dxchange(params.file_name,
+                                            '/measurement/instrument/detection_system/objective/resolution')
+        log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
+        return(params)
+    log.warning('  *** tomoScan resolution parameter not found.  Try old format')
     pixel_size = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detector/pixel_size_x')
     mag = config.param_from_dxchange(params.file_name,
@@ -327,15 +593,27 @@ def read_pixel_size(params):
 def read_scintillator(params):
     '''Read the scintillator type and thickness from the HDF file.
     '''
-    if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
-        log.info('  *** *** Find scintillator params from the HDF file')
+    if params.scintillator_auto:
+        log.info('  *** auto reading scintillator params')
         params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
                                             '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
                                             attr = None, scalar = True, char_array=False))
         log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
-        scint_material_string = config.param_from_dxchange(params.file_name,
-                                            '/measurement/instrument/detection_system/scintillator/description',
-                                            scalar = False, char_array = True)
+        tomoscan_path = '/measurement/instrument/detection_system/scintillator/name'
+        scint_material_string = ''
+        try:
+            scint_material_string = config.param_from_dxchange(params.file_name,
+                                            tomoscan_path, scalar = False, char_array = True)
+        except KeyError:
+            log.warning('  *** *** scintillator material not in tomoscan form.  Try old format')
+        if not scint_material_string: 
+            old_path = '/measurement/instrument/detection_system/scintillator/description'
+            try:
+                scint_material_string = config.param_from_dxchange(params.file_name,
+                                            old_path, scalar = False, char_array = True)
+            except KeyError:
+                log.warning('  *** *** no scintillator material found')
+                return(params)
         if scint_material_string.lower().startswith('luag'):
             params.scintillator_material = 'LuAG_Ce'
         elif scint_material_string.lower().startswith('lyso'):
@@ -344,7 +622,7 @@ def read_scintillator(params):
             params.scintillator_material = 'YAG_Ce' 
         else:
             log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
-        log.warning('  *** *** using scintillator {:s}'.format(params.scintillator_material))
+        log.info('  *** *** using scintillator {:s}'.format(params.scintillator_material))
     #Run the initialization for beam hardening.  Needed in case rotation_axis must
     #be computed later.
     if params.beam_hardening_method.lower() == 'standard':
@@ -355,26 +633,53 @@ def read_scintillator(params):
 def read_bright_ratio(params):
     '''Read the ratio between the bright exposure and other exposures.
     '''
-    log.info(params.flat_correction_method)
-    if params.scintillator_auto and params.flat_correction_method == 'standard':
-        log.info('  *** *** Find bright exposure ratio params from the HDF file')
-        try:
+    log.info('  *** *** %s' % params.flat_correction_method)
+    if params.flat_correction_method != 'standard' or (not params.scintillator_auto):
+        log.warning('  *** *** skip finding exposure ratio')
+        params.bright_exp_ratio = 1
+        return params
+    log.info('  *** *** Find bright exposure ratio params from the HDF file')
+    try:
+        if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/different_flat_exposure'):
+            diff_bright_exp = config.param_from_dxchange(params.file_name,
+                                '/measurement/instrument/detector/different_flat_exposure',
+                                    attr = None, scalar = False, char_array = True)
+            if diff_bright_exp.lower() == 'same':
+                log.error('  *** *** used same flat and data exposures')
+                params.bright_exp_ratio = 1
+                return params
+        if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/exposure_time_flat'):
             bright_exp = config.param_from_dxchange(params.file_name,
-                                        '/measurement/instrument/detector/brightfield_exposure_time',
-                                        attr = None, scalar = True, char_array = False)
-            log.info(bright_exp)
-            norm_exp = config.param_from_dxchange(params.file_name,
-                                        '/measurement/instrument/detector/exposure_time',
-                                        attr = None, scalar = True, char_array = False)
-            log.info(norm_exp)
-            params.bright_exp_ratio = bright_exp / norm_exp
-            log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
-        except:
-            log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
-            params.bright_exp_ratio = 1
-    else:
-            params.bright_exp_ratio = 1
+                                    '/measurement/instrument/detector/exposure_time_flat',
+                                    attr = None, scalar = True, char_array = False)
+        else: 
+            bright_exp = config.param_from_dxchange(params.file_name,
+                                    '/measurement/instrument/detector/brightfield_exposure_time',
+                                    attr = None, scalar = True, char_array = False)
+        log.info('  *** *** %f' % bright_exp)
+        norm_exp = config.param_from_dxchange(params.file_name,
+                                    '/measurement/instrument/detector/exposure_time',
+                                    attr = None, scalar = True, char_array = False)
+        log.info('  *** *** %f' % norm_exp)
+        params.bright_exp_ratio = bright_exp / norm_exp
+        log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
+    except:
+        log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
+        params.bright_exp_ratio = 1
     return params
+
+
+def check_item_exists_hdf(hdf_filename, item_name):
+    '''Checks if an item exists in an HDF file.
+    Inputs
+    hdf_filename: str filename or pathlib.Path object for HDF file to check
+    item_name: name of item whose existence needs to be checked
+    path: str path to check.  Default to None
+    '''
+    with h5py.File(hdf_filename, 'r') as hdf_file:
+        return item_name in hdf_file
 
 
 def convert(params):
@@ -405,3 +710,57 @@ def convert(params):
     f.add_entry(dx.Entry.data(theta={'value': theta, 'units':'degrees'}))
 
     f.close()
+
+
+def write_hdf5(data, fname, dname='volume', dtype=None,
+               dest_idx=None, maxsize=None, overwrite=False):
+    """Write data to hdf5 file in a specific dataset.
+    
+    This function supports partial writing of data through a
+    combination of *maxsize* and *dest_idx* options. For example, to
+    write slices 10 to 16 of a (32, 32, 32) volume::
+    
+        assert data.shape == (32, 32, 32)
+        file_io.write_hdf5(data[10:16], maxsize=data.shape, dest_idx=slice(10,16), ...)
+    
+    Parameters
+    ----------
+    data : ndarray
+        Array data to be saved.
+    fname : str
+        File name to which the data is saved. ``.h5`` extension
+        will be appended if it does not already have one.
+    dname : str, optional
+        Name for dataset where data will be written.
+    dtype : data-type, optional
+        By default, the data-type is inferred from the input data.
+    dest_idx : optional
+        A valid index for the dataset such that ``dataset[target_idx]
+        = data`` will properly write the data to the dataset.
+    maxsize : int, optional
+        Maximum size that the dataset can be resized to along the
+        given axis.
+    
+    """
+    # Extract default values if not given
+    if maxsize is None:
+        maxsize = data.shape
+    if dtype is None:
+        dtype = data.dtype
+    if dest_idx is None:
+        dest_idx = ()
+    # Create parent directory if necessary
+    Path(fname).parent.mkdir(parents=True, exist_ok=True)
+    # Open the HDF5 file so we can save data to it
+    with h5py.File(fname, mode='a') as h5fp:
+        # Delete the dataset if it already exists and is being overwritten
+        if dname in h5fp.keys() and overwrite:
+            del h5fp[dname]
+        # Create a new dataset if necessary
+        try:
+            ds = h5fp.require_dataset(dname, shape=maxsize, dtype=dtype, fillvalue=np.nan, exact=True)
+        except TypeError as e:
+            msg = str(e) + ". Use *overwrite=True* to overwrite existing dataset."
+            raise type(e)(msg)
+        # Save the data
+        ds[dest_idx] = data

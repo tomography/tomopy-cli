@@ -1,20 +1,24 @@
 import os
 import sys
 import shutil
-import pathlib
+from pathlib import Path
 import argparse
 import configparser
+from collections import OrderedDict
+import logging
+
 import h5py
 import numpy as np
 
-from collections import OrderedDict
-
-from tomopy_cli import log
 from tomopy_cli import util
 from tomopy_cli import __version__
 
-LOGS_HOME = os.path.join(str(pathlib.Path.home()), 'logs')
-CONFIG_FILE_NAME = os.path.join(str(pathlib.Path.home()), 'tomopy.conf')
+
+log = logging.getLogger(__name__)
+
+
+LOGS_HOME = Path.home()/'logs'
+CONFIG_FILE_NAME = Path.home()/'tomopy.conf'
 ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
@@ -39,8 +43,13 @@ SECTIONS['general'] = {
     'verbose': {
         'default': False,
         'help': 'Verbose output',
-        'action': 'store_true'}
+        'action': 'store_true'},
+    'config-update': {
+        'default': False,
+        'help': 'When set, the content of the config file is updated using the current params values',
+        'action': 'store_true'},
         }
+
 
 SECTIONS['find-rotation-axis'] = {
     'center-search-width': {
@@ -52,9 +61,10 @@ SECTIONS['find-rotation-axis'] = {
         'type': float,
         'help': "Location of rotation axis"},
     'rotation-axis-auto': {
-        'default': False,
-        'help': "If True, ignore above rotation-axis and find rotation axis by stored data in file or compute it.",
-        'action': 'store_true'},
+        'default': 'read_auto',
+        'type': str,
+        'help': "How to get rotation axis: read from HDF5, auto calculate, read from json file, or take from this file",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'json']},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
@@ -64,7 +74,7 @@ SECTIONS['find-rotation-axis'] = {
 SECTIONS['file-reading'] = {
     'file-name': {
         'default': '.',
-        'type': str,
+        'type': Path,
         'help': "Name of the last used hdf file or directory containing multiple hdf files",
         'metavar': 'PATH'},
     'file-format': {
@@ -83,7 +93,7 @@ SECTIONS['file-reading'] = {
         'help': 'Location of the sinogram used for slice reconstruction and find axis (0 top, 1 bottom)'},
     'nsino-per-chunk': {     
         'type': int,
-        'default': 32,
+        'default': 256,
         'help': "Number of sinograms per chunk. Use larger numbers with computers with larger memory.  Value <= 0 defaults to # of cpus.",},
     'binning': {
         'type': util.positive_int,
@@ -96,7 +106,7 @@ SECTIONS['file-reading'] = {
         'action': 'store_true'},
     'blocked-views': {
         'default': False,
-        'help': 'When set, the missing-angles options are used',
+        'help': 'When set, the blocked-views options are used',
         'action': 'store_true'},
     'dark-zero': {
         'default': False,
@@ -123,16 +133,16 @@ SECTIONS['file-reading'] = {
 SECTIONS['dx-options'] = {
     'dx-update': {
         'default': False,
-        'help': 'When set, the content of the hdf dx file /process tag is updated using the current config file information',
+        'help': 'When set, the content of the hdf dx file /process tag is updated using the current params values',
         'action': 'store_true'},
         }
 
-SECTIONS['missing-angles'] = {
-    'missing-angles-start': {
+SECTIONS['blocked-views'] = {
+    'blocked-views-start': {
         'type': util.positive_int,
         'default': 0,
         'help': "Projection number of the first blocked view"},
-    'missing-angles-end': {
+    'blocked-views-end': {
         'type': util.positive_int,
         'default': 1,
         'help': "Projection number of the first blocked view"},
@@ -177,7 +187,7 @@ SECTIONS['flat-correction'] = {
         'help': "Fix nan and inf",
         'action': 'store_true'},
     'fix-nan-and-inf-value': {
-        'default': 0.0,
+        'default': 6.0,
         'type': float,
         'help': "Values to be replaced with negative values in array"},
     'minus-log': {
@@ -212,6 +222,10 @@ SECTIONS['retrieve-phase'] = {
         'default': False,
         'help': "When set, multiple reconstruction of the same slice with different alpha coefficient are generated",
         'action': 'store_true'},
+    'retrieve-phase-pad': {
+        'type': util.positive_int,
+        'default': 8,
+        'help': "Padding with extra slices in z for phase-retrieval filtering"},
         }
 
 SECTIONS['remove-stripe'] = {
@@ -288,31 +302,40 @@ SECTIONS['beam-hardening']= {
         'type': str,
         'help': 'Sample material for beam hardening',
         'choices': ['Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+    'filter-1-auto': {
+        'default': False,
+        'help': 'If True, read filter 1 from HDF meta data',},
     'filter-1-material': {
         'default': 'none',
         'type': str,
         'help': 'Filter 1 material for beam hardening',
-        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-1-thickness': {
         'default': 0.0,
         'type': float,
         'help': 'Filter 1 thickness for beam hardening'},
+    'filter-2-auto': {
+        'default': False,
+        'help': 'If True, read filter 2 from HDF meta data',},
     'filter-2-material': {
         'default': 'none',
         'type': str,
         'help': 'Filter 2 material for beam hardening',
-        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-2-thickness': {
         'default': 0.0,
         'type': float,
         'help': 'Filter 2 thickness for beam hardening'},
+    'filter-3-auto': {
+        'default': False,
+        'help': 'If True, read filter 3 from HDF meta data',},
     'filter-3-material': {
-        'default': 'Be',
+        'default': 'none',
         'type': str,
         'help': 'Filter 3 material for beam hardening',
         'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-3-thickness': {
-        'default': 750.0,
+        'default': 0.0,
         'type': float,
         'help': 'Filter 3 thickness for beam hardening'},
     }
@@ -336,7 +359,20 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
-        }
+    'output-format': {
+        'default': 'tiff_stack',
+        'type': str,
+        'help': "How to save the reconstructed data. Only applies when ``reconstruction-type == 'full'``.",
+        'choices': ['tiff_stack', 'hdf5'],
+        },
+    'output-folder': {
+        'default': "{file_name_parent}_rec",
+        'type': str,
+        'help': ("Where to save the reconstructed data. Can accept other parameters "
+                 "and extra tokens (file_name_parent). "
+                 "Eg: \"{file_name_parent}_rec/{reconstruction_algorithm}/\"")
+        },
+    }
 
 SECTIONS['gridrec'] = {
     'gridrec-filter': {
@@ -456,7 +492,7 @@ SECTIONS['convert'] = {
         'metavar': 'PATH'},
         }
 
-RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'missing-angles', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-views', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
                 'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
@@ -493,10 +529,8 @@ def parse_known_args(parser, subparser=False):
         subparser_value = [sys.argv[1]] if subparser else []
         config_values = config_to_list(config_name=get_config_name())
         values = subparser_value + config_values + sys.argv[1:]
-        #print(subparser_value, config_values, values)
     else:
-        values = ""
-
+        raise TypeError("A command is required. See ``tomopy --help`` for detailed usage.")
     return parser.parse_known_args(values)[0]
 
 
@@ -516,7 +550,7 @@ def config_to_list(config_name=CONFIG_FILE_NAME):
         for name, opts in ((n, o) for n, o in SECTIONS[section].items() if config.has_option(section, n)):
             value = config.get(section, name)
 
-            if value is not '' and value != 'None':
+            if value != '' and value != 'None':
                 action = opts.get('action', None)
 
                 if action == 'store_true' and value == 'True':
@@ -598,59 +632,56 @@ def write(config_file, args=None, sections=None):
             else:
                 value = opts['default'] if opts['default'] is not None else ''
 
-            prefix = '# ' if value is '' else ''
+            prefix = '# ' if value == '' else ''
 
             if name != 'config':
                 config.set(section, prefix + name, str(value))
 
-
     with open(config_file, 'w') as f:
         config.write(f)
 
-    if args is not None:
-        write_hdf(config_file, args, sections)       
 
-
-def write_hdf(config_file, args=None, sections=None):
+def write_hdf(args=None, sections=None):
     """
     Write in the hdf raw data file the content of *config_file* with values from *args* 
     if they are specified, otherwise use the defaults. If *sections* are specified, 
     write values from *args* only to those sections, use the defaults on the remaining ones.
     """
-    if not args.dx_update:
+    if (args == None):
         log.warning("  *** Not saving log data to the HDF file.")
-        return
-    with h5py.File(args.file_name,'r+') as hdf_file:
-        #If the group we will write to already exists, remove it
-        if hdf_file.get('/process/tomopy-cli-' + __version__):
-            del(hdf_file['/process/tomopy-cli-' + __version__])
-        #dt = h5py.string_dtype(encoding='ascii')
-        log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.file_name))
-        config = configparser.ConfigParser()
-        for section in SECTIONS:
-            config.add_section(section)
-            for name, opts in SECTIONS[section].items():
-                if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
-                    value = getattr(args, name.replace('-', '_'))
-                    if isinstance(value, list):
-                        # print(type(value), value)
-                        value = ', '.join(value)
-                else:
-                    value = opts['default'] if opts['default'] is not None else ''
 
-                prefix = '# ' if value is '' else ''
+    else:
+        with h5py.File(args.file_name,'r+') as hdf_file:
+            #If the group we will write to already exists, remove it
+            if hdf_file.get('/process/tomopy-cli-' + __version__):
+                del(hdf_file['/process/tomopy-cli-' + __version__])
+            #dt = h5py.string_dtype(encoding='ascii')
+            log.info("  *** tomopy.conf parameter written to /process%s in file %s " % (__version__, args.file_name))
+            config = configparser.ConfigParser()
+            for section in SECTIONS:
+                config.add_section(section)
+                for name, opts in SECTIONS[section].items():
+                    if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
+                        value = getattr(args, name.replace('-', '_'))
+                        if isinstance(value, list):
+                            # print(type(value), value)
+                            value = ', '.join(value)
+                    else:
+                        value = opts['default'] if opts['default'] is not None else ''
 
-                if name != 'config':
-                    dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + section + '/'+ name
-                    dset_length = len(str(value)) * 2 if len(str(value)) > 5 else 10
-                    dt = 'S{0:d}'.format(dset_length)
-                    hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
-                    log.info(name + ': ' + str(value))
-                    try:
-                        hdf_file[dataset][0] = np.string_(str(value))
-                    except TypeError:
-                        print(value)
-                        raise TypeError
+                    prefix = '# ' if value == '' else ''
+
+                    if name != 'config':
+                        dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + section + '/'+ name
+                        dset_length = len(str(value)) * 2 if len(str(value)) > 5 else 10
+                        dt = 'S{0:d}'.format(dset_length)
+                        hdf_file.require_dataset(dataset, shape=(1,), dtype=dt)
+                        log.info(name + ': ' + str(value))
+                        try:
+                            hdf_file[dataset][0] = np.string_(str(value))
+                        except TypeError:
+                            log.error("Could not convert value {}".format(value))
+                            raise
 
 
 def log_values(args):
@@ -681,17 +712,23 @@ def log_values(args):
     log.warning('tomopy-cli status end')
 
 
-def update_log(args):
-       # update tomopy.conf
-        sections = RECON_PARAMS
+def update_config(args):
+
+    sections = RECON_PARAMS
+    # write(args.config, args=args, sections=sections)
+    if (args.config_update):
+        # update tomopy.conf
         write(args.config, args=args, sections=sections)
-        if (args.reconstruction_type == "full"):
-            tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
-            log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
-            try:
-                shutil.copyfile(args.config, log_fname)
-                log.info('  *** copied %s to %s ' % (args.config, log_fname))
-            except:
-                log.error('  *** attempt to copy %s to %s failed' % (args.config, log_fname))
-                pass
+    if (args.reconstruction_type == "full"):
+        tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
+        log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
+        try:
+            write(log_fname, args=args, sections=sections)
+            log.info('  *** saved config to %s ' % (log_fname))
             log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
+        except:
+            log.error('  *** attempt to save config to %s failed' % (log_fname))
+            pass
+    if(args.dx_update):
+        write_hdf(args, sections)       
+

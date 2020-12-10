@@ -4,13 +4,12 @@ import os
 import re
 import sys
 import argparse
-import logging
 import time
-import pathlib
+from pathlib import Path
 from datetime import datetime
 
 from tomopy_cli import config, __version__
-from tomopy_cli import log
+from tomopy_cli import logging
 from tomopy_cli import recon
 from tomopy_cli import find_center
 from tomopy_cli import file_io
@@ -18,32 +17,28 @@ from tomopy_cli import post
 from tomopy_cli.auto_complete import create_complete_tomopy
 
 
-def init(args):
+log = logging.getLogger('tomopy_cli.bin.tomopy')
 
+
+KNOWN_FORMATS = ['dx', 'aps2bm', 'aps7bm', 'aps32id']
+
+
+def init(args):
     if not os.path.exists(str(args.config)):
         config.write(args.config)
     else:
         log.error("{0} already exists".format(args.config))    
-    status = create_complete_tomopy.run(str(pathlib.Path.home())+'/complete_tomopy.sh')
-    if(status==0):
-        log.info('Bash autocomplete file created' +str(pathlib.Path.home())+'/complete_tomopy.sh')
-    else:
-        log.error('Bash autocomplete file was not created')                
-    os.system('source '+str(pathlib.Path.home())+'/complete_tomopy.sh'        )
-    print('source '+str(pathlib.Path.home())+'/complete_tomopy.sh'     )
-    log.info('Autocomplete tomopy recon done')
+
 
 def run_status(args):
-
     config.log_values(args)
 
-def run_find_center(args):
 
-    if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+def run_find_center(args):
+    if (str(args.file_format) in KNOWN_FORMATS):
         log.warning('find center start')
         args = find_center.find_rotation_axis(args)
         log.warning('find center end')
-
         # update tomopy.conf
         sections = config.RECON_PARAMS
         config.write(args.config, args=args, sections=sections)
@@ -73,15 +68,25 @@ def run_rec(args):
 
     log.warning('reconstruction start')
 
-    if (str(args.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
-        if os.path.isfile(args.file_name):    
-            log.info("reconstructing a single file: %s" % args.file_name)   
+    if str(args.file_format) in KNOWN_FORMATS:
+        file_path = Path(args.file_name)
+        if file_path.suffix == '.json':
+            # Load the list of files from a given JSON rotation_axis file
+            log.info("Reconstructing files listed in: %s" % args.file_name)
+            file_dict = file_io.read_rot_centers_json(file_path)
+            # args.rotation_axis_file = str(file_path)
+            for filename_idx, file_info in file_dict.items():
+                new_file_name = list(file_info.keys())[0]
+                args.file_name = file_path.parent / new_file_name
+                recon.rec(args)
+            config.update_config(args)
+        elif os.path.isfile(args.file_name):
+            log.info("reconstructing a single file: %s" % args.file_name)
             recon.rec(args)
-            config.update_log(args)
+            config.update_config(args)
         elif os.path.isdir(args.file_name):
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
-
             h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf', 'hdf5')), os.listdir(top)))
             if (h5_file_list):
                 h5_file_list.sort()
@@ -102,7 +107,7 @@ def run_rec(args):
                             log.warning("  *** file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
                             index += 1
                             recon.rec(args)
-                            config.update_log(args)
+                            config.update_config(args)
                     log.warning('reconstruction end')
                 else:
                     log.warning("  *** no pre-calculated rotation centers from %s file" % jfname)   
@@ -112,7 +117,7 @@ def run_rec(args):
                         log.warning("  *** file %d/%d;  %s" % (index, len(h5_file_list), fname))
                         index += 1
                         recon.rec(args)
-                        config.update_log(args)
+                        config.update_config(args)
                     log.warning('reconstruction end')
             else:
                 log.error("directory %s does not contain any file" % args.file_name)
@@ -121,7 +126,7 @@ def run_rec(args):
     else:
         # add here support for other file formats
         log.error("  *** %s is not a supported file format" % args.file_format)
-        log.error("supported data formats are: %s, %s, %s, %s" % ('dx', 'aps2bm', 'aps7bm', 'aps32id'))
+        log.error("supported data formats are: %s, %s, %s, %s" % tuple(KNOWN_FORMATS))
 
 
 def main():
@@ -162,8 +167,10 @@ def main():
         os.makedirs(logs_home)
 
     lfname = os.path.join(logs_home, 'tomopy_' + datetime.strftime(datetime.now(), "%Y-%m-%d_%H_%M_%S") + '.log')
- 
-    log.setup_custom_logger(lfname)
+
+    log_level = 'DEBUG' if args.verbose else "INFO"
+    logging.setup_custom_logger(lfname, level=log_level)
+    log.debug("Started tomopy_cli")
     log.info("Saving log at %s" % lfname)
 
     try:
