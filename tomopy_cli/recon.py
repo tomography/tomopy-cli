@@ -76,29 +76,31 @@ def rec(params):
             sino_chunk_end = sino_end
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
         sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
-        phase_pad = params.retrieve_phase_pad
         # extra data for padded phase retrieval
         if params.retrieve_phase_method == "paganin":
-                sino[0] -= (iChunk>0)*phase_pad
-                sino[1] += (iChunk<chunks-1)*phase_pad
-                log.info('  *** extra padding for phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
-        # extra data for padded phase retrieval
+                phase_pad = np.zeros(2,dtype=int)
+                if(iChunk>0):
+                    phase_pad[0] = -params.retrieve_phase_pad
+                if (iChunk<chunks-1):
+                    phase_pad[1] =  params.retrieve_phase_pad
+                sino += phase_pad
+                log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
         # Read APS 32-BM raw data.
-        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
+        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params) 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
             log.warning("  *** Chunk size > remaining data size.")
-            sino = [sino[0], sino[0] + proj.shape[1]]
-
+            sino = [sino[0], sino[0] + proj.shape[1]]        
+        
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":
-                data = data[:,(iChunk>0)*phase_pad:-(iChunk<chunks-1)*phase_pad-(phase_pad==0)]
-                sino[0] += (iChunk>0)*phase_pad
-                sino[1] -= (iChunk<chunks-1)*phase_pad
+                phase_pad //= pow(2, int(params.binning))
+                sino -= phase_pad                                
+                data = data[:,-phase_pad[0]:data.shape[1]-phase_pad[1]]                
                 log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
- 
+        
         # Reconstruct: this is for "slice" and "full" methods
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
