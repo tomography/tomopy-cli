@@ -3,7 +3,7 @@ tomopy-cli
 ==========
 
 
-.. image:: source/img/project-logo.png
+.. image:: source/img/tomopy-cli-logo.svg
    :width: 320px
    :alt: project
 
@@ -29,7 +29,7 @@ Content
 -------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    source/install
    source/usage

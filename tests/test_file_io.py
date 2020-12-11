@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 from tomopy_cli import file_io
 
 
+TESTDIR = Path(__file__).resolve().parent
+
+
 def make_params():
     params = mock.MagicMock()
     params.file_name = "test_tomogram.h5"
@@ -51,8 +54,8 @@ class FlipAndStitchTests(unittest.TestCase):
 
 
 class ReadParamTests(unittest.TestCase):
-    test_hdf_file = Path('filter-tests.hdf5')
-    rot_axis_file = Path(__file__).resolve().parent / 'rotation_axis.json'
+    test_hdf_file = TESTDIR / 'filter-tests.hdf5'
+    rot_axis_file = TESTDIR / 'rotation_axis.json'
     # Sample filters from 7-BM-B for 'open' and 'Cu_1000um' filters
     filter_open = np.array([[79, 112, 101, 110,] + [0,] * 252], dtype='int8')
     filter_Cu_1000um = np.array([[67, 117,  95,  49,  48,  48, 48, 117, 109,] + [0,] * 247], dtype='int8')
@@ -147,10 +150,10 @@ class ReadParamTests(unittest.TestCase):
 
 
 class ReadTomoScanParamTests(unittest.TestCase):
-    test_hdf_file = Path('meta_mock.h5')
+    test_hdf_file = TESTDIR/'meta_mock.h5'
 
     def setUp(self):
-        self.burner_hdf_file = Path('meta_mock2.h5')
+        self.burner_hdf_file = TESTDIR/'meta_mock2.h5'
         shutil.copy(self.test_hdf_file, self.burner_hdf_file) 
 
 
@@ -214,7 +217,6 @@ class ReadTomoScanParamTests(unittest.TestCase):
     def test_auto_filter(self):
         params = mock.MagicMock()
         params.file_name = str(self.test_hdf_file)
-        print(params.file_name)
         params.filter_1_auto = True
         params.filter_2_auto = True
         params.filter_3_auto = True

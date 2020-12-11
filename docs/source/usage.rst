@@ -98,6 +98,30 @@ data file, only the file given by ``--file-name`` is reconstructed.
 If the JSON file is also given as the argument to ``--file-name``,
 then all data files listed in the JSON file will be reconstructed.
 
+Stripe Removal
+==============
+
+Several methods of stripe removal are available in *Tomopy-cli*, and
+can be selected with the ``--remove-stripe`` parameter. Each method
+also has a set of associated parameters for controlling its behavior
+(e.g. ``--remove-stripe=fw`` relies on ``--fw-sigma``,
+``--fw-filter``, etc.).
+
+More information about each method and the accompanying parameters can
+be found in the corresponding *tomopy* documentation:
+
++------------------+----------------------------+------------------------------------------------------------------------------------------------------------------------------------+
+| Method           | ``--remove-stripe=`` Value | Tomopy Function                                                                                                                    |
++==================+============================+====================================================================================================================================+
+| Fourier-Wavelet  | fw                         | `remove_stripe_fw() <https://tomopy.readthedocs.io/en/latest/api/tomopy.prep.stripe.html#tomopy.prep.stripe.remove_stripe_fw>`_    |
++------------------+----------------------------+------------------------------------------------------------------------------------------------------------------------------------+
+| Titarenko        | ti                         | `remove_stripe_ti() <https://tomopy.readthedocs.io/en/latest/api/tomopy.prep.stripe.html#tomopy.prep.stripe.remove_stripe_ti>`_    |
++------------------+----------------------------+------------------------------------------------------------------------------------------------------------------------------------+
+| Smoothing Filter | sf                         | `remove_stripe_sf() <https://tomopy.readthedocs.io/en/latest/api/tomopy.prep.stripe.html#tomopy.prep.stripe.remove_stripe_sf>`_    |
++------------------+----------------------------+------------------------------------------------------------------------------------------------------------------------------------+
+| Vo's Algorithms  | vo-all                     | `remove_all_stripe() <https://tomopy.readthedocs.io/en/latest/api/tomopy.prep.stripe.html#tomopy.prep.stripe.remove_all_stripe>`_  |
++------------------+----------------------------+------------------------------------------------------------------------------------------------------------------------------------+
+
 Help
 ====
 
@@ -105,14 +129,18 @@ Help
 
     $ tomopy -h
     usage: tomopy [-h] [--config FILE] [--version]  ...
-
+    
     optional arguments:
       -h, --help     show this help message and exit
       --config FILE  File name of configuration file
       --version      show program's version number and exit
-
+    
     Commands:
       
         init         Create configuration file
         recon        Run tomographic reconstruction
+        status       Show the tomographic reconstruction status
+        segment      Run segmentation on reconstured data
         find_center  Find rotation axis location for all hdf files in a directory
+        convert      Convert pre-2015 (proj, dark, white) hdf files in a single
+                     data exchange h5 file

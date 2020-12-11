@@ -6,15 +6,55 @@ import argparse
 import configparser
 from collections import OrderedDict
 import logging
+import warnings
+import inspect
 
 import h5py
 import numpy as np
 
+import tomopy
 from tomopy_cli import util
 from tomopy_cli import __version__
 
 
 log = logging.getLogger(__name__)
+
+
+def default_parameter(func, param):
+    """Get the default value for a function parameter.
+    
+    For a given function *func*, introspect the function and return
+    the default value for the function parameter named *param*.
+    
+    Return
+    ======
+    default_val
+      The default value for the parameter.
+    
+    Raises
+    ======
+    RuntimeError
+      Raised if the function *func* has no default value for the
+      requested parameter *param*.
+    
+    """
+    # Retrieve the function parameter by introspection
+    try:
+        sig = inspect.signature(func)
+        _param = sig.parameters[param]
+    except TypeError as e:
+        warnings.warn(str(e))
+        log.warning(str(e))
+        return None
+    # Check if a default value exists
+    if _param.default is _param.empty:
+        # No default is listed in the function, so throw an exception
+        msg = ("No default value given for parameter *{}* of callable {}."
+               "".format(param, func))
+        raise RuntimeError(msg)
+    else:
+        # Retrieve and return the parameter's default value
+        return _param.default
 
 
 LOGS_HOME = Path.home()/'logs'
@@ -232,9 +272,24 @@ SECTIONS['remove-stripe'] = {
     'remove-stripe-method': {
         'default': 'none',
         'type': str,
-        'help': "Remove stripe method: none, fourier-wavelet, titarenko, smoothing filter",
-        'choices': ['none', 'fw', 'ti', 'sf']},
+        'help': "Remove stripe method: none, fourier-wavelet, titarenko, smoothing filter, all Vo's algorithms",
+        'choices': ['none', 'fw', 'ti', 'sf', 'vo-all']},
         }
+
+SECTIONS['vo-all'] = {
+    'vo-all-snr': {
+        'default': default_parameter(tomopy.remove_all_stripe, 'snr'),
+        'type': float,
+        'help': "Ratio used to locate large stripes. Greater is less sensitive."},
+    'vo-all-la-size': {
+        'default': default_parameter(tomopy.remove_all_stripe, 'la_size'),
+        'type': util.positive_int,
+        'help': "Window size of the median filter to remove large stripes."},
+    'vo-all-sm-size': {
+        'default': default_parameter(tomopy.remove_all_stripe, 'sm_size'),
+        'type': util.positive_int,
+        'help': "Window size of the median filter to remove small-to-medium stripes."},
+}
 
 SECTIONS['fw'] = {
     'fw-sigma': {
@@ -258,18 +313,18 @@ SECTIONS['fw'] = {
 
 SECTIONS['ti'] = {
     'ti-alpha': {
-        'default': 1.5,
+        'default': default_parameter(tomopy.remove_stripe_ti, 'alpha'),
         'type': float,
         'help': "Titarenko remove stripe damping factor"},
     'ti-nblock': {
-        'default': 0,
+        'default': default_parameter(tomopy.remove_stripe_ti, 'nblock'),
         'type': util.positive_int,
         'help': "Titarenko remove stripe number of blocks"},
     }
 
 SECTIONS['sf'] = {
     'sf-size': {
-        'default': 5,
+        'default': default_parameter(tomopy.remove_stripe_sf, 'size'),
         'type': util.positive_int,
         'help': "Smoothing filter remove stripe size"}
         }
@@ -492,7 +547,7 @@ SECTIONS['convert'] = {
         'metavar': 'PATH'},
         }
 
-RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-views', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-views', 'zinger-removal', 'flat-correction', 'remove-stripe', 'vo-all', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
                 'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
@@ -505,6 +560,7 @@ NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'dx-options', 'Mi
                 'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert')
 
 def get_config_name():
+
     """Get the command line --config option."""
     name = CONFIG_FILE_NAME
     for i, arg in enumerate(sys.argv):
@@ -567,7 +623,7 @@ def config_to_list(config_name=CONFIG_FILE_NAME):
     return result
 
 
-def param_from_dxchange(hdf_file, data_path, attr = None, scalar = True, char_array=False):
+def param_from_dxchange(hdf_file, data_path, attr=None, scalar=True, char_array=False):
     """
     Reads a parameter from the HDF file.
     Inputs
