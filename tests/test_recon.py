@@ -63,6 +63,7 @@ class ReconTests(TestCase):
         """Check that a basic reconstruction completes and produces output tiff files."""
         params = make_params()
         params.reconstruction_type = 'slice'
+        params.scintillator_auto = False
         response = rec(params=params)
         self.assertTrue(self.output_dir.exists())
     
@@ -71,6 +72,7 @@ class ReconTests(TestCase):
         params = make_params()
         params.reconstruction_type = 'full'
         params.output_format = 'tiff_stack'
+        params.scintillator_auto = False
         response = rec(params=params)
         # import pdb; pdb.set_trace()
         self.assertTrue(self.full_tiff_dir.exists())
@@ -79,6 +81,7 @@ class ReconTests(TestCase):
         params = make_params()
         params.reconstruction_type = 'full'
         params.output_format = "hdf5"
+        params.scintillator_auto = False
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
         # Check that tiffs are not saved and HDF5 file is saved
@@ -95,6 +98,7 @@ class ReconTests(TestCase):
         params.reconstruction_type = 'full'
         params.output_format = 'hdf5'
         params.nsino_per_chunk = 16 # 4 chunks
+        params.scintillator_auto = False
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
         # Check that tiffs are not saved and HDF5 file is saved

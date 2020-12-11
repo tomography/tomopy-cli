@@ -115,6 +115,11 @@ def remove_stripe(data, params):
         log.info('  *** *** smoothing filter')
         data = tomopy.remove_stripe_sf(data,  size=params.sf_size)
         log.info('  *** ***  *** sf size %d ' % params.sf_size)
+    elif(params.remove_stripe_method == 'vo-all'):
+        log.info('  *** *** Vo\'s algorithms: all')
+        data = tomopy.remove_all_stripe(data, snr=params.vo_all_snr,
+                                        la_size=params.vo_all_la_size,
+                                        sm_size=params.vo_all_sm_size)
     elif(params.remove_stripe_method == 'none'):
         log.warning('  *** *** OFF')
 

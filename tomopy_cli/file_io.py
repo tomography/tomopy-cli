@@ -595,9 +595,12 @@ def read_scintillator(params):
     '''
     if params.scintillator_auto:
         log.info('  *** auto reading scintillator params')
-        params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
-                                            '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
-                                            attr = None, scalar = True, char_array=False))
+        dataset_name = '/measurement/instrument/detection_system/scintillator/scintillating_thickness'
+        val = config.param_from_dxchange(params.file_name,
+                                         dataset_name, attr=None,
+                                         scalar=True,
+                                         char_array=False)
+        params.scintillator_thickness = float(val)
         log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
         tomoscan_path = '/measurement/instrument/detection_system/scintillator/name'
         scint_material_string = ''
