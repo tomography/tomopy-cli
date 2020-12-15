@@ -42,27 +42,38 @@
     </g>
     <g
        id="layer2"
-       style="opacity:1">
+       style="display:inline;opacity:1">
       <text
          xml:space="preserve"
-         style="font-style:normal;font-weight:normal;font-size:141.111px;line-height:88.1944px;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#a7aaa9;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         style="font-style:normal;font-weight:normal;font-size:141.111px;line-height:88.1944px;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:none;fill:#a7aaa9;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
          x="-60.7831"
          y="267.67557"
          id="text910"><tspan
            id="tspan908"
-           x="-60.7831"
-           y="267.67557"
+           x="0"
+           y="0"
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:141.111px;font-family:monospace;-inkscape-font-specification:'monospace, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#a7aaa9;fill-opacity:1;stroke-width:0.264583px">[  ~]$</tspan></text>
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:6.61458px;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         x="296.83655"
-         y="80.958702"
-         id="text1001"><tspan
-           id="tspan999"
-           x="296.83655"
-           y="80.958702"
-           style="stroke-width:0.264583px"></tspan></text>
+      <g
+         aria-label="[  ~]$"
+         id="text867"
+         style="font-style:normal;font-weight:normal;font-size:141.111px;line-height:88.1944px;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:inline;fill:#a7aaa9;fill-opacity:1;stroke:none;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1">
+        <path
+           d="M -32.533341,296.95885 V 165.42522 H 5.155972 v 9.57736 h -25.28698 V 287.3815 h 25.28698 v 9.57735 z"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:141.111px;font-family:monospace;-inkscape-font-specification:'monospace, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#a7aaa9;fill-opacity:1;stroke-width:0.264583px"
+           id="path869" />
+        <path
+           d="m 218.6139,212.07177 q 7.02799,0 16.19193,3.16949 10.12858,3.51399 13.09136,4.20301 3.03168,0.68902 5.51214,0.68902 8.95724,0 16.81206,-6.33897 v 10.26638 q -4.13412,2.89387 -8.13042,4.20301 -3.92741,1.30913 -9.78407,1.30913 -4.75422,0 -9.78406,-1.51584 -4.96093,-1.51584 -9.99077,-3.30729 -8.88834,-3.10058 -14.9517,-3.10058 -4.61642,0 -8.61273,1.44694 -3.99631,1.37804 -8.47493,4.61642 v -9.85296 q 7.64811,-5.78776 18.12119,-5.78776 z"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:141.111px;font-family:monospace;-inkscape-font-specification:'monospace, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#a7aaa9;fill-opacity:1;stroke-width:0.264583px"
+           id="path871" />
+        <path
+           d="m 296.26629,296.95885 v -9.57735 h 25.28698 V 175.00258 h -25.28698 v -9.57736 h 37.68932 v 131.53363 z"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:141.111px;font-family:monospace;-inkscape-font-specification:'monospace, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#a7aaa9;fill-opacity:1;stroke-width:0.264583px"
+           id="path873" />
+        <path
+           d="m 441.5114,241.49286 q 0,11.1621 -8.26822,17.70778 -8.26822,6.47677 -23.70224,7.09689 v 11.0932 h -8.81943 v -11.0932 Q 371.64492,265.3329 366.8218,241.56177 l 11.71331,-2.54937 q 1.79145,8.68163 7.3036,13.02245 5.51214,4.27191 14.8828,4.75423 v -33.69301 l -2.06706,-0.55122 q -11.57551,-2.82497 -17.01876,-6.13226 -5.37434,-3.37619 -7.92371,-8.06152 -2.48047,-4.68532 -2.48047,-11.1621 0,-10.26637 7.51031,-15.98523 7.5792,-5.78775 21.97969,-6.27006 v -8.95725 h 8.81943 v 8.95725 q 12.81575,0.48231 19.77483,5.51214 6.95909,4.96094 10.05968,16.60535 l -11.98893,2.27376 q -1.51584,-7.3036 -5.92556,-11.0243 -4.40971,-3.7207 -11.92002,-4.20301 v 29.35219 q 11.85112,2.89388 17.15656,5.37434 5.30545,2.48047 8.47493,5.64996 3.16949,3.16948 4.75423,7.37249 1.58474,4.13412 1.58474,9.64626 z m -58.42877,-43.95938 q 0,3.92741 1.58474,6.61458 1.65365,2.61827 4.75423,4.40972 3.10059,1.72255 11.29991,3.8585 v -28.45646 q -8.68164,0.34451 -13.16026,3.8585 -4.47862,3.44509 -4.47862,9.71516 z m 46.57765,43.75268 q 0,-4.54752 -1.92925,-7.5103 -1.86035,-2.96278 -5.30544,-4.89203 -3.44509,-1.99816 -12.88465,-4.40972 v 32.45277 q 9.92187,-0.62012 15.02061,-4.61643 5.09873,-4.0652 5.09873,-11.02429 z"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:141.111px;font-family:monospace;-inkscape-font-specification:'monospace, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#a7aaa9;fill-opacity:1;stroke-width:0.264583px"
+           id="path875" />
+      </g>
     </g>
     <g
        id="layer4">
