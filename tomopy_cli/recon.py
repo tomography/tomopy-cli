@@ -150,6 +150,7 @@ def rec(params):
     for thread in write_threads:
         thread.join()
 
+
 def _try_rec(params):
     log.info("  *** *** starting 'try' reconstruction")
     data_shape = file_io.get_dx_dims(params)
@@ -240,30 +241,26 @@ def padded_rec(data, theta, rotation_axis, params):
     rec = unpadding(rec, N, params)
     # mask each reconstructed slice with a circle
     rec = mask(rec, params)
-
     return rec
 
 
 def padding(data, rotation_axis, params):
-
     log.info("  *** padding")
-    if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
-        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
-    #if(params.padding):
+    do_gridrec_padding = params.reconstruction_algorithm=='gridrec' and params.gridrec_padding
+    do_lprec_fbp_padding = params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding
+    if do_gridrec_padding or do_lprec_fbp_padding:
         log.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
         data_pad[:,:,N//4:5*N//4] = data
         data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
         data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
-
         data = data_pad
         rot_center = rotation_axis + N//4
     else:
         log.warning('  *** *** OFF')
         data = data
         rot_center = rotation_axis
-
     return data, rot_center
 
 
