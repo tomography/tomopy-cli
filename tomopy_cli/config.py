@@ -15,6 +15,7 @@ import numpy as np
 import tomopy
 from tomopy_cli import util
 from tomopy_cli import __version__
+from tomopy_cli import recon
 
 
 log = logging.getLogger(__name__)
@@ -560,7 +561,6 @@ NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'dx-options', 'Mi
                 'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert')
 
 def get_config_name():
-
     """Get the command line --config option."""
     name = CONFIG_FILE_NAME
     for i, arg in enumerate(sys.argv):
@@ -769,22 +769,39 @@ def log_values(args):
 
 
 def update_config(args):
-
+    """Update the corresponding configuration file.
+    
+    If *args.config_update* is true, the original configuration file
+    is updated.
+    
+    If *args.reconstruction_type* is "full", then a new configuration
+    file is created alongside the reconstructed data, with a path
+    determined by whether *args.output_format* is "tiff_stack" or
+    "hdf5".
+    
+    """
     sections = RECON_PARAMS
+    config_file = Path(args.config).resolve()
+    data_file = Path(args.file_name).resolve()
     # write(args.config, args=args, sections=sections)
     if (args.config_update):
         # update tomopy.conf
-        write(args.config, args=args, sections=sections)
+        write(config_file, args=args, sections=sections)
     if (args.reconstruction_type == "full"):
-        tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
-        log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
+        recon_dir = recon.reconstruction_folder(args)
+        if args.output_format == "hdf5":
+            log_fname = recon_dir / "{}_rec_{}".format(data_file.stem, config_file.name)
+        else:
+            log_fname = recon_dir / "{}_rec".format(data_file.stem) / config_file.name
         try:
             write(log_fname, args=args, sections=sections)
+        except Exception as e:
+            log.error('  *** attempt to save config to %s failed' % log_fname)
+            log.error('  *** *** %s' % e)
+        else:
             log.info('  *** saved config to %s ' % (log_fname))
-            log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
-        except:
-            log.error('  *** attempt to save config to %s failed' % (log_fname))
-            pass
+            rerun_msg = ' *** command to repeat the reconstruction: tomopy recon --config {}'
+            rerun_msg = rerun_msg.format(log_fname)
+            log.warning(rerun_msg)
     if(args.dx_update):
         write_hdf(args, sections)       
-
