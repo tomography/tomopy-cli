@@ -65,7 +65,8 @@ class ReadParamTests(unittest.TestCase):
             self.rot_axis_file.unlink()
         # Create a rotation_axis.json file
         with open(self.rot_axis_file, mode='x') as fp:
-            fp.write('{"0": {"filter-tests.hdf5": 1287.25}}')
+            fp.write('{"0": {"filter-tests.hdf5": 1287.25},\n'
+                     ' "1": {"tests/filter-001.hdf5": 1290.0}}\n')
     
     def tearDown(self):
         # Clean up the mocked HDF5 file
@@ -140,14 +141,32 @@ class ReadParamTests(unittest.TestCase):
         self.assertEqual(params.filter_1_thickness, 0.)
         self.assertEqual(params.filter_2_material, 'Al')
         self.assertEqual(params.filter_2_thickness, 0.)
-
-    def test_read_rot_center_json(self):
+    
+    def test_read_rot_center_json_by_filename(self):
         params = make_params()
         params.rotation_axis_auto = 'json'
         params.file_name = self.test_hdf_file
         params.rotation_axis_file = self.rot_axis_file
-        file_io.read_rot_center(params)
+        result = file_io.read_rot_center(params)
+        self.assertEqual(result.rotation_axis, 1287.25)
 
+    def test_read_rot_center_json_by_relative_path(self):
+        """Can we parse rotation centers in relative subfolders?"""
+        params = make_params()
+        params.rotation_axis_auto = 'json'
+        params.file_name = TESTDIR / 'filter-001.hdf5'
+        params.rotation_axis_file = self.rot_axis_file
+        rotation_axis = file_io.read_rot_center(params).rotation_axis
+        self.assertEqual(rotation_axis, 1290.0)
+    
+    def test_rot_center_json_not_found(self):
+        """Throw the right exception when rotation center not found."""
+        params = make_params()
+        params.rotation_axis_auto = 'json'
+        params.file_name = TESTDIR / 'filter-garbage.hdf5'
+        params.rotation_axis_file = self.rot_axis_file
+        with self.assertRaises(KeyError):
+            rotation_axis = file_io.read_rot_center(params).rotation_axis
 
 class ReadTomoScanParamTests(unittest.TestCase):
     test_hdf_file = TESTDIR/'meta_mock.h5'
