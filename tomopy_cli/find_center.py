@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import traceback
 
 import tomopy
 import numpy as np
@@ -11,6 +12,7 @@ import skimage.feature
 from tomopy_cli import prep
 from tomopy_cli import config
 from tomopy_cli import file_io
+from tomopy_cli.logging import log_exception
 
 
 log = logging.getLogger(__name__)
@@ -35,29 +37,38 @@ def find_rotation_axis(params):
         log.info("Determining the rotation axis location")
         
         dic_centers = {}
-        i=0
-        for fname in h5_file_list:
+        failed_files = []
+        for i, fname in enumerate(h5_file_list):
             h5fname = top + fname
             params.file_name = h5fname
-            params = _find_rotation_axis(params)
-            params.file_name = top
-            case =  {fname : params.rotation_axis}
-            log.info("  *** file: %s; rotation axis %f" % (fname, params.rotation_axis))
-            dic_centers[i] = case
-            i += 1
-
+            try:
+                params = _find_rotation_axis(params)
+            except Exception as err:
+                # This file failed, but we can keep going and try the rest of the files
+                failed_files.append(fname)
+                # Log the exception and stacktrace
+                log.error("  *** find center failed: %s", repr(err))
+                log_exception(log, err, fmt="      %s")
+            else:
+                params.file_name = top
+                case =  {fname : params.rotation_axis}
+                log.info("  *** file: %s; rotation axis %f" % (fname, params.rotation_axis))
+                dic_centers[i] = case
         # Set the json file name that will store the rotation axis positions.
         jfname = top + ra_fname
         # Save json file containing the rotation axis
-        json_dump = json.dumps(dic_centers)
+        json_dump = json.dumps(dic_centers, indent=2)
         f = open(jfname,"w")
         f.write(json_dump)
         f.close()
         log.info("Rotation axis locations save in: %s" % jfname)
+        # Report list of failed files so it's not buried in the log
+        if len(failed_files) > 0:
+            log.error("Some rotation centers could not be found: %s",
+                      ", ".join(failed_files))
         return params
-
     else:
-        log.info("Directory or File Name does not exist: %s " % fname)
+        log.error("Directory or File Name does not exist: %s " % fname)
 
 
 def _find_rotation_axis(params):

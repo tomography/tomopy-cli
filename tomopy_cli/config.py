@@ -768,26 +768,35 @@ def log_values(args):
     log.warning('tomopy-cli status end')
 
 
-def update_config(args):
+def update_config(args, is_reconstruction=True):
     """Update the corresponding configuration file.
     
     If *args.config_update* is true, the original configuration file
     is updated.
     
-    If *args.reconstruction_type* is "full", then a new configuration
-    file is created alongside the reconstructed data, with a path
-    determined by whether *args.output_format* is "tiff_stack" or
-    "hdf5".
-    
+    If *args.reconstruction_type* is "full" and *is_reconstruction* is
+    true, then a new configuration file is created alongside the
+    reconstructed data, with a path determined by whether
+    *args.output_format* is "tiff_stack" or "hdf5".
+
+    Parameters
+    ==========
+    args
+      The configuration parameters from the command line argument
+      parser.
+    is_reconstruction
+      If true, an appropriate configuration file is saved alongside
+      the full reconstructed data.
+
     """
     sections = RECON_PARAMS
     config_file = Path(args.config).resolve()
     data_file = Path(args.file_name).resolve()
-    # write(args.config, args=args, sections=sections)
     if (args.config_update):
         # update tomopy.conf
         write(config_file, args=args, sections=sections)
-    if (args.reconstruction_type == "full"):
+    is_full_recon = (is_reconstruction and args.reconstruction_type == "full")
+    if is_full_recon:
         recon_dir = recon.reconstruction_folder(args)
         if args.output_format == "hdf5":
             log_fname = recon_dir / "{}_rec_{}".format(data_file.stem, config_file.name)

@@ -73,7 +73,6 @@ def flat_correction(proj, flat, dark, params):
 
     log.info('  *** normalization')
     if(params.flat_correction_method == 'standard'):
-        #import pdb; pdb.set_trace()
         data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff)
         try:
             if params.bright_exp_ratio != 1:
