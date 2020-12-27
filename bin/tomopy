@@ -130,7 +130,6 @@ def run_rec(args):
 
 
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', **config.SECTIONS['general']['config'])
     parser.add_argument('--version', action='version',
@@ -158,7 +157,6 @@ def main():
         cmd_parser.set_defaults(_func=func)
 
     args = config.parse_known_args(parser, subparser=True)
-
     # create logger
     logs_home = args.logs_home
 
@@ -174,12 +172,11 @@ def main():
     log.info("Saving log at %s" % lfname)
 
     try:
-        # config.log_values(args)
         args._func(args)
     except RuntimeError as e:
         log.error(str(e))
         sys.exit(1)
-         
+
 
 if __name__ == '__main__':
     main()

@@ -2,7 +2,9 @@ import os
 import json
 import logging
 import traceback
+from pathlib import Path
 
+import yaml
 import tomopy
 import numpy as np
 import h5py
@@ -20,17 +22,15 @@ log = logging.getLogger(__name__)
 
 def find_rotation_axis(params):
 
-    fname = params.file_name
-    ra_fname = params.rotation_axis_file
-    if os.path.isfile(fname):
+    fname = Path(params.file_name)
+    ra_yaml_fname = params.extra_parameters_file
+
+    if fname.is_file():
         return _find_rotation_axis(params)
         
-    elif os.path.isdir(fname):
-        # Add a trailing slash if missing
-        top = os.path.join(fname, '')
-
+    elif fname.is_dir():
         # log.info(os.listdir(top))
-        h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf')), os.listdir(top)))
+        h5_file_list = list(filter(lambda x: x.suffix in ('.h5', '.hdf'), fname.iterdir()))
         h5_file_list.sort()
 
         log.info("Found: %s" % h5_file_list)
@@ -38,30 +38,31 @@ def find_rotation_axis(params):
         
         dic_centers = {}
         failed_files = []
-        for i, fname in enumerate(h5_file_list):
-            h5fname = top + fname
+        for i, this_fname in enumerate(h5_file_list):
+            h5fname = this_fname / this_fname
+            print(h5fname)
             params.file_name = h5fname
             try:
                 params = _find_rotation_axis(params)
             except Exception as err:
                 # This file failed, but we can keep going and try the rest of the files
-                failed_files.append(fname)
+                failed_files.append(this_fname)
                 # Log the exception and stacktrace
                 log.error("  *** find center failed: %s", repr(err))
                 log_exception(log, err, fmt="      %s")
             else:
-                params.file_name = top
-                case =  {fname : params.rotation_axis}
-                log.info("  *** file: %s; rotation axis %f" % (fname, params.rotation_axis))
-                dic_centers[i] = case
-        # Set the json file name that will store the rotation axis positions.
-        jfname = top + ra_fname
+                params.file_name = str(fname)
+                key = str(this_fname.relative_to(fname))
+                dic_centers[key] = {"rotation-axis": float(params.rotation_axis)}
+                log.info("  *** file: %s; rotation axis %f" % (this_fname, params.rotation_axis))
+        # Set the YAML file name that will store the rotation axis positions.
+        yfname = fname / ra_yaml_fname
+        yaml_dump = yaml.dump(dic_centers)
         # Save json file containing the rotation axis
-        json_dump = json.dumps(dic_centers, indent=2)
-        f = open(jfname,"w")
-        f.write(json_dump)
+        f = open(yfname, "w")
+        f.write(yaml_dump)
         f.close()
-        log.info("Rotation axis locations save in: %s" % jfname)
+        log.info("Rotation axis locations save in: %s" % yfname)
         # Report list of failed files so it's not buried in the log
         if len(failed_files) > 0:
             log.error("Some rotation centers could not be found: %s",

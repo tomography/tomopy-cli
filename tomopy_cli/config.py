@@ -1,16 +1,19 @@
 import os
 import sys
 import shutil
+from copy import copy
 from pathlib import Path
 import argparse
 import configparser
 from collections import OrderedDict
+import contextlib
 import logging
 import warnings
 import inspect
 
 import h5py
 import numpy as np
+import yaml
 
 import tomopy
 from tomopy_cli import util
@@ -79,7 +82,12 @@ SECTIONS['general'] = {
     'rotation-axis-file': {
         'default': ROTATION_AXIS_FILE_NAME,
         'type': str,
-        'help': "File name of rataion axis locations",
+        'help': "[Deprecated] File name of rataion axis locations (use --extra-parameters-file instead)",
+        'metavar': 'FILE'},
+    'extra-parameters-file': {
+        'default': "extra_params.yaml",
+        'type': str,
+        'help': 'File name of extra, per-tomogram parameters in YAML format',
         'metavar': 'FILE'},
     'verbose': {
         'default': False,
@@ -104,8 +112,8 @@ SECTIONS['find-rotation-axis'] = {
     'rotation-axis-auto': {
         'default': 'read_auto',
         'type': str,
-        'help': "How to get rotation axis: read from HDF5, auto calculate, read from json file, or take from this file",
-        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'json']},
+        'help': "How to get rotation axis: read from HDF5, auto calculate, read from a yaml file, a json file (deprecated), or take from this file",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'yaml', 'json']},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
@@ -666,7 +674,6 @@ class Params(object):
     def get_defaults(self):
         parser = argparse.ArgumentParser()
         self.add_arguments(parser)
-
         return parser.parse_args('')
 
 
@@ -681,15 +688,15 @@ def write(config_file, args=None, sections=None):
         config.add_section(section)
         for name, opts in SECTIONS[section].items():
             if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
+                # Use a value specified in *args*
                 value = getattr(args, name.replace('-', '_'))
                 if isinstance(value, list):
-                    # print(type(value), value)
                     value = ', '.join(value)
             else:
+                # Use the default value
                 value = opts['default'] if opts['default'] is not None else ''
 
             prefix = '# ' if value == '' else ''
-
             if name != 'config':
                 config.set(section, prefix + name, str(value))
 
@@ -814,3 +821,64 @@ def update_config(args, is_reconstruction=True):
             log.warning(rerun_msg)
     if(args.dx_update):
         write_hdf(args, sections)       
+
+
+def yaml_args(args, yaml_file, sample, cli_args=[]):
+    """Override config parameters on a per-sample basis.
+    
+    This can be used when processing many tomograms that differ by
+    only one or two parameters. These parameters can be saved in a
+    yaml file then loaded for the corresponding tomogram without
+    affecting the base parameters.
+    
+    Use::
+    
+        args = ...
+        for filename in all_filenames:
+            my_args = yaml_args(args, sample=filename)
+                recon.rec(my_args)
+    
+    The yaml file is expected to be in the following example format,
+    where some first level entry should match the *sample* argument::
+    
+        tomo_file_1.h5:
+          rotation_axis: 512
+          remove_stripe_method: ti
+        tomo_file_2.h5:
+          remove_stripe_method: none
+    
+    Parameters
+    ==========
+    args
+      The base-line configuration args to be copied and modified.
+    yaml_file
+      The path to the a yaml file with overridden parameters.
+    sample
+      The name of the sample to find in the yaml file. Most likely to
+      be the name of the HDF5 file.
+    cli_args
+      A list of CLI parameters, similar to ``sys.argv``. Any
+      parameters in this list will not be overridden by the yaml file.
+    
+    Returns
+    =======
+    new_args
+      A copy of *args* with new parameters based on what was found in
+      the yaml file *yaml_file*.
+    
+    """
+    with open(yaml_file, mode='r') as fp:
+        extra_params = yaml.load(fp)[sample]
+    # Create a copy of the args
+    new_args = copy(args)
+    # Prepare CLI parameters by only keep the "--arg" part
+    cli_args = [p.split('=')[0] for p in cli_args]
+    # Update with new values
+    new_args.file_name = sample
+    for key, value in extra_params.items():
+        params_key = "--{}".format(key.replace('_', '-'))
+        is_in_cli = len([p for p in cli_args if p == params_key]) > 0
+        if not is_in_cli:
+            setattr(new_args, key.replace('-', '_'), value)
+    # Return the modified parameters
+    return new_args
