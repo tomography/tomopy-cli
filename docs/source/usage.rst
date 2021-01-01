@@ -98,6 +98,10 @@ data file, only the file given by ``--file-name`` is reconstructed.
 If the JSON file is also given as the argument to ``--file-name``,
 then all data files listed in the JSON file will be reconstructed.
 
+The filenames listed in the JSON file can be relative to the current
+working directory, including subdirectories, but cannot use other
+file-system shortcuts (e.g. "..", "~").
+
 Stripe Removal
 ==============
 

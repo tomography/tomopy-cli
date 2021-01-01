@@ -41,7 +41,7 @@ def run_find_center(args):
         log.warning('find center end')
         # update tomopy.conf
         sections = config.RECON_PARAMS
-        config.write(args.config, args=args, sections=sections)
+        config.update_config(args, is_reconstruction=False)
     else:
         log.error("  *** %s is not a supported file format" % args.file_format)
         exit()

@@ -29,14 +29,16 @@ def make_params():
     params.gridrec_filter = 'parzen'
     params.reconstruction_mask_ratio = 1.0
     params.reconstruction_type = 'slice'
+    params.scintillator_auto = False
+    params.blocked_views = False
     return params
 
 
-class ReconTests(TestCase):
+class ReconTestBase(TestCase):
     output_dir = Path(__file__).resolve().parent / '_rec'
     output_hdf = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec.hdf'
     full_tiff_dir = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec'
-
+    
     def setUp(self):
         # Remove the temporary HDF5 file
         if HDF_FILE.exists():
@@ -58,12 +60,13 @@ class ReconTests(TestCase):
         # Remove the reconstructed output
         if self.output_dir.exists():
             shutil.rmtree(self.output_dir)
-        
+
+
+class ReconTests(ReconTestBase):
     def test_slice_reconstruction(self):
         """Check that a basic reconstruction completes and produces output tiff files."""
         params = make_params()
         params.reconstruction_type = 'slice'
-        params.scintillator_auto = False
         response = rec(params=params)
         self.assertTrue(self.output_dir.exists())
     
@@ -72,7 +75,6 @@ class ReconTests(TestCase):
         params = make_params()
         params.reconstruction_type = 'full'
         params.output_format = 'tiff_stack'
-        params.scintillator_auto = False
         response = rec(params=params)
         # import pdb; pdb.set_trace()
         self.assertTrue(self.full_tiff_dir.exists())
@@ -81,7 +83,6 @@ class ReconTests(TestCase):
         params = make_params()
         params.reconstruction_type = 'full'
         params.output_format = "hdf5"
-        params.scintillator_auto = False
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
         # Check that tiffs are not saved and HDF5 file is saved
@@ -98,7 +99,6 @@ class ReconTests(TestCase):
         params.reconstruction_type = 'full'
         params.output_format = 'hdf5'
         params.nsino_per_chunk = 16 # 4 chunks
-        params.scintillator_auto = False
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
         # Check that tiffs are not saved and HDF5 file is saved
@@ -136,3 +136,18 @@ class ReconTests(TestCase):
         params.reconstruction_algorithm = "sirt"
         output = reconstruction_folder(params)
         self.assertEqual(str(output), "/home/mwolf/src/tomopy-cli/tests_rec")
+
+
+class TryCenterTests(ReconTestBase):
+    def test_recon_output_dir(self):
+        """Check that ``--reconstruction-type=try`` respects output
+        directory.
+        
+        """
+        print(self.output_dir)
+        params = make_params()
+        params.reconstruction_type = "try"
+        params.center_search_width = 10
+        params.output_folder = "{file_name_parent}/_rec"        
+        response = rec(params=params)
+        self.assertTrue(self.output_dir.exists())

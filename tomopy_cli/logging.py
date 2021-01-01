@@ -8,11 +8,34 @@ that can be used to get a logger object with the usual *debug*,
 logfile.
 
 '''
+import traceback
 import logging
 from logging import *
 
 
 __all__ = ['setup_custom_logger', 'ColoredLogFormatter'] + logging.__all__
+
+
+def log_exception(logger, err, fmt="%s"):
+    """Send a reconstructed stacktrace to the log.
+
+    The stacktrace will be sent to the error log for the given logger.
+
+    Parameters
+    ==========
+    logger
+      A logger, as returned by ``logging.getLogger(...)``
+    err
+      An exception to log.
+    fmt
+      Logging format string for each line of the exception
+      (e.g. "  *** %s"")
+    
+    """
+    tb_lines = traceback.format_exception(type(err), err, err.__traceback__)
+    tb_lines = [ln for lns in tb_lines for ln in lns.splitlines()]
+    for tb_line in tb_lines:
+        logger.error("      %s", tb_line)
 
 
 def setup_custom_logger(lfname: str=None, stream_to_console: bool=True, level=logging.DEBUG):

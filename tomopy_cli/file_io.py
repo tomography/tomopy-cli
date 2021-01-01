@@ -372,7 +372,17 @@ def read_rot_center(params):
     elif params.rotation_axis_auto == 'json':
         log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
         all_centers = read_rot_centers(params)
-        params.rotation_axis = all_centers[params.file_name.name]
+        data_file = params.file_name.resolve()
+        # Look for matching JSON keys by going up the file's hierarchy
+        keys_to_check = [data_file] + [data_file.relative_to(a) for a in data_file.parents]
+        rot_center = None
+        for key in keys_to_check:
+            rot_center = all_centers.get(str(key), rot_center)
+        # Check if we found a matching file path in the JSON file
+        if rot_center is not None:
+            params.rotation_axis = float(rot_center)
+        else:
+            raise KeyError(data_file)
     else:
         # Try to read from HDF5 file
         log.warning('  *** *** Try to read rotation center from file {}'.format(params.file_name))
