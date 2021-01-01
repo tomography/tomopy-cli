@@ -257,7 +257,7 @@ def padding(data, rotation_axis, params):
 
     log.info("  *** padding")
     if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
-        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
+        or (params.reconstruction_algorithm=='lprec' and params.lprec_padding)):
     #if(params.padding):
         log.info('  *** *** ON')
         N = data.shape[2]
@@ -280,7 +280,7 @@ def unpadding(rec, N, params):
 
     log.info("  *** un-padding")
     if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
-        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
+        or (params.reconstruction_algorithm=='lprec' and params.lprec_padding)):
     #if(params.padding):
         log.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
@@ -386,6 +386,7 @@ def reconstruct(data, theta, rot_center, params):
             rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
         else:
             rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+    # gridrec                
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
         # import pdb; pdb.set_trace()
@@ -394,14 +395,26 @@ def reconstruct(data, theta, rot_center, params):
                             sinogram_order=sinogram_order, 
                             algorithm='gridrec', 
                             filter_name=params.gridrec_filter)
-    elif params.reconstruction_algorithm == 'lprec_fbp':
+    
+    # log-polar based method                            
+    elif params.reconstruction_algorithm == 'lprec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        lpmethod  = params.lprec_method
+        
+        if (lpmethod=='fbp'):           
+            filter_name = params.lprec_fbp_filter 
+        else:
+            filter_name = 'none'
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
                             algorithm=tomopy.lprec,
-                            lpmethod='fbp', 
-                            filter_name=params.lprec_fbp_filter)
+                            lpmethod=lpmethod,
+                            filter_name=filter_name,
+                            ncore=1,
+                            num_iter=params.lprec_num_iter,
+                            reg_par=params.lprec_reg,
+                            gpu_list=range(params.lprec_num_gpu))
     else:
         log.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
         params.reconstruction_algorithm = 'gridrec'
