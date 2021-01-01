@@ -249,8 +249,8 @@ def padded_rec(data, theta, rotation_axis, params):
 def padding(data, rotation_axis, params):
     log.info("  *** padding")
     do_gridrec_padding = params.reconstruction_algorithm=='gridrec' and params.gridrec_padding
-    do_lprec_fbp_padding = params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding
-    if do_gridrec_padding or do_lprec_fbp_padding:
+    do_lprec_padding = params.reconstruction_algorithm=='lprec' and params.lprec_padding
+    if do_gridrec_padding or do_lprec_padding:
         log.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
@@ -269,9 +269,10 @@ def padding(data, rotation_axis, params):
 def unpadding(rec, N, params):
 
     log.info("  *** un-padding")
-    if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
-        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
-    #if(params.padding):
+    do_gridrec_padding = params.reconstruction_algorithm=='gridrec' and params.gridrec_padding
+    do_lprec_padding = params.reconstruction_algorithm=='lprec' and params.lprec_padding
+
+    if do_gridrec_padding or do_lprec_padding:
         log.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
