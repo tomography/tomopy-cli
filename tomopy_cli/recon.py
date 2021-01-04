@@ -76,29 +76,31 @@ def rec(params):
             sino_chunk_end = sino_end
         log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
         sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
-        phase_pad = params.retrieve_phase_pad
         # extra data for padded phase retrieval
         if params.retrieve_phase_method == "paganin":
-                sino[0] -= (iChunk>0)*phase_pad
-                sino[1] += (iChunk<chunks-1)*phase_pad
-                log.info('  *** extra padding for phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
-        # extra data for padded phase retrieval
+                phase_pad = np.zeros(2,dtype=int)
+                if(iChunk>0):
+                    phase_pad[0] = -params.retrieve_phase_pad
+                if (iChunk<chunks-1):
+                    phase_pad[1] =  params.retrieve_phase_pad
+                sino += phase_pad
+                log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
         # Read APS 32-BM raw data.
-        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
+        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params) 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
             log.warning("  *** Chunk size > remaining data size.")
-            sino = [sino[0], sino[0] + proj.shape[1]]
-
+            sino = [sino[0], sino[0] + proj.shape[1]]        
+        
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":
-                data = data[:,(iChunk>0)*phase_pad:-(iChunk<chunks-1)*phase_pad-(phase_pad==0)]
-                sino[0] += (iChunk>0)*phase_pad
-                sino[1] -= (iChunk<chunks-1)*phase_pad
+                phase_pad //= pow(2, int(params.binning))
+                sino -= phase_pad                                
+                data = data[:,-phase_pad[0]:data.shape[1]-phase_pad[1]]                
                 log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
- 
+        
         # Reconstruct: this is for "slice" and "full" methods
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
@@ -247,8 +249,8 @@ def padded_rec(data, theta, rotation_axis, params):
 def padding(data, rotation_axis, params):
     log.info("  *** padding")
     do_gridrec_padding = params.reconstruction_algorithm=='gridrec' and params.gridrec_padding
-    do_lprec_fbp_padding = params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding
-    if do_gridrec_padding or do_lprec_fbp_padding:
+    do_lprec_padding = params.reconstruction_algorithm=='lprec' and params.lprec_padding
+    if do_gridrec_padding or do_lprec_padding:
         log.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
@@ -267,9 +269,10 @@ def padding(data, rotation_axis, params):
 def unpadding(rec, N, params):
 
     log.info("  *** un-padding")
-    if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
-        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
-    #if(params.padding):
+    do_gridrec_padding = params.reconstruction_algorithm=='gridrec' and params.gridrec_padding
+    do_lprec_padding = params.reconstruction_algorithm=='lprec' and params.lprec_padding
+
+    if do_gridrec_padding or do_lprec_padding:
         log.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
@@ -374,6 +377,7 @@ def reconstruct(data, theta, rot_center, params):
             rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
         else:
             rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+    # gridrec                
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
         # import pdb; pdb.set_trace()
@@ -382,14 +386,26 @@ def reconstruct(data, theta, rot_center, params):
                             sinogram_order=sinogram_order, 
                             algorithm='gridrec', 
                             filter_name=params.gridrec_filter)
-    elif params.reconstruction_algorithm == 'lprec_fbp':
+    
+    # log-polar based method                            
+    elif params.reconstruction_algorithm == 'lprec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        lpmethod  = params.lprec_method
+        
+        if (lpmethod=='fbp'):           
+            filter_name = params.lprec_fbp_filter 
+        else:
+            filter_name = 'none'
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
                             algorithm=tomopy.lprec,
-                            lpmethod='fbp', 
-                            filter_name=params.lprec_fbp_filter)
+                            lpmethod=lpmethod,
+                            filter_name=filter_name,
+                            ncore=1,
+                            num_iter=params.lprec_num_iter,
+                            reg_par=params.lprec_reg,
+                            gpu_list=range(params.lprec_num_gpu))
     else:
         log.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
         params.reconstruction_algorithm = 'gridrec'

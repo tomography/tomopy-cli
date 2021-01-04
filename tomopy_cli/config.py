@@ -406,7 +406,7 @@ SECTIONS['reconstruction'] = {
         'default': 'gridrec',
         'type': str,
         'help': "Reconstruction algorithm",
-        'choices': ['art', 'astrasart','astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'lprec_fbp', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
+        'choices': ['art', 'astrasart','astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'lprec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
     'reconstruction-mask': {
         'default': False,
         'help': "When set, applies circular mask to the reconstructed slices",
@@ -442,17 +442,34 @@ SECTIONS['gridrec'] = {
         'action': 'store_true'},
     }
 
-SECTIONS['lprec-fbp'] = {
+SECTIONS['lprec'] = {
     'lprec-fbp-filter': {
         'default': 'parzen',
         'type': str,
         'help': 'Filter used for lprec-fbp reconstruction',
         'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
-    'lprec-fbp-padding': {
+    'lprec-padding': {
         'default': False,
         'help': "When set, raw data are padded/unpadded before/after reconstruction",
         'action': 'store_true'},
-    }
+    'lprec-method': {
+        'default': 'fbp',
+        'type': str,
+        'help': 'Reconstruction method applied in log-polar coordinates',
+        'choices': ['fbp', 'grad', 'cg', 'tv', 'tvl1', 'tve', 'em']},
+    'lprec-num_iter': {
+        'default': 64,
+        'type': util.positive_int,
+        'help': 'Number of requested iterations for lprec.'},        
+    'lprec-reg': {
+        'default': 0.01,
+        'type': float,
+        'help': "Regularization parameter."},            
+    'lprec-num_gpu': {
+        'default': 1,
+        'type': util.positive_int,
+        'help': 'Number of GPUs for reconstruction by  lprec.'},        
+    }        
     
 SECTIONS['astrasirt'] = {
     'astrasirt-proj-type': {
@@ -550,7 +567,7 @@ SECTIONS['convert'] = {
 
 RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-views', 'zinger-removal', 'flat-correction', 'remove-stripe', 'vo-all', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
-                'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
+                'gridrec', 'lprec', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
 
 CONVERT_PARAMS = ('convert', )
