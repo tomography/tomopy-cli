@@ -24,6 +24,8 @@ def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
 
+    # Read parameters from YAML file
+    params = config.yaml_args(params, params.extra_parameters_file, str(params.file_name))
     # Read parameters from DXchange file if requested
     params = file_io.auto_read_dxchange(params)
     if params.rotation_axis <= 0:

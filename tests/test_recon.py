@@ -5,18 +5,21 @@ from pathlib import Path
 
 import numpy as np
 import h5py
+import yaml
 
 import tomopy
 from tomopy_cli.recon import rec, reconstruction_folder
 
-HDF_FILE = Path(__file__).resolve().parent / 'test_tomogram.h5'
-ROT_AXIS_FILE = Path(__file__).resolve().parent / 'rotation_axis.json'
-
+TEST_DIR = Path(__file__).resolve().parent
+HDF_FILE = TEST_DIR / 'test_tomogram.h5'
+ROT_AXIS_FILE = TEST_DIR / 'rotation_axis.json'
+YAML_FILE = TEST_DIR / 'test_tomogram.yaml'
 
 def make_params():
     params = mock.MagicMock()
     params.file_name = HDF_FILE
     params.output_folder = "{file_name_parent}/_rec"
+    params.extra_parameters_file = os.devnull
     params.rotation_axis = 32
     params.file_type = 'standard'
     params.file_format = 'dx'
@@ -144,10 +147,38 @@ class TryCenterTests(ReconTestBase):
         directory.
         
         """
-        print(self.output_dir)
         params = make_params()
         params.reconstruction_type = "try"
         params.center_search_width = 10
-        params.output_folder = "{file_name_parent}/_rec"        
+        params.output_folder = "{file_name_parent}/_rec"
+        params.extra_parameters_file = os.devnull
         response = rec(params=params)
         self.assertTrue(self.output_dir.exists())
+
+
+class YamlParamsTests(ReconTestBase):
+    yaml_file = TEST_DIR / "my_files.yaml"
+    def setUp(self):
+        # Delete any old files 
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+        # Create a new YAML file
+        opts = {
+            "test_tomogram.h5": {
+                "spam": "foo",
+                "rotation-axis": 1200,
+            }
+        }
+        with open(self.yaml_file, mode='w') as fp:
+            fp.write(yaml.dump(opts))
+        super().setUp()
+    
+    def tearDown(self):
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+        super().tearDown()
+
+    def test_yaml_params(self):
+        params = make_params()
+        params.extra_parameters_file = self.yaml_file
+        response = rec(params=params)

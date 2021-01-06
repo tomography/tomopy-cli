@@ -67,9 +67,8 @@ def run_convert(args):
 def run_rec(args):
 
     log.warning('reconstruction start')
-
+    file_path = Path(args.file_name)
     if str(args.file_format) in KNOWN_FORMATS:
-        file_path = Path(args.file_name)
         if file_path.suffix == '.json':
             # Load the list of files from a given JSON rotation_axis file
             log.info("Reconstructing files listed in: %s" % args.file_name)
@@ -80,11 +79,11 @@ def run_rec(args):
                 args.file_name = file_path.parent / new_file_name
                 recon.rec(args)
             config.update_config(args)
-        elif os.path.isfile(args.file_name):
+        elif file_path.is_file():
             log.info("reconstructing a single file: %s" % args.file_name)
             recon.rec(args)
             config.update_config(args)
-        elif os.path.isdir(args.file_name):
+        elif file_path.is_dir():
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
             h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf', 'hdf5')), os.listdir(top)))

@@ -823,7 +823,7 @@ def update_config(args, is_reconstruction=True):
         write_hdf(args, sections)       
 
 
-def yaml_args(args, yaml_file, sample, cli_args=[]):
+def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
     """Override config parameters on a per-sample basis.
     
     This can be used when processing many tomograms that differ by
@@ -867,18 +867,41 @@ def yaml_args(args, yaml_file, sample, cli_args=[]):
       the yaml file *yaml_file*.
     
     """
+    sample = Path(sample)
+    yaml_file = Path(yaml_file)
+    # Check for bad files
+    if not yaml_file.exists():
+        log.warning("YAML file does not exist: %s", yaml_file)
+        return args
+    # Look for the requested key in a hierarchical manner
     with open(yaml_file, mode='r') as fp:
-        extra_params = yaml.load(fp)[sample]
+        extra_params = None
+        yaml_data = yaml.load(fp)
+        if yaml_data is None:
+            log.warning("Invalid YAML file: %s", yaml_file)
+            return args
+        keys_to_check = [sample] + [sample.relative_to(a) for a in sample.parents]
+        for key in keys_to_check:
+            key = str(key)
+            if key in yaml_data.keys():
+                extra_params = yaml_data[key]
+                log.debug("  *** Found %d extra parameters for %s", len(extra_params), key)
+                break
+        if extra_params is None:
+            raise KeyError(sample)
     # Create a copy of the args
     new_args = copy(args)
     # Prepare CLI parameters by only keep the "--arg" part
     cli_args = [p.split('=')[0] for p in cli_args]
     # Update with new values
-    new_args.file_name = sample
+    new_args.file_name = Path(sample)
     for key, value in extra_params.items():
         params_key = "--{}".format(key.replace('_', '-'))
         is_in_cli = len([p for p in cli_args if p == params_key]) > 0
-        if not is_in_cli:
+        ra_source = getattr(args, 'rotation_axis_auto', None)
+        skip_param = (key == "rotation-axis") and (ra_source != "yaml")
+        if not is_in_cli and not skip_param:
             setattr(new_args, key.replace('-', '_'), value)
+    # Restore the previous rotation_axis if it's not coming from YAML
     # Return the modified parameters
     return new_args

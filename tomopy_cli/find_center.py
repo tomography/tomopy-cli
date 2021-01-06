@@ -33,13 +33,13 @@ def find_rotation_axis(params):
         h5_file_list = list(filter(lambda x: x.suffix in ('.h5', '.hdf'), fname.iterdir()))
         h5_file_list.sort()
 
-        log.info("Found: %s" % h5_file_list)
+        log.info("Found: %s" % [str(f) for f in h5_file_list])
         log.info("Determining the rotation axis location")
         
         dic_centers = {}
         failed_files = []
         for i, this_fname in enumerate(h5_file_list):
-            h5fname = this_fname / this_fname
+            h5fname = fname / this_fname
             print(h5fname)
             params.file_name = h5fname
             try:
@@ -66,7 +66,7 @@ def find_rotation_axis(params):
         # Report list of failed files so it's not buried in the log
         if len(failed_files) > 0:
             log.error("Some rotation centers could not be found: %s",
-                      ", ".join(failed_files))
+                      ", ".join([str(f) for f in failed_files]))
         return params
     else:
         log.error("Directory or File Name does not exist: %s " % fname)

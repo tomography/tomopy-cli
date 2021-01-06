@@ -72,6 +72,7 @@ class YamlParamsTests(TestCase):
         opts = {
             "my_tomo_file.h5": {
                 "spam": "foo",
+                "rotation-axis": 1200,
             }
         }
         with open(self.yaml_file, mode='w') as fp:
@@ -86,7 +87,7 @@ class YamlParamsTests(TestCase):
         new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5")
         # Check that new args were set
         self.assertEqual(new_args.spam, "foo")
-        self.assertEqual(new_args.file_name, "my_tomo_file.h5")
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
         # Check that original args are unchanged
         self.assertEqual(args.spam, "eggs")
     
@@ -97,19 +98,27 @@ class YamlParamsTests(TestCase):
         new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5", cli_args=cli_args)
         # Check that new args were set
         self.assertEqual(new_args.spam, "eggs")
-        self.assertEqual(new_args.file_name, "my_tomo_file.h5")
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
         # Test with ``--spam eggs`` style CLI arg
         args = argparse.Namespace(spam="eggs")
         cli_args = ['tomopy', 'recon', '--spam=eggs']
         new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5", cli_args=cli_args)
         # Check that new args were set
         self.assertEqual(new_args.spam, "eggs")
-        self.assertEqual(new_args.file_name, "my_tomo_file.h5")
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
         # Test with a similar but slightly different CLI arg
         args = argparse.Namespace(spam="eggs")
         cli_args = ['tomopy', 'recon', '--spammery=eggs']
         new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5", cli_args=cli_args)
         # Check that new args were set
         self.assertEqual(new_args.spam, "foo")
-        self.assertEqual(new_args.file_name, "my_tomo_file.h5")
-
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
+    
+    def test_rotation_axis(self):
+        args = argparse.Namespace(spam="eggs")
+        args.rotation_axis = 1150.
+        args.rotation_axis_auto = "manual"
+        new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5")
+        # Check that new args were set
+        self.assertEqual(new_args.rotation_axis, 1150)
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))

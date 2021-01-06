@@ -363,7 +363,7 @@ def read_rot_center(params):
     """
     log.info('  *** *** rotation axis')
     # Handle case of manual only: this is the easiest
-    if params.rotation_axis_auto == 'manual':
+    if params.rotation_axis_auto in ['manual', 'yaml']:
         log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
     elif params.rotation_axis_auto == 'auto':
         log.warning('  *** *** Force auto calculation without reading config value')
