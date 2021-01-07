@@ -54,7 +54,9 @@ def find_rotation_axis(params):
                 params.file_name = str(fname)
                 key = str(this_fname.relative_to(fname))
                 dic_centers[key] = {"rotation-axis": float(params.rotation_axis)}
-                log.info("  *** file: %s; rotation axis %f" % (this_fname, params.rotation_axis))
+                log.info("  *** file: %s (%d/%d); rotation axis %f",
+                         fname, i, len(h5_file_list), params.rotation_axis)
+                
         # Set the YAML file name that will store the rotation axis positions.
         yfname = fname / ra_yaml_fname
         yaml_dump = yaml.dump(dic_centers)

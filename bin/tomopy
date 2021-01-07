@@ -7,6 +7,7 @@ import argparse
 import time
 from pathlib import Path
 from datetime import datetime
+import yaml
 
 from tomopy_cli import config, __version__
 from tomopy_cli import logging
@@ -78,7 +79,19 @@ def run_rec(args):
                 new_file_name = list(file_info.keys())[0]
                 args.file_name = file_path.parent / new_file_name
                 recon.rec(args)
-            config.update_config(args)
+                config.update_config(args)
+        elif file_path.suffix == '.yaml':
+            # Load the list of files from a given YAML parameters file
+            log.info("Reconstructing files listed in: %s" % file_path)
+            with open(file_path, mode='r') as fp:
+                yaml_data = yaml.load(fp.read())
+            file_list = yaml_data.keys()
+            for idx, new_file_name in enumerate(file_list):
+                args.file_name = file_path.parent / new_file_name
+                log.info("Reconstructing next file (%d/%d): %s",
+                         idx, len(file_list), args.file_name)
+                recon.rec(args)
+                config.update_config(args)            
         elif file_path.is_file():
             log.info("reconstructing a single file: %s" % args.file_name)
             recon.rec(args)
