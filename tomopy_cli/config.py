@@ -836,7 +836,7 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
         args = ...
         for filename in all_filenames:
             my_args = yaml_args(args, sample=filename)
-                recon.rec(my_args)
+            recon.rec(my_args)
     
     The yaml file is expected to be in the following example format,
     where some first level entry should match the *sample* argument::

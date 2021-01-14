@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import collections
 import re
+from typing import List
 
 import h5py
 import tomopy
@@ -11,6 +12,7 @@ import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
+import yaml
 
 from tomopy_cli import __version__
 from tomopy_cli import find_center
@@ -777,3 +779,29 @@ def write_hdf5(data, fname, dname='volume', dtype=None,
             raise type(e)(msg)
         # Save the data
         ds[dest_idx] = data
+
+
+def yaml_file_list(file_path: Path)->List[Path]:
+    """Open a YAML file and return the list of files within.
+
+    This function does not parse the parameters contained inside,
+    merely returns a list of the files that are referenced. For
+    updating parameters on a per-file basis, use
+    ``config.yaml_args()``.
+
+    Parameters
+    ==========
+    file_path
+      A pathlib Path object pointing to the file to open.
+
+    Returns
+    =======
+    file_list
+      The list of file names found. There is no guarantee that these
+      files are suitable for reconsturction, or even exist at all.
+
+    """
+    with open(file_path, mode='r') as fp:
+        yaml_data = yaml.load(fp.read())
+    file_list = [Path(k) for k in yaml_data.keys()]
+    return file_list

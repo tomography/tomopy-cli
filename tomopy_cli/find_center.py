@@ -14,6 +14,7 @@ import skimage.feature
 from tomopy_cli import prep
 from tomopy_cli import config
 from tomopy_cli import file_io
+from tomopy_cli import util
 from tomopy_cli.logging import log_exception
 
 
@@ -24,23 +25,31 @@ def find_rotation_axis(params):
 
     fname = Path(params.file_name)
     ra_yaml_fname = params.extra_parameters_file
-
-    if fname.is_file():
-        return _find_rotation_axis(params)
-        
+    if fname.suffix == ".yaml":
+        h5_file_list = file_io.yaml_file_list(fname)
+        parent_dir = fname.parent
     elif fname.is_dir():
         # log.info(os.listdir(top))
         h5_file_list = list(filter(lambda x: x.suffix in ('.h5', '.hdf'), fname.iterdir()))
         h5_file_list.sort()
-
+        # Prepend the directory to each file name
+        parent_dir = fname
+    elif fname.is_file():
+        h5_file_list = None
+    else:
+        log.error("Directory or File Name does not exist: %s " % fname)
+        return
+    # Do the rotation center finding
+    if h5_file_list is None:
+        return _find_rotation_axis(params)
+    else: # Find the center of a bunch of files
         log.info("Found: %s" % [str(f) for f in h5_file_list])
         log.info("Determining the rotation axis location")
         
         dic_centers = {}
         failed_files = []
         for i, this_fname in enumerate(h5_file_list):
-            h5fname = fname / this_fname
-            print(h5fname)
+            h5fname = parent_dir / this_fname
             params.file_name = h5fname
             try:
                 params = _find_rotation_axis(params)
@@ -52,30 +61,34 @@ def find_rotation_axis(params):
                 log_exception(log, err, fmt="      %s")
             else:
                 params.file_name = str(fname)
-                key = str(this_fname.relative_to(fname))
+                key = str(this_fname.relative_to(parent_dir))
                 dic_centers[key] = {"rotation-axis": float(params.rotation_axis)}
                 log.info("  *** file: %s (%d/%d); rotation axis %f",
                          fname, i, len(h5_file_list), params.rotation_axis)
-                
-        # Set the YAML file name that will store the rotation axis positions.
-        yfname = fname / ra_yaml_fname
-        yaml_dump = yaml.dump(dic_centers)
+        # Open the existing YAML file to get any previously set parameters
+        yfname = parent_dir / ra_yaml_fname
+        if yfname.exists():
+            log.debug("Updating existing parameters file: %s", yfname)
+            with open(yfname, 'r') as fp:
+                all_params = yaml.load(fp.read())
+        else:
+            all_params = {}
+        # Update previous parameters with new rotation centers
+        all_params = util.update_dict(all_params, dic_centers)
         # Save json file containing the rotation axis
-        f = open(yfname, "w")
-        f.write(yaml_dump)
-        f.close()
-        log.info("Rotation axis locations save in: %s" % yfname)
+        yaml_dump = yaml.dump(all_params)
+        with open(yfname, "w") as f:
+            f.write(yaml_dump)
+        log.info("Rotation axis locations save in: %s", yfname)
         # Report list of failed files so it's not buried in the log
         if len(failed_files) > 0:
             log.error("Some rotation centers could not be found: %s",
                       ", ".join([str(f) for f in failed_files]))
         return params
-    else:
-        log.error("Directory or File Name does not exist: %s " % fname)
 
 
 def _find_rotation_axis(params):
-    
+    import pdb; pdb.set_trace()
     log.info("  *** calculating automatic center")
     data_size = file_io.get_dx_dims(params)
     ssino = int(data_size[1] * params.nsino)

@@ -83,9 +83,7 @@ def run_rec(args):
         elif file_path.suffix == '.yaml':
             # Load the list of files from a given YAML parameters file
             log.info("Reconstructing files listed in: %s" % file_path)
-            with open(file_path, mode='r') as fp:
-                yaml_data = yaml.load(fp.read())
-            file_list = yaml_data.keys()
+            file_list = file_io.yaml_file_list(file_path)
             for idx, new_file_name in enumerate(file_list):
                 args.file_name = file_path.parent / new_file_name
                 log.info("Reconstructing next file (%d/%d): %s",
