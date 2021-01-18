@@ -19,7 +19,7 @@ def make_params():
     params = mock.MagicMock()
     params.file_name = HDF_FILE
     params.output_folder = "{file_name_parent}/_rec"
-    params.extra_parameters_file = os.devnull
+    params.parameter_file = os.devnull
     params.rotation_axis = 32
     params.file_type = 'standard'
     params.file_format = 'dx'
@@ -151,7 +151,7 @@ class TryCenterTests(ReconTestBase):
         params.reconstruction_type = "try"
         params.center_search_width = 10
         params.output_folder = "{file_name_parent}/_rec"
-        params.extra_parameters_file = os.devnull
+        params.parameter_file = os.devnull
         response = rec(params=params)
         self.assertTrue(self.output_dir.exists())
 
@@ -180,5 +180,5 @@ class YamlParamsTests(ReconTestBase):
 
     def test_yaml_params(self):
         params = make_params()
-        params.extra_parameters_file = self.yaml_file
+        params.parameter_file = self.yaml_file
         response = rec(params=params)

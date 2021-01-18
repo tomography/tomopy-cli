@@ -86,6 +86,7 @@ class YamlParamsTests(TestCase):
         args = argparse.Namespace(spam="eggs")
         new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5")
         # Check that new args were set
+        self.assertIsNot(new_args, args, msg="``yaml_args`` should return a deep copy")
         self.assertEqual(new_args.spam, "foo")
         self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
         # Check that original args are unchanged

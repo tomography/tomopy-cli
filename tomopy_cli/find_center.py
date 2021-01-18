@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 def find_rotation_axis(params):
 
     fname = Path(params.file_name)
-    ra_yaml_fname = params.extra_parameters_file
+    ra_yaml_fname = params.parameter_file
     if fname.suffix == ".yaml":
         h5_file_list = file_io.yaml_file_list(fname)
         parent_dir = fname.parent

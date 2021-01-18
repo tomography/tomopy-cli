@@ -84,9 +84,9 @@ SECTIONS['general'] = {
         'type': str,
         'help': "[Deprecated] File name of rataion axis locations (use --extra-parameters-file instead)",
         'metavar': 'FILE'},
-    'extra-parameters-file': {
+    'parameter-file': {
         'default': "extra_params.yaml",
-        'type': str,
+        'type': Path,
         'help': 'File name of extra, per-tomogram parameters in YAML format',
         'metavar': 'FILE'},
     'verbose': {
