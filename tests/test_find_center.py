@@ -80,5 +80,5 @@ class FindRotationAxisTests(TestCase):
         self.assertEqual(params.rotation_axis, 31.5)
         # Check YAML file
         with open(YAML_FILE, mode='r') as yfp:
-            yaml_output = yaml.load(yfp.read())
+            yaml_output = yaml.safe_load(yfp.read())
             self.assertEqual(yaml_output['test_tomogram.h5']['rotation-axis'], 31.5)

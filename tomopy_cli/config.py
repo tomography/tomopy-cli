@@ -63,7 +63,6 @@ def default_parameter(func, param):
 
 LOGS_HOME = Path.home()/'logs'
 CONFIG_FILE_NAME = Path.home()/'tomopy.conf'
-ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
 
@@ -78,11 +77,6 @@ SECTIONS['general'] = {
         'default': LOGS_HOME,
         'type': str,
         'help': "Log file directory",
-        'metavar': 'FILE'},
-    'rotation-axis-file': {
-        'default': ROTATION_AXIS_FILE_NAME,
-        'type': str,
-        'help': "[Deprecated] File name of rataion axis locations (use --extra-parameters-file instead)",
         'metavar': 'FILE'},
     'parameter-file': {
         'default': "extra_params.yaml",
@@ -112,8 +106,8 @@ SECTIONS['find-rotation-axis'] = {
     'rotation-axis-auto': {
         'default': 'read_auto',
         'type': str,
-        'help': "How to get rotation axis: read from HDF5, auto calculate, read from a yaml file, a json file (deprecated), or take from this file",
-        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'yaml', 'json']},
+        'help': "How to get rotation axis: read from HDF5, auto calculate, read from a yaml file, or take from this file",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'yaml',]},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
@@ -876,7 +870,7 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
     # Look for the requested key in a hierarchical manner
     with open(yaml_file, mode='r') as fp:
         extra_params = None
-        yaml_data = yaml.load(fp)
+        yaml_data = yaml.safe_load(fp)
         if yaml_data is None:
             log.warning("Invalid YAML file: %s", yaml_file)
             return args
@@ -902,6 +896,5 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
         skip_param = (key == "rotation-axis") and (ra_source != "yaml")
         if not is_in_cli and not skip_param:
             setattr(new_args, key.replace('-', '_'), value)
-    # Restore the previous rotation_axis if it's not coming from YAML
     # Return the modified parameters
     return new_args

@@ -31,29 +31,33 @@ def make_params():
     return params
 
 
-class RotationAxisFileTests(unittest.TestCase):
-    """Check that file names can be read from a rotation-axis.json
+class YAMLFileTests(unittest.TestCase):
+    """Check that file names can be read from a extra_params.yaml
     file.
     
     """
-    rot_axis_file = Path(__file__).resolve().parent / 'rotation_axis.json'
+    params_file = Path(__file__).resolve().parent / 'extra_params.yaml'
     def setUp(self):
-        if self.rot_axis_file.exists():
-            self.rot_axis_file.unlink()
-        # Create a rotation_axis.json file
-        with open(self.rot_axis_file, mode='x') as fp:
-            fp.write('{"0": {"test_tomogram.h5": 1287.25}}')
+        if self.params_file.exists():
+            self.params_file.unlink()
+        # Create a extra_params.yaml file
+        with open(self.params_file, mode='x') as fp:
+            fp.write('test_tomogram.h5:\n  rotation_axis: 1287.25')
     
     def tearDown(self):
-        if self.rot_axis_file.exists():
-            self.rot_axis_file.unlink()
-
+        if self.params_file.exists():
+            self.params_file.unlink()
+    
     @mock.patch('tomopy_bin.recon.rec')
     @mock.patch('tomopy_bin.config.update_config')
-    def test_filename_from_json_file(self, update_config_func, rec_func):
+    def test_filename_from_yaml_file(self, update_config_func, rec_func):
+        """Doesn't test results, just that the binary calls the rec function."""
         params = make_params()
-        params.file_name = self.rot_axis_file
+        params.file_name = self.params_file
         response = tomopy_bin.run_rec(params)
-        #self.assertEqual(str(params.file_name), '/home/mwolf/src/tomopy-cli/tests/test_tomogram.h5')
-        self.assertEqual(params.rotation_axis, 32)
-
+        # Test that only the files are used, but no parameters are overridden
+        self.assertEqual(params.rotation_axis, 32, msg="Rotation axis should not be overridden")
+        # Test the call to reconstruction function
+        rec_func.assert_called_once()
+        rec_args = rec_func.call_args_list[0][0][0]
+        self.assertEqual(rec_args.file_name, self.params_file.parent / 'test_tomogram.h5')

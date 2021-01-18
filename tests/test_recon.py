@@ -12,7 +12,6 @@ from tomopy_cli.recon import rec, reconstruction_folder
 
 TEST_DIR = Path(__file__).resolve().parent
 HDF_FILE = TEST_DIR / 'test_tomogram.h5'
-ROT_AXIS_FILE = TEST_DIR / 'rotation_axis.json'
 YAML_FILE = TEST_DIR / 'test_tomogram.yaml'
 
 def make_params():

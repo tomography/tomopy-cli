@@ -1,5 +1,4 @@
 import os
-import json
 import logging
 import traceback
 from pathlib import Path
@@ -70,12 +69,12 @@ def find_rotation_axis(params):
         if yfname.exists():
             log.debug("Updating existing parameters file: %s", yfname)
             with open(yfname, 'r') as fp:
-                all_params = yaml.load(fp.read())
+                all_params = yaml.safe_load(fp.read())
         else:
             all_params = {}
         # Update previous parameters with new rotation centers
         all_params = util.update_dict(all_params, dic_centers)
-        # Save json file containing the rotation axis
+        # Save YAML file containing the rotation axis
         yaml_dump = yaml.dump(all_params)
         with open(yfname, "w") as f:
             f.write(yaml_dump)

@@ -1,7 +1,6 @@
 import os
 import logging
 from pathlib import Path
-import json
 import collections
 import re
 from typing import List
@@ -19,7 +18,7 @@ from tomopy_cli import find_center
 from tomopy_cli import config
 from tomopy_cli import beamhardening
 
-__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
+__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren, Mark Wolfman"
 __credits__ = "Pavel Shevchenko"
 __copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
@@ -309,44 +308,6 @@ def path_base_name(path):
     return file_base_name(fname)
 
 
-def read_rot_centers_json(json_path):
-    try:
-        with open(json_path) as json_file:
-            json_string = json_file.read()
-            dictionary = json.loads(json_string)
-    except FileNotFoundError:
-        log.error("the json %s file containing the rotation axis locations is missing" % json_path)
-        log.error("to create one run:")
-        log.error("$ tomopy find_center")
-        exit()
-    except json.decoder.JSONDecodeError as e:
-        log.error("the json %s file containing the rotation axis locations is malformed" % json_path)
-        log.error(e)
-        exit()
-    else:
-        return dictionary
-    
-
-def read_rot_centers(params):
-    # Prepend the data directory to the json path
-    fpath = Path(params.file_name)
-    if fpath.is_dir():
-        jfpath = fpath / params.rotation_axis_file
-    else:
-        jfpath = params.rotation_axis_file
-    # Load and return the json data
-    dictionary = read_rot_centers_json(jfpath)
-    dictionary = collections.OrderedDict(sorted(dictionary.items()))
-    subdict = collections.OrderedDict()
-    for idx, payload in dictionary.items():
-        try:
-            key, val = next(iter(payload.items()))
-        except AttributeError:
-            raise RuntimeError("Malformed rotation-axis file.")
-        subdict[key] = val
-    return subdict
-
-
 def auto_read_dxchange(params):
     log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
@@ -365,26 +326,12 @@ def read_rot_center(params):
     """
     log.info('  *** *** rotation axis')
     # Handle case of manual only: this is the easiest
-    if params.rotation_axis_auto in ['manual', 'yaml']:
+    if params.rotation_axis_auto == 'manual':
         log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
     elif params.rotation_axis_auto == 'auto':
         log.warning('  *** *** Force auto calculation without reading config value')
         log.warning('  *** *** Computing rotation axis')
         params = find_center.find_rotation_axis(params)
-    elif params.rotation_axis_auto == 'json':
-        log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
-        all_centers = read_rot_centers(params)
-        data_file = params.file_name.resolve()
-        # Look for matching JSON keys by going up the file's hierarchy
-        keys_to_check = [data_file] + [data_file.relative_to(a) for a in data_file.parents]
-        rot_center = None
-        for key in keys_to_check:
-            rot_center = all_centers.get(str(key), rot_center)
-        # Check if we found a matching file path in the JSON file
-        if rot_center is not None:
-            params.rotation_axis = float(rot_center)
-        else:
-            raise KeyError(data_file)
     else:
         # Try to read from HDF5 file
         log.warning('  *** *** Try to read rotation center from file {}'.format(params.file_name))
@@ -802,6 +749,6 @@ def yaml_file_list(file_path: Path)->List[Path]:
 
     """
     with open(file_path, mode='r') as fp:
-        yaml_data = yaml.load(fp.read())
+        yaml_data = yaml.safe_load(fp.read())
     file_list = [Path(k) for k in yaml_data.keys()]
     return file_list
