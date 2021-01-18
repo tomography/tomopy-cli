@@ -92,7 +92,7 @@ def rec(params):
             log.warning("  *** Chunk size > remaining data size.")
             sino = [sino[0], sino[0] + proj.shape[1]]
 
-        # apply all preprocessing functions
+        # Apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":

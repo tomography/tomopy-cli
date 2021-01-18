@@ -88,7 +88,6 @@ def find_rotation_axis(params):
 
 
 def _find_rotation_axis(params):
-    import pdb; pdb.set_trace()
     log.info("  *** calculating automatic center")
     data_size = file_io.get_dx_dims(params)
     ssino = int(data_size[1] * params.nsino)

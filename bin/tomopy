@@ -16,6 +16,7 @@ from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
 from tomopy_cli.auto_complete import create_complete_tomopy
+from tomopy_cli.logging import log_exception
 
 
 log = logging.getLogger('tomopy_cli.bin.tomopy')
@@ -84,12 +85,25 @@ def run_rec(args):
             # Load the list of files from a given YAML parameters file
             log.info("Reconstructing files listed in: %s" % file_path)
             file_list = file_io.yaml_file_list(file_path)
-            for idx, new_file_name in enumerate(file_list):
-                args.file_name = file_path.parent / new_file_name
+            failed_files = []
+            for idx, this_fname in enumerate(file_list):
+                args.file_name = file_path.parent / this_fname
                 log.info("Reconstructing next file (%d/%d): %s",
                          idx, len(file_list), args.file_name)
-                recon.rec(args)
-                config.update_config(args)            
+                try:
+                    recon.rec(args)
+                except Exception as err:
+                    # This file failed, but we can keep going and try the rest of the files
+                    failed_files.append(this_fname)
+                    # Log the exception and stacktrace
+                    log.error("  *** reconstruction failed: %s", repr(err))
+                    log_exception(log, err, fmt="      %s")
+                else:
+                    config.update_config(args)
+            # Report list of failed files so it's not buried in the log
+            if len(failed_files) > 0:
+                log.error("Some tomograms could not be reconstructed: %s",
+                          ", ".join([str(f) for f in failed_files]))
         elif file_path.is_file():
             log.info("reconstructing a single file: %s" % args.file_name)
             recon.rec(args)
