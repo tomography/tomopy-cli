@@ -36,7 +36,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
     'sphinxcontrib.bibtex',
-    'sphinx.ext.viewcode']
+    'sphinx.ext.viewcode',
+    'sphinx.ext.autosectionlabel',]
 
 # Napoleon settings
 napoleon_google_docstring = True

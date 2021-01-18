@@ -1,9 +1,9 @@
 import os
 import logging
 from pathlib import Path
-import json
 import collections
 import re
+from typing import List
 
 import h5py
 import tomopy
@@ -11,13 +11,14 @@ import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
+import yaml
 
 from tomopy_cli import __version__
 from tomopy_cli import find_center
 from tomopy_cli import config
 from tomopy_cli import beamhardening
 
-__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
+__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren, Mark Wolfman"
 __credits__ = "Pavel Shevchenko"
 __copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
@@ -307,44 +308,6 @@ def path_base_name(path):
     return file_base_name(fname)
 
 
-def read_rot_centers_json(json_path):
-    try:
-        with open(json_path) as json_file:
-            json_string = json_file.read()
-            dictionary = json.loads(json_string)
-    except FileNotFoundError:
-        log.error("the json %s file containing the rotation axis locations is missing" % json_path)
-        log.error("to create one run:")
-        log.error("$ tomopy find_center")
-        exit()
-    except json.decoder.JSONDecodeError as e:
-        log.error("the json %s file containing the rotation axis locations is malformed" % json_path)
-        log.error(e)
-        exit()
-    else:
-        return dictionary
-    
-
-def read_rot_centers(params):
-    # Prepend the data directory to the json path
-    fpath = Path(params.file_name)
-    if fpath.is_dir():
-        jfpath = fpath / params.rotation_axis_file
-    else:
-        jfpath = params.rotation_axis_file
-    # Load and return the json data
-    dictionary = read_rot_centers_json(jfpath)
-    dictionary = collections.OrderedDict(sorted(dictionary.items()))
-    subdict = collections.OrderedDict()
-    for idx, payload in dictionary.items():
-        try:
-            key, val = next(iter(payload.items()))
-        except AttributeError:
-            raise RuntimeError("Malformed rotation-axis file.")
-        subdict[key] = val
-    return subdict
-
-
 def auto_read_dxchange(params):
     log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
@@ -364,47 +327,33 @@ def read_rot_center(params):
     log.info('  *** *** rotation axis')
     # Handle case of manual only: this is the easiest
     if params.rotation_axis_auto == 'manual':
-        log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
+        log.info('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
     elif params.rotation_axis_auto == 'auto':
-        log.warning('  *** *** Force auto calculation without reading config value')
-        log.warning('  *** *** Computing rotation axis')
+        log.info('  *** *** Force auto calculation without reading config value')
+        log.info('  *** *** Computing rotation axis')
         params = find_center.find_rotation_axis(params)
-    elif params.rotation_axis_auto == 'json':
-        log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
-        all_centers = read_rot_centers(params)
-        data_file = params.file_name.resolve()
-        # Look for matching JSON keys by going up the file's hierarchy
-        keys_to_check = [data_file] + [data_file.relative_to(a) for a in data_file.parents]
-        rot_center = None
-        for key in keys_to_check:
-            rot_center = all_centers.get(str(key), rot_center)
-        # Check if we found a matching file path in the JSON file
-        if rot_center is not None:
-            params.rotation_axis = float(rot_center)
-        else:
-            raise KeyError(data_file)
     else:
         # Try to read from HDF5 file
-        log.warning('  *** *** Try to read rotation center from file {}'.format(params.file_name))
+        log.info('  *** *** Try to read rotation center from file {}'.format(params.file_name))
         with h5py.File(params.file_name, 'r') as file_name:
             try:
-                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
+                dataset = '/process/tomopy-cli-{}/find-rotation-axis/rotation-axis'.format(__version__)
                 params.rotation_axis = float(file_name[dataset][0])
-                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
+                dataset = '/process/tomopy-cli-{}/find-rotation-axis/rotation-axis-flip'.format(__version__)
                 params.rotation_axis_flip = float(file_name[dataset][0])
                 log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
-                log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
+                log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip))
                 return params
             except (KeyError, ValueError):
                 log.warning('  *** *** No rotation center stored in the HDF5 file')
-        #If we get here, we need to either find it automatically or from config file.
+        # If we get here, we need to either find it automatically or from config file.
         log.warning('  *** *** No rotation axis stored in the HDF file')
         if (params.rotation_axis_auto == 'read_auto'):
             log.warning('  *** *** fall back to auto calculation')
             log.warning('  *** *** Computing rotation axis')
             params = find_center.find_rotation_axis(params) 
         else:
-            log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
+            log.warning('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params
 
 
@@ -417,7 +366,7 @@ def read_filter_materials(params):
         return read_filter_materials_tomoscan(params)
     else:
         return read_filter_materials_old(params)
-    
+
 
 def read_filter_materials_tomoscan(params):
     '''Read the beam filter configuration from the HDF file.
@@ -777,3 +726,29 @@ def write_hdf5(data, fname, dname='volume', dtype=None,
             raise type(e)(msg)
         # Save the data
         ds[dest_idx] = data
+
+
+def yaml_file_list(file_path: Path)->List[Path]:
+    """Open a YAML file and return the list of files within.
+
+    This function does not parse the parameters contained inside,
+    merely returns a list of the files that are referenced. For
+    updating parameters on a per-file basis, use
+    ``config.yaml_args()``.
+
+    Parameters
+    ==========
+    file_path
+      A pathlib Path object pointing to the file to open.
+
+    Returns
+    =======
+    file_list
+      The list of file names found. There is no guarantee that these
+      files are suitable for reconsturction, or even exist at all.
+
+    """
+    with open(file_path, mode='r') as fp:
+        yaml_data = yaml.safe_load(fp.read())
+    file_list = [Path(k) for k in yaml_data.keys()]
+    return file_list

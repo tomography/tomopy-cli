@@ -1,12 +1,15 @@
+import argparse
 from unittest import TestCase, mock
 from pathlib import Path
 import os
 import shutil
 
+import yaml
+
 from tomopy_cli import config
 
-
-HDF_FILE = Path(__file__).resolve().parent / 'test_tomogram.h5'
+TEST_DIR = Path(__file__).resolve().parent
+HDF_FILE = TEST_DIR / 'test_tomogram.h5'
 
 
 def make_params():
@@ -52,3 +55,62 @@ class TestUpdateConfig(TestCase):
                 shutil.rmtree(output_dir)
             if base_dir.exists():
                 shutil.rmtree(base_dir)
+
+
+class NamespaceTests(TestCase):
+    def test_config(self):
+        pass
+
+
+class YamlParamsTests(TestCase):
+    yaml_file = TEST_DIR / "my_files.yaml"
+    def setUp(self):
+        # Delete any old files 
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+        # Create a new YAML file
+        opts = {
+            "my_tomo_file.h5": {
+                "spam": "foo",
+                "rotation-axis": 1200,
+            }
+        }
+        with open(self.yaml_file, mode='w') as fp:
+            fp.write(yaml.dump(opts))
+    
+    def tearDown(self):
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+    
+    def test_yaml_args(self):
+        args = argparse.Namespace(spam="eggs")
+        new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5")
+        # Check that new args were set
+        self.assertIsNot(new_args, args, msg="``yaml_args`` should return a deep copy")
+        self.assertEqual(new_args.spam, "foo")
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
+        # Check that original args are unchanged
+        self.assertEqual(args.spam, "eggs")
+    
+    def test_yaml_with_cli_args(self):
+        # Test with ``--spam=eggs`` style CLI arg
+        args = argparse.Namespace(spam="eggs")
+        cli_args = ['tomopy', 'recon', '--spam=eggs']
+        new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5", cli_args=cli_args)
+        # Check that new args were set
+        self.assertEqual(new_args.spam, "eggs")
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
+        # Test with ``--spam eggs`` style CLI arg
+        args = argparse.Namespace(spam="eggs")
+        cli_args = ['tomopy', 'recon', '--spam=eggs']
+        new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5", cli_args=cli_args)
+        # Check that new args were set
+        self.assertEqual(new_args.spam, "eggs")
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
+        # Test with a similar but slightly different CLI arg
+        args = argparse.Namespace(spam="eggs")
+        cli_args = ['tomopy', 'recon', '--spammery=eggs']
+        new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5", cli_args=cli_args)
+        # Check that new args were set
+        self.assertEqual(new_args.spam, "foo")
+        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
