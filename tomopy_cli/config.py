@@ -826,6 +826,10 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
     yaml file then loaded for the corresponding tomogram without
     affecting the base parameters.
     
+    The filenames listed in the YAML file can be relative to the
+    current working directory, including subdirectories, but cannot
+    use other file-system shortcuts (e.g. “..”, “~”).
+    
     Use::
     
         args = ...
@@ -860,7 +864,7 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
     new_args
       A copy of *args* with new parameters based on what was found in
       the yaml file *yaml_file*.
-    
+
     """
     sample = Path(sample)
     yaml_file = Path(yaml_file)
