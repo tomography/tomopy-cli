@@ -114,12 +114,3 @@ class YamlParamsTests(TestCase):
         # Check that new args were set
         self.assertEqual(new_args.spam, "foo")
         self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))
-    
-    def test_rotation_axis(self):
-        args = argparse.Namespace(spam="eggs")
-        args.rotation_axis = 1150.
-        args.rotation_axis_auto = "manual"
-        new_args = config.yaml_args(args, yaml_file=self.yaml_file, sample="my_tomo_file.h5")
-        # Check that new args were set
-        self.assertEqual(new_args.rotation_axis, 1150)
-        self.assertEqual(new_args.file_name, Path("my_tomo_file.h5"))

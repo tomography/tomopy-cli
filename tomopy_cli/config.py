@@ -106,13 +106,14 @@ SECTIONS['find-rotation-axis'] = {
     'rotation-axis-auto': {
         'default': 'read_auto',
         'type': str,
-        'help': "How to get rotation axis: read from HDF5, auto calculate, read from a yaml file, or take from this file",
-        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'yaml',]},
+        'help': "How to get rotation axis: read from HDF5 ('read_auto', 'read_manual'), auto calculate ('auto'), or take from this file ('manual')",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto',]},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
         'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
         }
+
 
 SECTIONS['file-reading'] = {
     'file-name': {
@@ -891,10 +892,9 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
     new_args.file_name = Path(sample)
     for key, value in extra_params.items():
         params_key = "--{}".format(key.replace('_', '-'))
+        # Parameters given on the command line take precedence
         is_in_cli = len([p for p in cli_args if p == params_key]) > 0
-        ra_source = getattr(args, 'rotation_axis_auto', None)
-        skip_param = (key == "rotation-axis") and (ra_source != "yaml")
-        if not is_in_cli and not skip_param:
+        if not is_in_cli:
             setattr(new_args, key.replace('-', '_'), value)
     # Return the modified parameters
     return new_args
