@@ -1,9 +1,9 @@
 import os
 import logging
 from pathlib import Path
-import json
 import collections
 import re
+from typing import List
 
 import h5py
 import tomopy
@@ -11,13 +11,14 @@ import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
+import yaml
 
 from tomopy_cli import __version__
 from tomopy_cli import find_center
 from tomopy_cli import config
 from tomopy_cli import beamhardening
 
-__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren"
+__author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren, Mark Wolfman"
 __credits__ = "Pavel Shevchenko"
 __copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
@@ -87,7 +88,6 @@ def _read_theta_size(params):
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
-
     return theta_size
 
 
@@ -308,44 +308,6 @@ def path_base_name(path):
     return file_base_name(fname)
 
 
-def read_rot_centers_json(json_path):
-    try:
-        with open(json_path) as json_file:
-            json_string = json_file.read()
-            dictionary = json.loads(json_string)
-    except FileNotFoundError:
-        log.error("the json %s file containing the rotation axis locations is missing" % json_path)
-        log.error("to create one run:")
-        log.error("$ tomopy find_center")
-        exit()
-    except json.decoder.JSONDecodeError as e:
-        log.error("the json %s file containing the rotation axis locations is malformed" % json_path)
-        log.error(e)
-        exit()
-    else:
-        return dictionary
-    
-
-def read_rot_centers(params):
-    # Prepend the data directory to the json path
-    fpath = Path(params.file_name)
-    if fpath.is_dir():
-        jfpath = fpath / params.rotation_axis_file
-    else:
-        jfpath = params.rotation_axis_file
-    # Load and return the json data
-    dictionary = read_rot_centers_json(jfpath)
-    dictionary = collections.OrderedDict(sorted(dictionary.items()))
-    subdict = collections.OrderedDict()
-    for idx, payload in dictionary.items():
-        try:
-            key, val = next(iter(payload.items()))
-        except AttributeError:
-            raise RuntimeError("Malformed rotation-axis file.")
-        subdict[key] = val
-    return subdict
-
-
 def auto_read_dxchange(params):
     log.info('  *** Auto parameter reading from the HDF file.')
     params = read_pixel_size(params)
@@ -365,41 +327,114 @@ def read_rot_center(params):
     log.info('  *** *** rotation axis')
     # Handle case of manual only: this is the easiest
     if params.rotation_axis_auto == 'manual':
-        log.warning('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
+        log.info('  *** *** Force use of config file value = {:f}'.format(params.rotation_axis))
     elif params.rotation_axis_auto == 'auto':
-        log.warning('  *** *** Force auto calculation without reading config value')
-        log.warning('  *** *** Computing rotation axis')
+        log.info('  *** *** Force auto calculation without reading config value')
+        log.info('  *** *** Computing rotation axis')
         params = find_center.find_rotation_axis(params)
-    elif params.rotation_axis_auto == 'json':
-        log.warning('  *** *** Reading rotation axis from json file: %s', params.rotation_axis_file)
-        all_centers = read_rot_centers(params)
-        params.rotation_axis = all_centers[params.file_name.name]
     else:
         # Try to read from HDF5 file
-        log.warning('  *** *** Try to read rotation center from file {}'.format(params.file_name))
+        log.info('  *** *** Try to read rotation center from file {}'.format(params.file_name))
         with h5py.File(params.file_name, 'r') as file_name:
             try:
-                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis'
+                dataset = '/process/tomopy-cli-{}/find-rotation-axis/rotation-axis'.format(__version__)
                 params.rotation_axis = float(file_name[dataset][0])
-                dataset = '/process' + '/tomopy-cli-' + __version__ + '/' + 'find-rotation-axis' + '/'+ 'rotation-axis-flip'
+                dataset = '/process/tomopy-cli-{}/find-rotation-axis/rotation-axis-flip'.format(__version__)
                 params.rotation_axis_flip = float(file_name[dataset][0])
                 log.info('  *** *** Rotation center read from HDF5 file: {0:f}'.format(params.rotation_axis)) 
-                log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip)) 
+                log.info('  *** *** Rotation center flip read from HDF5 file: {0:f}'.format(params.rotation_axis_flip))
                 return params
             except (KeyError, ValueError):
                 log.warning('  *** *** No rotation center stored in the HDF5 file')
-        #If we get here, we need to either find it automatically or from config file.
+        # If we get here, we need to either find it automatically or from config file.
         log.warning('  *** *** No rotation axis stored in the HDF file')
         if (params.rotation_axis_auto == 'read_auto'):
             log.warning('  *** *** fall back to auto calculation')
             log.warning('  *** *** Computing rotation axis')
             params = find_center.find_rotation_axis(params) 
         else:
-            log.info('  *** *** using config file value of {:f}'.format(params.rotation_axis))
+            log.warning('  *** *** using config file value of {:f}'.format(params.rotation_axis))
     return params
 
 
 def read_filter_materials(params):
+    '''Read the beam filter configuration.
+    This discriminates between files created with tomoScan and
+    the previous meta data format.
+    '''
+    if check_item_exists_hdf(params.file_name, '/measurement/instrument/attenuator_1'):
+        return read_filter_materials_tomoscan(params)
+    else:
+        return read_filter_materials_old(params)
+
+
+def read_filter_materials_tomoscan(params):
+    '''Read the beam filter configuration from the HDF file.
+    
+    If params.filter_{n}_auto for n in [1,2,3] is True,
+    then try to read the filter configuration recorded during
+    acquisition in the HDF5 file.
+    
+    Parameters
+    ==========
+    params
+    
+      The global parameter object, should have *filter_n_material*,
+      *filter_n_thickness*, and *filter_n_auto* for n in [1,2,3]
+    
+    Returns
+    =======
+    params
+      An equivalent object to the *params* input, optionally with
+      *filter_n_material* and *filter_n_thickness*
+      attributes modified to reflect the HDF5 file.
+    
+    '''
+    log.info('  *** auto reading filter configuration')
+    # Read the relevant data from disk
+    filter_path = '/measurement/instrument/attenuator_{idx}'
+    param_path = 'filter_{idx}_{attr}'
+    for idx_filter in range(1,4,1):
+        if not check_item_exists_hdf(params.file_name, filter_path.format(idx = idx_filter)):
+            log.warning('  *** *** Filter {idx} not found in HDF file.  Set this filter to none'
+                                    .format(idx = idx_filter))
+            setattr(params, param_path.format(idx=idx_filter, attr='material'), 'Al')
+            setattr(params, param_path.format(idx=idx_filter, attr='thickness'), 0.0)
+            continue
+        filter_auto = getattr(params, param_path.format(idx=idx_filter, attr='auto'))
+        if filter_auto != 'True' and filter_auto != True:
+            log.warning('  *** *** do not auto read filter {n}'.format(n=idx_filter))
+            continue
+        log.warning('  *** *** auto reading parameters for filter {0}'.format(idx_filter))
+        # See if there are description and thickness fields
+        if check_item_exists_hdf(params.file_name, filter_path.format(idx = idx_filter) + '/description'):
+            filt_material = config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/description',
+                                        char_array = True, scalar = False)
+            filt_thickness = int(config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/thickness',
+                                        char_array = False, scalar = True))
+        else:
+            #The filter info is just the raw string from the filter unit.
+            log.warning('  *** *** filter {idx} info must be read from the raw string'
+                            .format(idx = idx_filter))
+            filter_str = config.param_from_dxchange(params.file_name,
+                                        filter_path.format(idx=idx_filter) + '/setup/filter_unit_text',
+                                        char_array = True, scalar = False)
+            if filter_str is None:
+                log.warning('  *** *** Could not load filter %d configuration from HDF5 file.' % idx_filter)
+                filt_material, filt_thickness = _filter_str_to_params('Open')
+            else: 
+                filt_material, filt_thickness = _filter_str_to_params(filter_str)
+
+        # Update the params with the loaded values
+        setattr(params, param_path.format(idx=idx_filter, attr='material'), filt_material)
+        setattr(params, param_path.format(idx=idx_filter, attr='thickness'), filt_thickness)
+        log.info('  *** *** Filter %d: (%s %f)' % (idx_filter, filt_material, filt_thickness))
+    return params
+
+
+def read_filter_materials_old(params):
     '''Read the beam filter configuration from the HDF file.
     
     If params.filter_1_material and/or params.filter_2_material are
@@ -487,6 +522,14 @@ def read_pixel_size(params):
     if params.pixel_size_auto != True:
         log.info('  *** *** OFF')
         return params
+    
+    if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detection_system/objective/resolution'):
+        params.pixel_size = config.param_from_dxchange(params.file_name,
+                                            '/measurement/instrument/detection_system/objective/resolution')
+        log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
+        return(params)
+    log.warning('  *** tomoScan resolution parameter not found.  Try old format')
     pixel_size = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detector/pixel_size_x')
     mag = config.param_from_dxchange(params.file_name,
@@ -509,15 +552,30 @@ def read_pixel_size(params):
 def read_scintillator(params):
     '''Read the scintillator type and thickness from the HDF file.
     '''
-    if params.scintillator_auto and params.beam_hardening_method.lower() == 'standard':
+    if params.scintillator_auto:
         log.info('  *** auto reading scintillator params')
-        params.scintillator_thickness = float(config.param_from_dxchange(params.file_name, 
-                                            '/measurement/instrument/detection_system/scintillator/scintillating_thickness', 
-                                            attr = None, scalar = True, char_array=False))
+        dataset_name = '/measurement/instrument/detection_system/scintillator/scintillating_thickness'
+        val = config.param_from_dxchange(params.file_name,
+                                         dataset_name, attr=None,
+                                         scalar=True,
+                                         char_array=False)
+        params.scintillator_thickness = float(val)
         log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
-        scint_material_string = config.param_from_dxchange(params.file_name,
-                                            '/measurement/instrument/detection_system/scintillator/description',
-                                            scalar = False, char_array = True)
+        tomoscan_path = '/measurement/instrument/detection_system/scintillator/name'
+        scint_material_string = ''
+        try:
+            scint_material_string = config.param_from_dxchange(params.file_name,
+                                            tomoscan_path, scalar = False, char_array = True)
+        except KeyError:
+            log.warning('  *** *** scintillator material not in tomoscan form.  Try old format')
+        if not scint_material_string: 
+            old_path = '/measurement/instrument/detection_system/scintillator/description'
+            try:
+                scint_material_string = config.param_from_dxchange(params.file_name,
+                                            old_path, scalar = False, char_array = True)
+            except KeyError:
+                log.warning('  *** *** no scintillator material found')
+                return(params)
         if scint_material_string.lower().startswith('luag'):
             params.scintillator_material = 'LuAG_Ce'
         elif scint_material_string.lower().startswith('lyso'):
@@ -538,25 +596,52 @@ def read_bright_ratio(params):
     '''Read the ratio between the bright exposure and other exposures.
     '''
     log.info('  *** *** %s' % params.flat_correction_method)
-    if params.scintillator_auto and params.flat_correction_method == 'standard':
-        log.info('  *** *** Find bright exposure ratio params from the HDF file')
-        try:
+    if params.flat_correction_method != 'standard' or (not params.scintillator_auto):
+        log.warning('  *** *** skip finding exposure ratio')
+        params.bright_exp_ratio = 1
+        return params
+    log.info('  *** *** Find bright exposure ratio params from the HDF file')
+    try:
+        if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/different_flat_exposure'):
+            diff_bright_exp = config.param_from_dxchange(params.file_name,
+                                '/measurement/instrument/detector/different_flat_exposure',
+                                    attr = None, scalar = False, char_array = True)
+            if diff_bright_exp.lower() == 'same':
+                log.error('  *** *** used same flat and data exposures')
+                params.bright_exp_ratio = 1
+                return params
+        if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/exposure_time_flat'):
             bright_exp = config.param_from_dxchange(params.file_name,
-                                        '/measurement/instrument/detector/brightfield_exposure_time',
-                                        attr = None, scalar = True, char_array = False)
-            log.info('  *** *** %f' % bright_exp)
-            norm_exp = config.param_from_dxchange(params.file_name,
-                                        '/measurement/instrument/detector/exposure_time',
-                                        attr = None, scalar = True, char_array = False)
-            log.info('  *** *** %f' % norm_exp)
-            params.bright_exp_ratio = bright_exp / norm_exp
-            log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
-        except:
-            log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
-            params.bright_exp_ratio = 1
-    else:
-            params.bright_exp_ratio = 1
+                                    '/measurement/instrument/detector/exposure_time_flat',
+                                    attr = None, scalar = True, char_array = False)
+        else: 
+            bright_exp = config.param_from_dxchange(params.file_name,
+                                    '/measurement/instrument/detector/brightfield_exposure_time',
+                                    attr = None, scalar = True, char_array = False)
+        log.info('  *** *** %f' % bright_exp)
+        norm_exp = config.param_from_dxchange(params.file_name,
+                                    '/measurement/instrument/detector/exposure_time',
+                                    attr = None, scalar = True, char_array = False)
+        log.info('  *** *** %f' % norm_exp)
+        params.bright_exp_ratio = bright_exp / norm_exp
+        log.info('  *** *** found bright exposure ratio of {0:6.4f}'.format(params.bright_exp_ratio))
+    except:
+        log.warning('  *** *** problem getting bright exposure ratio.  Use 1.')
+        params.bright_exp_ratio = 1
     return params
+
+
+def check_item_exists_hdf(hdf_filename, item_name):
+    '''Checks if an item exists in an HDF file.
+    Inputs
+    hdf_filename: str filename or pathlib.Path object for HDF file to check
+    item_name: name of item whose existence needs to be checked
+    path: str path to check.  Default to None
+    '''
+    with h5py.File(hdf_filename, 'r') as hdf_file:
+        return item_name in hdf_file
 
 
 def convert(params):
@@ -641,3 +726,29 @@ def write_hdf5(data, fname, dname='volume', dtype=None,
             raise type(e)(msg)
         # Save the data
         ds[dest_idx] = data
+
+
+def yaml_file_list(file_path: Path)->List[Path]:
+    """Open a YAML file and return the list of files within.
+
+    This function does not parse the parameters contained inside,
+    merely returns a list of the files that are referenced. For
+    updating parameters on a per-file basis, use
+    ``config.yaml_args()``.
+
+    Parameters
+    ==========
+    file_path
+      A pathlib Path object pointing to the file to open.
+
+    Returns
+    =======
+    file_list
+      The list of file names found. There is no guarantee that these
+      files are suitable for reconsturction, or even exist at all.
+
+    """
+    with open(file_path, mode='r') as fp:
+        yaml_data = yaml.safe_load(fp.read())
+    file_list = [Path(k) for k in yaml_data.keys()]
+    return file_list
