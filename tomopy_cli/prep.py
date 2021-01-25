@@ -161,15 +161,16 @@ def beamhardening_correct(data, params, sino):
     """
     log.info("  *** correct beam hardening")
     data_dtype = data.dtype
-    #Correct for centerline of fan
-    data = beamhardening.fcorrect_as_pathlength_centerline(data)
-    #Make an array of correction factors
-    beamhardening.center_row = params.center_row
-    log.info("  *** *** Beam hardening center row = {:f}".format(beamhardening.center_row))
-    angles = np.abs(np.arange(sino[0], sino[1])- beamhardening.center_row).astype(data_dtype)
-    angles *= beamhardening.pixel_size / beamhardening.d_source
+    # Correct for centerline of fan
+    softener = beamhardening.BeamSoftener(params)
+    data = softener.fcorrect_as_pathlength_centerline(data)
+    # Make an array of correction factors
+    softener.center_row = params.center_row
+    log.info("  *** *** Beam hardening center row = {:f}".format(softener.center_row))
+    angles = np.abs(np.arange(sino[0], sino[1])- softener.center_row).astype(data_dtype)
+    angles *= softener.pixel_size / softener.d_source
     log.info("  *** *** angles from {0:f} to {1:f} urad".format(angles[0], angles[-1]))
-    correction_factor = beamhardening.angular_spline(angles).astype(data_dtype)
+    correction_factor = softener.angular_spline(angles).astype(data_dtype)
     if len(data.shape) == 2:
         return data* correction_factor[:,None]
     else:

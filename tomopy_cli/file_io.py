@@ -585,10 +585,10 @@ def read_scintillator(params):
         else:
             log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
         log.info('  *** *** using scintillator {:s}'.format(params.scintillator_material))
-    #Run the initialization for beam hardening.  Needed in case rotation_axis must
-    #be computed later.
-    if params.beam_hardening_method.lower() == 'standard':
-        beamhardening.initialize(params)
+    # Run the initialization for beam hardening.  Needed in case
+    # rotation_axis must be computed later.
+    # if params.beam_hardening_method.lower() == 'standard':
+    #     beamhardening.initialize(params)
     return params 
 
 
