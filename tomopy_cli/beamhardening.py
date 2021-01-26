@@ -53,6 +53,7 @@ from copy import deepcopy
 import os
 from pathlib import Path, PurePath
 import logging
+from typing import Mapping
 
 import numpy as np
 import scipy.interpolate
@@ -65,27 +66,11 @@ from scipy.signal.windows import gaussian
 from tomopy.util import mproc
 from tomopy_cli import config
 
+
 log = logging.getLogger(__name__)
 
 
-# Global variables we need for computing LUT
-# filters = {}
-# sample_material = None
-# scintillator_material = None
-# scintillator_thickness = None
-# ref_trans = None
-# threshold_trans = None
-# d_source = 0
-# pixel_size = 0
-# center_row = 0
-# spectra_dict = None
-# possible_materials = {}
-
 data_path = Path(__file__).parent / 'beam_hardening_data'
-
-# Global variables for when we convert images
-# centerline_spline = None
-# angular_spline = None
 
 
 class Spectrum:
@@ -100,7 +85,10 @@ class Spectrum:
         return scipy.integrate.simps(self.spectral_power, self.energies)
 
     def fmean_energy(self):
-        return scipy.integrate.simps(self.spectral_power * self.energies, self.energies) / self.fintegrated_power()
+        power = self.spectral_power
+        total_power = self.fintegrated_power()
+        energies = self.energies
+        return scipy.integrate.simps(power * energies, energies) / total_power
     
     def __len__(self):
         return len(energies)
@@ -132,9 +120,9 @@ class Material:
     def interp_function(self,energies,absorptions):
         '''Return a function to interpolate logs of energies into logs of absorptions.
         '''
-        return scipy.interpolate.interp1d(np.log(energies),np.log(absorptions),bounds_error=False)
+        return scipy.interpolate.interp1d(np.log(energies), np.log(absorptions), bounds_error=False)
     
-    def finterpolate_absorption(self,input_energies):
+    def finterpolate_absorption(self, input_energies):
         '''Interpolates absorption on log-log scale and scales back
         '''
         return np.exp(self.absorption_interpolation_function(np.log(input_energies)))
@@ -144,7 +132,7 @@ class Material:
         '''
         return np.exp(self.attenuation_interpolation_function(np.log(input_energies)))
     
-    def fcompute_proj_density(self,thickness):
+    def fcompute_proj_density(self, thickness):
         '''Computes projected density from thickness and material density.
         Input: thickness in um
         Output: projected density in g/cm^2
@@ -195,15 +183,27 @@ class Material:
         return self.fcompute_absorbed_spectrum(thickness,input_spectrum).fintegrated_power()
 
 
-# def fcorrect_as_pathlength(input_trans):
-#     '''Corrects for the angular dependence of the BM spectrum.
-#     First, use fconvert_data to get in terms of pathlength assuming we are
-#     in the ring plane.  Then, use this function to correct.
-#     '''
-#     angles = np.abs(np.arange(input_trans.shape[0]) - center_row)
-#     angles *= pixel_size / d_source
-#     correction_factor = angular_spline(angles)
-#     return centerline_spline(input_trans) * correction_factor[:,None]
+def fapply_filters(filters: Mapping, input_spectrum):
+    """Computes the spectrum after all filters.
+    
+    Parameters
+    ==========
+    filters
+      Holds the loaded filters described by ``filters[symbol] =
+      thickness``.
+    input_spectrum : np.ndarray
+      spectral power for input spectrum, in numpy array
+    
+    Returns
+    =======
+    temp_spectrum : np.ndarray
+      spectral power transmitted through the filter set.
+    
+    """
+    temp_spectrum = deepcopy(input_spectrum)
+    for filt, thickness in filters.items():
+        temp_spectrum = filt.fcompute_transmitted_spectrum(thickness, temp_spectrum)
+    return temp_spectrum
 
 
 class BeamSoftener():
@@ -363,7 +363,7 @@ class BeamSoftener():
             angles_urad.append(float(angle))
             spectrum = self.spectra_dict[angle]
             #Filter the beam
-            filtered_spectrum = self.fapply_filters(spectrum)
+            filtered_spectrum = fapply_filters(self.filters, spectrum)
             #Create an interpolation function based on this
             angle_spline = self.ffind_calibration_one_angle(filtered_spectrum)
             if angle  == 0:
@@ -372,25 +372,6 @@ class BeamSoftener():
         cal_curve /= cal_curve[0]
         self.angular_spline = InterpolatedUnivariateSpline(angles_urad, cal_curve) 
     
-    def fapply_filters(self, input_spectrum):
-        """Computes the spectrum after all filters.
-        
-        Parameters
-        ==========
-        input_spectrum : np.ndarray
-          spectral power for input spectrum, in numpy array
-        
-        Returns
-        =======
-        temp_spectrum : np.ndarray
-          spectral power transmitted through the filter set.
-        
-        """
-        temp_spectrum = deepcopy(input_spectrum)
-        for filt, thickness in self.filters.items():
-            temp_spectrum = filt.fcompute_transmitted_spectrum(thickness, temp_spectrum)
-        return temp_spectrum
-
     def ffind_calibration_one_angle(self, input_spectrum):
         '''Makes a scipy interpolation function to be used to correct images.
         
@@ -433,3 +414,13 @@ class BeamSoftener():
         pathlength = mproc.distribute_jobs(input_trans, self.centerline_spline, args=(), axis=1)
         return pathlength
 
+    def fcorrect_as_pathlength(self, input_trans):
+        '''Corrects for the angular dependence of the BM spectrum.
+        First, use fconvert_data to get in terms of pathlength assuming we are
+        in the ring plane.  Then, use this function to correct.
+        '''
+        angles = np.abs(np.arange(input_trans.shape[0]) - self.center_row)
+        angles *= self.pixel_size / self.d_source
+        correction_factor = self.angular_spline(angles)
+        return self.centerline_spline(input_trans) * correction_factor[:,None]
+    
