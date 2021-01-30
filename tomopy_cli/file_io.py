@@ -94,6 +94,7 @@ def _read_tomo(params, sino):
 
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
+#        proj1, flat, dark, theta1 = dxchange.read_aps_32id("/data/staff/tomograms/experiments/APS/2019-08/348_coal5wtNaBr5p.h5", sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
         # Check if the flat and dark fields are single images or sets
         if len(flat.shape) == len(proj.shape):

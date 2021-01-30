@@ -102,20 +102,31 @@ def rec(params):
                 log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
         
         # Reconstruct: this is for "slice" and "full" methods
+        if(1):
+            rotation_axis += data.shape[2]
+            data = padding_360(data,rotation_axis)        
         rec = padded_rec(data, theta, rotation_axis, params)
         # Save images
         recon_base_dir = reconstruction_folder(params)
         fpath = Path(params.file_name).resolve()
         if params.reconstruction_type == "full":
             recon_dir = recon_base_dir / "{}_rec".format(fpath.stem)
+            data_dir = recon_base_dir / "{}_data".format(fpath.stem)
             if params.output_format == 'tiff_stack':
                 fname = recon_dir / 'recon'
+                fname_data = data_dir / 'data'
                 log.debug("Full tiff dir: %s", fname)
+                log.debug("Full tiff data dir: %s", fname_data)
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
                                                 kwargs = {'fname': str(fname),
                                                           'start': strt,
                                                           'overwrite': True})
+                write_data_thread = threading.Thread(target=dxchange.write_tiff_stack,
+                                                args = (data.swapaxes(0,1),),
+                                                kwargs = {'fname': str(fname_data),
+                                                          'start': strt,
+                                                          'overwrite': True})                                                          
             elif params.output_format == "hdf5":
                 # HDF5 output
                 fname = "{}.hdf".format(recon_dir)
@@ -135,7 +146,9 @@ def rec(params):
             # Save the data to disk
             if write_thread is not None:
                 write_thread.start()
+                write_data_thread.start()
                 write_threads.append(write_thread)
+                write_threads.append(write_data_thread)
             # Increment counter for which chunks to save
             strt += (sino[1] - sino[0])
         elif params.reconstruction_type == "slice":
@@ -176,6 +189,7 @@ def _try_rec(params):
     proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params, True)
     # Apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)
+    
     rec = []
     center_range = []
     # try passes an array of rotation centers and this is only supported by gridrec
@@ -195,6 +209,9 @@ def _try_rec(params):
         log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' 
                         % (sino_start, center_range[0], center_range[-1], center_range[1] - center_range[0]))
         if params.reconstruction_algorithm == 'gridrec':
+            if(1):
+                center_range += stack.shape[2]
+                stack = padding_360(stack,center_range)                
             rec = padded_rec(stack, theta, center_range, params)
         else:
             log.warning("  *** Doing try_center with '%s' instead of 'gridrec' is slow.", params.reconstruction_algorithm)
@@ -231,10 +248,24 @@ def _try_rec(params):
     # restore original method
     # params.reconstruction_algorithm = reconstruction_algorithm_org
 
+def padding_360(data,rotation_axis):
+    if isinstance(rotation_axis,list):
+        for r_axis in range(len(rotation_axis)):
+            w = max(0,int(2*(rotation_axis[r_axis]-data.shape[2])))
+            v = np.linspace(0,1,w,endpoint=False) 
+            v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4) 
+            data[r_axis,:,:w] *= v
+    else:
+        w = max(0,int(2*(rotation_axis-data.shape[2])))
+        v = np.linspace(0,1,w,endpoint=False) 
+        v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4) 
+        data[:,:,:w] *= v
+    data = np.pad(data,((0,0),(0,0),(data.shape[2],0)))    
+    return data
 
 def padded_rec(data, theta, rotation_axis, params):
-    # original shape
-    N = data.shape[2]
+    # original shape    
+    N = data.shape[2]    
     # padding
     data, padded_rotation_axis = padding(data, rotation_axis, params) 
     # reconstruct object
@@ -282,7 +313,7 @@ def unpadding(rec, N, params):
 
 
 def reconstruct(data, theta, rot_center, params):
-
+    
     if(params.reconstruction_type == "try"):
         sinogram_order = True
     else:
