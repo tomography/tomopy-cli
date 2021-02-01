@@ -23,7 +23,8 @@ log = logging.getLogger(__name__)
 def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
-
+    # Read parameters from YAML file
+    params = config.yaml_args(params, params.parameter_file, str(params.file_name))
     # Read parameters from DXchange file if requested
     params = file_io.auto_read_dxchange(params)
     if params.rotation_axis <= 0:
@@ -90,9 +91,8 @@ def rec(params):
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
             log.warning("  *** Chunk size > remaining data size.")
-            sino = [sino[0], sino[0] + proj.shape[1]]        
-        
-        # apply all preprocessing functions
+            sino = [sino[0], sino[0] + proj.shape[1]]
+        # Apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":

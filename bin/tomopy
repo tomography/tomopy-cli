@@ -7,6 +7,7 @@ import argparse
 import time
 from pathlib import Path
 from datetime import datetime
+import yaml
 
 from tomopy_cli import config, __version__
 from tomopy_cli import logging
@@ -15,6 +16,7 @@ from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
 from tomopy_cli.auto_complete import create_complete_tomopy
+from tomopy_cli.logging import log_exception
 
 
 log = logging.getLogger('tomopy_cli.bin.tomopy')
@@ -67,58 +69,50 @@ def run_convert(args):
 def run_rec(args):
 
     log.warning('reconstruction start')
-
+    file_path = Path(args.file_name)
     if str(args.file_format) in KNOWN_FORMATS:
-        file_path = Path(args.file_name)
-        if file_path.suffix == '.json':
-            # Load the list of files from a given JSON rotation_axis file
-            log.info("Reconstructing files listed in: %s" % args.file_name)
-            file_dict = file_io.read_rot_centers_json(file_path)
-            # args.rotation_axis_file = str(file_path)
-            for filename_idx, file_info in file_dict.items():
-                new_file_name = list(file_info.keys())[0]
-                args.file_name = file_path.parent / new_file_name
-                recon.rec(args)
-            config.update_config(args)
-        elif os.path.isfile(args.file_name):
+        if file_path.suffix == '.yaml':
+            # Load the list of files from a given YAML parameters file
+            log.info("Reconstructing files listed in: %s" % file_path)
+            file_list = file_io.yaml_file_list(file_path)
+            failed_files = []
+            for idx, this_fname in enumerate(file_list):
+                args.file_name = file_path.parent / this_fname
+                log.info("Reconstructing next file (%d/%d): %s",
+                         idx, len(file_list), args.file_name)
+                try:
+                    recon.rec(args)
+                except Exception as err:
+                    # This file failed, but we can keep going and try the rest of the files
+                    failed_files.append(this_fname)
+                    # Log the exception and stacktrace
+                    log.error("  *** reconstruction failed: %s", repr(err))
+                    log_exception(log, err, fmt="      %s")
+                else:
+                    config.update_config(args)
+            # Report list of failed files so it's not buried in the log
+            if len(failed_files) > 0:
+                log.error("Some tomograms could not be reconstructed: %s",
+                          ", ".join([str(f) for f in failed_files]))
+        elif file_path.is_file():
             log.info("reconstructing a single file: %s" % args.file_name)
             recon.rec(args)
             config.update_config(args)
-        elif os.path.isdir(args.file_name):
+        elif file_path.is_dir():
             # Add a trailing slash if missing
             top = os.path.join(args.file_name, '')
             h5_file_list = list(filter(lambda x: x.endswith(('.h5', '.hdf', 'hdf5')), os.listdir(top)))
             if (h5_file_list):
                 h5_file_list.sort()
                 log.info("found: %s" % h5_file_list) 
-                # look for pre-calculated rotation axis positions.
-                jfname = top + args.rotation_axis_file
-                if(os.path.exists(jfname)):
-                    log.warning("  *** try to use pre-calculated rotation centers from %s file" % jfname)   
-                    dictionary = file_io.read_rot_centers(args)
-                    # log.warning("reconstructing a folder containing %d files" % len(dictionary))   
-                    index = 0
-                    for key in dictionary:
-                        dict2 = dictionary[key]
-                        for h5fname in dict2:
-                            args.rotation_axis = dict2[h5fname]
-                            fname = top + h5fname
-                            args.file_name = fname
-                            log.warning("  *** file %d/%d; ord(%s);  %s center: %f" % (index, len(dictionary)-1, key, args.file_name, args.rotation_axis))
-                            index += 1
-                            recon.rec(args)
-                            config.update_config(args)
-                    log.warning('reconstruction end')
-                else:
-                    log.warning("  *** no pre-calculated rotation centers from %s file" % jfname)   
-                    index=0
-                    for fname in h5_file_list:
-                        args.file_name = top + fname
-                        log.warning("  *** file %d/%d;  %s" % (index, len(h5_file_list), fname))
-                        index += 1
-                        recon.rec(args)
-                        config.update_config(args)
-                    log.warning('reconstruction end')
+                index=0
+                for fname in h5_file_list:
+                    args.file_name = top + fname
+                    log.warning("  *** file %d/%d;  %s" % (index, len(h5_file_list), fname))
+                    index += 1
+                    recon.rec(args)
+                    config.update_config(args)
+                log.warning('reconstruction end')
             else:
                 log.error("directory %s does not contain any file" % args.file_name)
         else:
@@ -130,7 +124,6 @@ def run_rec(args):
 
 
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', **config.SECTIONS['general']['config'])
     parser.add_argument('--version', action='version',
@@ -158,7 +151,6 @@ def main():
         cmd_parser.set_defaults(_func=func)
 
     args = config.parse_known_args(parser, subparser=True)
-
     # create logger
     logs_home = args.logs_home
 
@@ -174,12 +166,11 @@ def main():
     log.info("Saving log at %s" % lfname)
 
     try:
-        # config.log_values(args)
         args._func(args)
     except RuntimeError as e:
         log.error(str(e))
         sys.exit(1)
-         
+
 
 if __name__ == '__main__':
     main()
