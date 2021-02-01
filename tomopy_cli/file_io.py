@@ -50,7 +50,7 @@ def read_tomo(sino, params, ignore_flip = False):
     float
         location of the rotation axis
     """
-    if (params.file_type == 'standard' or 
+    if (params.file_type == 'standard' or params.file_type == 'double_fov' or
             (params.file_type == 'flip_and_stich' and ignore_flip)):
         # Read APS 32-BM raw data.
         log.info("  *** loading a stardard data set: %s" % params.file_name)

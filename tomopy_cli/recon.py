@@ -102,7 +102,16 @@ def rec(params):
                 log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
         
         # Reconstruct: this is for "slice" and "full" methods
-        rec = padded_rec(data, theta, rotation_axis, params)
+        rotation_axis_rec = rotation_axis
+        if (params.file_type == 'double_fov'):                                
+            if(rotation_axis<data.shape[-1]//2):
+                #if rotation center is on the left side of the ROI
+                data = data[:,:,::-1]
+                rotation_axis_rec = data.shape[-1]-rotation_axis                               
+            # double FOV by adding zeros
+            data = double_fov(data,rotation_axis_rec)    
+        rec = padded_rec(data, theta, rotation_axis_rec, params)
+
         # Save images
         recon_base_dir = reconstruction_folder(params)
         fpath = Path(params.file_name).resolve()
@@ -181,7 +190,7 @@ def _try_rec(params):
     # try passes an array of rotation centers and this is only supported by gridrec
     # reconstruction_algorithm_org = params.reconstruction_algorithm
     # params.reconstruction_algorithm = 'gridrec'
-    if (params.file_type == 'standard'):
+    if (params.file_type == 'standard' or params.file_type == 'double_fov'):
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
         center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
         # stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
@@ -194,12 +203,20 @@ def _try_rec(params):
             stack[i] = data[:, 0, :]
         log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' 
                         % (sino_start, center_range[0], center_range[-1], center_range[1] - center_range[0]))
+        center_range_rec = center_range
+        if (params.file_type == 'double_fov'):                                
+            if(rotation_axis<stack.shape[-1]//2):
+                #if rotation center is on the left side of the ROI
+                stack = stack[:,:,::-1]
+                center_range_rec = stack.shape[-1]-center_range
+            # double FOV by adding zeros
+            stack = double_fov_try(stack,center_range_rec)                
         if params.reconstruction_algorithm == 'gridrec':
-            rec = padded_rec(stack, theta, center_range, params)
+            rec = padded_rec(stack, theta, center_range_rec, params)
         else:
             log.warning("  *** Doing try_center with '%s' instead of 'gridrec' is slow.", params.reconstruction_algorithm)
             rec = []
-            for center in center_range:
+            for center in center_range_rec:
                 rec.append(padded_rec(data[:, 0:1, :], theta, center, params))
             rec = np.asarray(rec)
     else:
@@ -231,6 +248,26 @@ def _try_rec(params):
     # restore original method
     # params.reconstruction_algorithm = reconstruction_algorithm_org
 
+def double_fov(data,rotation_axis):
+    # smooth the sinogram border with a smooth weigting function from 0 to 1
+    w = max(1,int(2*(data.shape[-1]-rotation_axis)))    
+    v = np.linspace(1,0,w,endpoint=False)
+    v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
+    data[:,:,-w:] *= v    
+    # double sinogram size with adding 0
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    return data
+
+def double_fov_try(data,rotation_axis):
+    # smooth the sinogram border with a smooth weigting function from 0 to 1
+    for r_axis in range(len(rotation_axis)):        
+        w = max(1,int(2*(data.shape[-1]-rotation_axis[r_axis])))    
+        v = np.linspace(1,0,w,endpoint=False)
+        v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
+        data[r_axis,:,-w:] *= v        
+    # double sinogram size with adding 0
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    return data
 
 def padded_rec(data, theta, rotation_axis, params):
     # original shape
@@ -284,9 +321,9 @@ def unpadding(rec, N, params):
 def reconstruct(data, theta, rot_center, params):
 
     if(params.reconstruction_type == "try"):
-        sinogram_order = True
+        sinogram_order = True        
     else:
-        sinogram_order = False
+        sinogram_order = False        
     # Check for sane input values
     if not np.all(np.isfinite(data)):
         log.warning("  *** nan/inf found in input data. "
@@ -380,12 +417,18 @@ def reconstruct(data, theta, rot_center, params):
     # gridrec                
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
-        # import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()        
+        if(params.reconstruction_type == "try"):
+            # each chunk works with 1 rotation center
+            nchunk = 1 
+        else:
+            nchunk = None
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
                             algorithm='gridrec', 
-                            filter_name=params.gridrec_filter)
+                            filter_name=params.gridrec_filter,
+                            nchunk = nchunk)
     
     # log-polar based method                            
     elif params.reconstruction_algorithm == 'lprec':

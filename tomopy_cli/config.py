@@ -130,7 +130,7 @@ SECTIONS['file-reading'] = {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
-        'choices': ['standard', 'flip_and_stich', 'mosaic']},
+        'choices': ['standard', 'flip_and_stich', 'double_fov', 'mosaic']},
     'nsino': {
         'default': 0.5,
         'type': float,
