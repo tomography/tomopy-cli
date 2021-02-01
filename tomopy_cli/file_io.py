@@ -31,7 +31,6 @@ log = logging.getLogger(__name__)
 def read_tomo(sino, params, ignore_flip = False):
     """
     Read in the tomography data.
-
     Parameters
     ----------
     sino : tuple of (start_row, end_row) to be read in
@@ -42,16 +41,12 @@ def read_tomo(sino, params, ignore_flip = False):
     -------
     ndarray
         3D tomographic data.
-
     ndarray
         3D flat field data.
-
     ndarray
         3D dark field data.
-
     ndarray
         1D theta in radian.
-
     float
         location of the rotation axis
     """
@@ -95,7 +90,6 @@ def _read_tomo(params, sino):
 
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
-#        proj1, flat, dark, theta1 = dxchange.read_aps_32id("/data/staff/tomograms/experiments/APS/2019-08/348_coal5wtNaBr5p.h5", sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
         # Check if the flat and dark fields are single images or sets
         if len(flat.shape) == len(proj.shape):
@@ -130,11 +124,9 @@ def blocked_view(proj, theta, params):
 def binning(proj, flat, dark, params):
     """
     Bin the tomography data.
-
     Parameters
     ----------
     proj : projection data, 3D Numpy array
-
     flat : projection flatfield data, 2D Numpy array
     
     dark : projection dark field data, 2D Numpy array
@@ -145,10 +137,8 @@ def binning(proj, flat, dark, params):
     -------
     ndarray
         3D binned projection data.
-
     ndarray
         2D binned flat field data.
-
     ndarray
         2D binned dark field data.
     """
@@ -175,13 +165,10 @@ def _binning(data, params):
 def flip_and_stitch(params, img360, flat360, dark360):
     """
     Stitch together data for flip-and-stitch (0-360 degree offset center) scan.
-
     Parameters
     ----------
     params : dict of reconstruction parameters
-
     img360 : projection data from 0-360 degrees, 3D Numpy array
-
     flat360 : flatfield data, 2D Numpy array
     
     dark360 : dark field data, 2D Numpy array
@@ -192,13 +179,10 @@ def flip_and_stitch(params, img360, flat360, dark360):
     -------
     ndarray
         3D binned projection data stitched together, 0-180 degree domain
-
     ndarray
         2D binned flat field data stitched together, 0-180 degree domain
-
     ndarray
         2D binned dark field data stitched together, 0-180 degree domain
-
     """
     num_stitched_angles = img360.shape[0]//2 
     new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
@@ -731,23 +715,19 @@ def write_hdf5(data, fname, dname='volume', dtype=None,
 
 def yaml_file_list(file_path: Path)->List[Path]:
     """Open a YAML file and return the list of files within.
-
     This function does not parse the parameters contained inside,
     merely returns a list of the files that are referenced. For
     updating parameters on a per-file basis, use
     ``config.yaml_args()``.
-
     Parameters
     ==========
     file_path
       A pathlib Path object pointing to the file to open.
-
     Returns
     =======
     file_list
       The list of file names found. There is no guarantee that these
       files are suitable for reconsturction, or even exist at all.
-
     """
     with open(file_path, mode='r') as fp:
         yaml_data = yaml.safe_load(fp.read())
