@@ -255,7 +255,7 @@ def double_fov(data,rotation_axis):
     v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
     data[:,:,-w:] *= v    
     # double sinogram size with adding 0
-    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])),'constant')    
     return data
 
 def double_fov_try(data,rotation_axis):
@@ -264,9 +264,9 @@ def double_fov_try(data,rotation_axis):
         w = max(1,int(2*(data.shape[-1]-rotation_axis[r_axis])))    
         v = np.linspace(1,0,w,endpoint=False)
         v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
-        data[r_axis,:,-w:] *= v        
+        data[r_axis,:,-w:] *= v
     # double sinogram size with adding 0
-    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])),'constant')    
     return data
 
 def padded_rec(data, theta, rotation_axis, params):
