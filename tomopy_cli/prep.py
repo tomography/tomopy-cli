@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import time
 
 import tomopy
 import dxchange
@@ -16,6 +17,7 @@ log = logging.getLogger(__name__)
 
 def all(proj, flat, dark, params, sino):
     # zinger_removal
+    time_start_all = time.time()
     proj, flat = zinger_removal(proj, flat, params)
     if (params.dark_zero):
         dark *= 0
@@ -27,6 +29,7 @@ def all(proj, flat, dark, params, sino):
     data = remove_stripe(data, params)
     # Perform beam hardening.  This leaves the data in pathlength.
     if params.beam_hardening_method == 'standard':
+        #import pdb; pdb.set_trace()
         data = beamhardening_correct(data, params, sino)
     else:
         # phase retrieval
@@ -35,11 +38,13 @@ def all(proj, flat, dark, params, sino):
         data = minus_log(data, params)
     # remove outlier
     data = remove_nan_neg_inf(data, params)
+    log.debug('  *** total time for prep.all = {0:6.4f}'.format(
+                time.time() - time_start_all))
     return data
 
 
 def remove_nan_neg_inf(data, params):
-
+    time_start_remove_nan = time.time()
     log.info('  *** remove nan, neg and inf')
     if(params.fix_nan_and_inf == True):
         log.info('  *** *** ON')
@@ -50,13 +55,15 @@ def remove_nan_neg_inf(data, params):
         data[data > params.fix_nan_and_inf_value] = params.fix_nan_and_inf_value
     else:
         log.warning('  *** *** OFF')
-
+    log.debug('  *** total time for prep.remove_nan_neg_inf = {0:6.4f}'.format(
+                time.time() - time_start_remove_nan))
     return data
 
 
 def zinger_removal(proj, flat, params):
 
     log.info("  *** zinger removal")
+    time_start_zinger = time.time()
     if (params.zinger_removal_method == 'standard'):
         log.info('  *** *** ON')
         log.info("  *** *** zinger level projections: %d" % params.zinger_level_projections)
@@ -66,16 +73,18 @@ def zinger_removal(proj, flat, params):
         flat = tomopy.misc.corr.remove_outlier(flat, params.zinger_level_white, size=params.zinger_size, axis=0)
     elif(params.zinger_removal_method == 'none'):
         log.warning('  *** *** OFF')
-
+    log.debug('  *** total time for prep.zinger_removal = {0:6.4f}'.format(
+                time.time() - time_start_zinger))
     return proj, flat
 
 
 def flat_correction(proj, flat, dark, params):
 
     log.info('  *** normalization')
+    time_start_flat = time.time()
     if(params.flat_correction_method == 'standard'):
         #import pdb; pdb.set_trace()
-        data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff)
+        data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff / params.bright_exp_ratio)
         try:
             if params.bright_exp_ratio != 1:
                 data *= params.bright_exp_ratio
@@ -93,11 +102,13 @@ def flat_correction(proj, flat, dark, params):
                          "Valid options are {}"
                          "".format(params.flat_correction_method,
                                    config.SECTIONS['flat-correction']['flat-correction-method']['choices']))
+    log.debug('  *** total time for prep.flat_correction = {0:6.4f}'.format(
+                time.time() - time_start_flat))
     return data
 
 
 def remove_stripe(data, params):
-
+    time_start_stripe = time.time()
     log.info('  *** remove stripe:')
     if(params.remove_stripe_method == 'fw'):
         log.info('  *** *** fourier wavelet')
@@ -117,6 +128,8 @@ def remove_stripe(data, params):
         log.info('  *** ***  *** sf size %d ' % params.sf_size)
     elif(params.remove_stripe_method == 'none'):
         log.warning('  *** *** OFF')
+    log.debug('  *** total time for prep.remove_stripe = {0:6.4f}'.format(
+                time.time() - time_start_stripe))
 
     return data
 
@@ -157,6 +170,7 @@ def beamhardening_correct(data, params, sino):
     sino: row numbers for these data
     """
     log.info("  *** correct beam hardening")
+    time_start_bh = time.time()
     data_dtype = data.dtype
     #Correct for centerline of fan
     data = beamhardening.fcorrect_as_pathlength_centerline(data)
@@ -168,7 +182,10 @@ def beamhardening_correct(data, params, sino):
     log.info("  *** *** angles from {0:f} to {1:f} urad".format(angles[0], angles[-1]))
     correction_factor = beamhardening.angular_spline(angles).astype(data_dtype)
     if len(data.shape) == 2:
-        return data* correction_factor[:,None]
+        output = data* correction_factor[:,None]
     else:
-        return data * correction_factor[None, :, None]
+        output = data * correction_factor[None, :, None]
+    log.debug('  *** total time for prep.remove_stripe = {0:6.4f}'.format(
+                time.time() - time_start_bh))
+    return output
 

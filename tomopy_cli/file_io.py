@@ -476,7 +476,6 @@ def read_filter_materials_tomoscan(params):
 
 
 def read_filter_materials_old(params):
-=======
     '''Read the beam filter configuration from the HDF file.
     
     If params.filter_1_material and/or params.filter_2_material are

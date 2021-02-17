@@ -92,6 +92,9 @@ def rec(params):
 
         # apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
+        del(dark)
+        del(flat)
+        del(proj)
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":
                 data = data[:,(iChunk>0)*phase_pad:-(iChunk<chunks-1)*phase_pad-(phase_pad==0)]
