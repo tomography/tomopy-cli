@@ -13,7 +13,6 @@ import dxchange
 from tomopy_cli import file_io
 from tomopy_cli import config
 from tomopy_cli import prep
-from tomopy_cli import beamhardening
 from tomopy_cli import find_center
 
 
