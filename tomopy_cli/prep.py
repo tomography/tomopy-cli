@@ -73,10 +73,10 @@ def flat_correction(proj, flat, dark, params):
 
     log.info('  *** normalization')
     if(params.flat_correction_method == 'standard'):
-        data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff)
         try:
-            if params.bright_exp_ratio != 1:
-                data *= params.bright_exp_ratio
+            data = tomopy.normalize(proj, flat, dark, 
+                                cutoff=params.normalization_cutoff / params.bright_exp_ratio)
+            data *= params.bright_exp_ratio
         except AttributeError:
             log.warning('  *** *** No bright_exp_ratio found.  Ignore')
         log.info('  *** *** ON %f cut-off' % params.normalization_cutoff)
