@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 from tomopy_cli import file_io
 
 
+TESTDIR = Path(__file__).resolve().parent
+
+
 def make_params():
     params = mock.MagicMock()
     params.file_name = "test_tomogram.h5"
@@ -51,25 +54,26 @@ class FlipAndStitchTests(unittest.TestCase):
 
 
 class ReadParamTests(unittest.TestCase):
-    test_hdf_file = Path('filter-tests.hdf5')
-    rot_axis_file = Path(__file__).resolve().parent / 'rotation_axis.json'
+    test_hdf_file = TESTDIR / 'filter-tests.hdf5'
+    params_file = TESTDIR / 'extra_params.yaml'
     # Sample filters from 7-BM-B for 'open' and 'Cu_1000um' filters
     filter_open = np.array([[79, 112, 101, 110,] + [0,] * 252], dtype='int8')
     filter_Cu_1000um = np.array([[67, 117,  95,  49,  48,  48, 48, 117, 109,] + [0,] * 247], dtype='int8')
 
     def setUp(self):
-        if self.rot_axis_file.exists():
-            self.rot_axis_file.unlink()
-        # Create a rotation_axis.json file
-        with open(self.rot_axis_file, mode='x') as fp:
-            fp.write('{"0": {"filter-tests.hdf5": 1287.25}}')
+        if self.params_file.exists():
+            self.params_file.unlink()
+        # Create a extra_params.yaml file
+        with open(self.params_file, mode='x') as fp:
+            fp.write('filter-tests.hdf5:\n  rotation_axis: 1287.25\n'
+                     'tests/filter-001.hdf5:\n  rotation_axis: 1290.0\n')
     
     def tearDown(self):
         # Clean up the mocked HDF5 file
         if os.path.exists(self.test_hdf_file):
             os.remove(self.test_hdf_file)
-        if self.rot_axis_file.exists():
-            self.rot_axis_file.unlink()            
+        if self.params_file.exists():
+            self.params_file.unlink()            
     
     def prepare_hdf_file(self, filter_1=None, filter_2=None):
         with h5py.File(self.test_hdf_file, mode='x') as h5fp:
@@ -138,19 +142,12 @@ class ReadParamTests(unittest.TestCase):
         self.assertEqual(params.filter_2_material, 'Al')
         self.assertEqual(params.filter_2_thickness, 0.)
 
-    def test_read_rot_center_json(self):
-        params = make_params()
-        params.rotation_axis_auto = 'json'
-        params.file_name = self.test_hdf_file
-        params.rotation_axis_file = self.rot_axis_file
-        file_io.read_rot_center(params)
-
 
 class ReadTomoScanParamTests(unittest.TestCase):
-    test_hdf_file = Path('meta_mock.h5')
+    test_hdf_file = TESTDIR/'meta_mock.h5'
 
     def setUp(self):
-        self.burner_hdf_file = Path('meta_mock2.h5')
+        self.burner_hdf_file = TESTDIR/'meta_mock2.h5'
         shutil.copy(self.test_hdf_file, self.burner_hdf_file) 
 
 
@@ -214,7 +211,6 @@ class ReadTomoScanParamTests(unittest.TestCase):
     def test_auto_filter(self):
         params = mock.MagicMock()
         params.file_name = str(self.test_hdf_file)
-        print(params.file_name)
         params.filter_1_auto = True
         params.filter_2_auto = True
         params.filter_3_auto = True
