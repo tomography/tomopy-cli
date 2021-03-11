@@ -90,6 +90,10 @@ main.py
 *.ipynb
 trunk
 
+# Profiler Results #
+####################
+prof/
+
 # Installer logs
 ##############
 pip-log.txt
