@@ -94,6 +94,11 @@ def _read_theta_size(params):
 def _read_tomo(params, sino):
 
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
+        # temporary work around
+        #flat_file = '/local/data/2020-10/PazPuente/flat_samp2_417.h5'
+        #print('flat fields are taken from:', flat_file)
+#        proj_bad, flat, dark, theta_bad = dxchange.read_aps_32id(flat_file, sino=sino)
+#        proj, flat_bad, dark_bad, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
         # Check if the flat and dark fields are single images or sets
@@ -115,11 +120,20 @@ def blocked_view(proj, theta, params):
     log.info("  *** correcting for blocked view data collection")
     if params.blocked_views:
         log.warning('  *** *** ON')
-        miss_angles = [params.blocked_views_start, params.blocked_views_end]
+        # miss_angles = [params.blocked_views_start, params.blocked_views_end]
+        # # Manage the missing angles:
+        # proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]:,:,:]), axis=0)
+        # theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]:]))
+         
+        # easier managing of missing angles: Viktor
+        st = params.blocked_views_start
+        end = params.blocked_views_end
+        log.warning('%f %f',st,end)
+        ids = np.where(((theta-st)%np.pi<0) + ((theta-st)%np.pi>end-st))[0]
+        proj = proj[ids]
+        theta = theta[ids]
+        print(theta)
 
-        # Manage the missing angles:
-        proj = np.concatenate((proj[0:miss_angles[0],:,:], proj[miss_angles[1]:,:,:]), axis=0)
-        theta = np.concatenate((theta[0:miss_angles[0]], theta[miss_angles[1]:]))
     else:
         log.warning('  *** *** OFF')
 
@@ -593,7 +607,7 @@ def write_hdf5(data, fname, dname='volume', dtype=None,
                dest_idx=None, maxsize=None, overwrite=False):
     """Write data to hdf5 file in a specific dataset.
     
-    This function supports partial writing of data through a
+    This function supports partial writing of data through af
     combination of *maxsize* and *dest_idx* options. For example, to
     write slices 10 to 16 of a (32, 32, 32) volume::
     

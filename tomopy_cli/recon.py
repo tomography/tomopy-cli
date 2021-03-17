@@ -187,8 +187,13 @@ def _try_rec(params):
         center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
         # stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
         if (params.blocked_views):
-            blocked_views = params.blocked_views_end - params.blocked_views_start
-            stack = np.empty((len(center_range), data_shape[0]-blocked_views, int(data_shape[2])))
+            # blocked_views = params.blocked_views_end - params.blocked_views_start
+            # stack = np.empty((len(center_range), data_shape[0]-blocked_views, int(data_shape[2])))
+            st = params.blocked_views_start
+            end = params.blocked_views_end
+            #log.warning('%f %f',st,end)
+            ids = np.where(((theta-st)%np.pi<0) + ((theta-st)%np.pi>end-st))[0]
+            stack = np.empty((len(center_range), len(ids), int(data_shape[2])))
         else:
             stack = np.empty((len(center_range), data.shape[0], int(data.shape[2])))
 
