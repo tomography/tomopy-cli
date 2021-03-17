@@ -36,7 +36,13 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
     'sphinxcontrib.bibtex',
-    'sphinx.ext.viewcode']
+    'sphinx.ext.viewcode',
+    'sphinx.ext.autosectionlabel',]
+
+bibtex_bibfiles = [
+    'source/bibtex/cite.bib',
+    'source/bibtex/ref.bib',
+    ]
 
 # Napoleon settings
 napoleon_google_docstring = True
@@ -306,4 +312,8 @@ autodoc_mock_imports = [
     'dxfile',
     'skimage',
     'scipy',
+    'matplotlib',
+    'inspect',
+    'warnings',
+    'yaml',
 ]

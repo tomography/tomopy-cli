@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Mapping
 
 import numpy as np
 
@@ -85,3 +86,30 @@ class CenterCalibration(object):
         self.center = (self.width / 2.0 + self.width - p) / 2
 
 
+def update_dict(original: Mapping, new: Mapping)->Mapping:
+    """Recursively update a dictionary in place with new values.
+
+    This is distinct from the python ``dict.update`` method in that it
+    respects existing entries and just updates them with new values.
+
+    https://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
+
+    Parameters
+    ==========
+    original
+      The target dictionary that will be updated.
+    new
+      The dictionary with new values that will be added to *original*.
+
+    Returns
+    =======
+    original
+      Same dictionary that was passed, with values modified in place.
+
+    """
+    for k, v in new.items():
+        if isinstance(v, Mapping):
+            original[k] = update_dict(original.get(k, {}), v)
+        else:
+            original[k] = v
+    return original

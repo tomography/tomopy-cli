@@ -1,7 +1,9 @@
 import unittest
 from unittest import mock
 import os
+import shutil
 from pathlib import Path
+import copy
 
 import h5py
 import numpy as np
@@ -10,6 +12,9 @@ from tomopy import misc, project
 import matplotlib.pyplot as plt
 
 from tomopy_cli import file_io
+
+
+TESTDIR = Path(__file__).resolve().parent
 
 
 def make_params():
@@ -49,25 +54,26 @@ class FlipAndStitchTests(unittest.TestCase):
 
 
 class ReadParamTests(unittest.TestCase):
-    test_hdf_file = Path('filter-tests.hdf5')
-    rot_axis_file = Path(__file__).resolve().parent / 'rotation_axis.json'
+    test_hdf_file = TESTDIR / 'filter-tests.hdf5'
+    params_file = TESTDIR / 'extra_params.yaml'
     # Sample filters from 7-BM-B for 'open' and 'Cu_1000um' filters
     filter_open = np.array([[79, 112, 101, 110,] + [0,] * 252], dtype='int8')
     filter_Cu_1000um = np.array([[67, 117,  95,  49,  48,  48, 48, 117, 109,] + [0,] * 247], dtype='int8')
 
     def setUp(self):
-        if self.rot_axis_file.exists():
-            self.rot_axis_file.unlink()
-        # Create a rotation_axis.json file
-        with open(self.rot_axis_file, mode='x') as fp:
-            fp.write('{"0": {"filter-tests.hdf5": 1287.25}}')
+        if self.params_file.exists():
+            self.params_file.unlink()
+        # Create a extra_params.yaml file
+        with open(self.params_file, mode='x') as fp:
+            fp.write('filter-tests.hdf5:\n  rotation_axis: 1287.25\n'
+                     'tests/filter-001.hdf5:\n  rotation_axis: 1290.0\n')
     
     def tearDown(self):
         # Clean up the mocked HDF5 file
         if os.path.exists(self.test_hdf_file):
             os.remove(self.test_hdf_file)
-        if self.rot_axis_file.exists():
-            self.rot_axis_file.unlink()            
+        if self.params_file.exists():
+            self.params_file.unlink()            
     
     def prepare_hdf_file(self, filter_1=None, filter_2=None):
         with h5py.File(self.test_hdf_file, mode='x') as h5fp:
@@ -136,13 +142,84 @@ class ReadParamTests(unittest.TestCase):
         self.assertEqual(params.filter_2_material, 'Al')
         self.assertEqual(params.filter_2_thickness, 0.)
 
-    def test_read_rot_center_json(self):
-        params = make_params()
-        params.rotation_axis_auto = 'json'
-        params.file_name = self.test_hdf_file
-        params.rotation_axis_file = self.rot_axis_file
-        file_io.read_rot_center(params)
 
+class ReadTomoScanParamTests(unittest.TestCase):
+    test_hdf_file = TESTDIR/'meta_mock.h5'
+
+    def setUp(self):
+        self.burner_hdf_file = TESTDIR/'meta_mock2.h5'
+        shutil.copy(self.test_hdf_file, self.burner_hdf_file) 
+
+
+    def tearDown(self):
+        os.remove(self.burner_hdf_file)
+
+ 
+    def test_check_item_exists_hdf(self):
+        self.assertTrue(file_io.check_item_exists_hdf(self.test_hdf_file,
+                                    '/exchange/data'))
+        self.assertFalse(file_io.check_item_exists_hdf(self.test_hdf_file,
+                                    '/exchange/bob'))
+
+
+    def test_pixel_size(self):
+        params = mock.MagicMock()
+        params.file_name = str(self.test_hdf_file)
+        params.pixel_size_auto = False
+        params.pixel_size = 0
+        self.assertEqual(file_io.read_pixel_size(params).pixel_size, 0)
+        params.pixel_size_auto = True
+        self.assertAlmostEqual(file_io.read_pixel_size(params).pixel_size, 
+                                    1.1806373, 5)
+        
+    def test_scintillator_to_params(self):
+        params = mock.MagicMock()
+        params.file_name = str(self.test_hdf_file)
+        params.scintillator_auto = False
+        params.scintillator_thickness = 0
+        new_params = file_io.read_scintillator(params)
+        self.assertEqual(new_params.scintillator_thickness, 0)
+        params.scintillator_auto = True
+        new_params = file_io.read_scintillator(params)
+        self.assertEqual(new_params.scintillator_thickness, 100.)
+
+
+    def test_exposure_ratio_to_params(self):
+        params = mock.MagicMock()
+        params.file_name = self.burner_hdf_file
+        params.scintillator_auto = False 
+        params.flat_correction_method = 'standard'
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,1.)
+        params.scintillator_auto = True 
+        params.flat_correction_method = 'none'
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,1.)
+        params.flat_correction_method = 'standard'
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,1.)
+        with h5py.File(self.burner_hdf_file, 'r+') as hdf_file:
+            hdf_file['/measurement/instrument/detector/different_flat_exposure'][0] = 'Different'.encode()
+        new_params = file_io.read_bright_ratio(params)
+        self.assertEqual(new_params.bright_exp_ratio,0.)
+        with h5py.File(self.burner_hdf_file, 'r+') as hdf_file:
+            hdf_file['/measurement/instrument/detector/exposure_time_flat'][...] = 0.004
+        new_params = file_io.read_bright_ratio(params)
+        self.assertAlmostEqual(new_params.bright_exp_ratio,0.5, 3)
+        
+
+    def test_auto_filter(self):
+        params = mock.MagicMock()
+        params.file_name = str(self.test_hdf_file)
+        params.filter_1_auto = True
+        params.filter_2_auto = True
+        params.filter_3_auto = True
+        new_params = file_io.read_filter_materials_tomoscan(params) 
+        #import pdb; pdb.set_trace()
+        self.assertEqual(new_params.filter_1_material, 'Be')
+        self.assertEqual(new_params.filter_2_thickness, 0)
+        self.assertEqual(new_params.filter_3_thickness, 1000)
+        
 
 class WriteHDF5Tests(unittest.TestCase):
     hdf_filename = 'test_output.h5'
