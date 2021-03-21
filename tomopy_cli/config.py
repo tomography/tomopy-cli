@@ -183,13 +183,13 @@ SECTIONS['dx-options'] = {
 
 SECTIONS['blocked-views'] = {
     'blocked-views-start': {
-        'type': util.positive_int,
+        'type': float,
         'default': 0,
-        'help': "Projection number of the first blocked view"},
+        'help': "Angle of the first blocked view"},
     'blocked-views-end': {
-        'type': util.positive_int,
+        'type': float,
         'default': 1,
-        'help': "Projection number of the first blocked view"},
+        'help': "Angle of the last blocked view"},
         }
 
 SECTIONS['zinger-removal'] = {
