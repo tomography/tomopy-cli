@@ -24,7 +24,7 @@ def all(proj, flat, dark, params, sino):
     data = flat_correction(proj, flat, dark, params)
     del(proj, flat, dark)
     # remove stripes
-    data[:,...] = remove_stripe(data, params)
+    data = remove_stripe(data, params)
     # Perform beam hardening.  This leaves the data in pathlength.
     if params.beam_hardening_method == 'standard':
         data[:,...] = beamhardening_correct(data, params, sino)
