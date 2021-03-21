@@ -69,30 +69,19 @@ def rec(params):
                     "*end_row*, and *nsino_per_chunk*.")
     for iChunk in range(0, chunks):
         log.info('chunk # %i/%i' % (iChunk + 1, chunks))
-        sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
-        sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
-        if sino_chunk_end > sino_end:
-            log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
-            sino_chunk_end = sino_end
-        log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
-        sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
-        # extra data for padded phase retrieval
-        if params.retrieve_phase_method == "paganin":
-                phase_pad = np.zeros(2,dtype=int)
-                if(iChunk>0):
-                    phase_pad[0] = -params.retrieve_phase_pad
-                if (iChunk<chunks-1):
-                    phase_pad[1] =  params.retrieve_phase_pad
-                sino += phase_pad
-                log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
+        sino = _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params) 
+
         # Read APS 32-BM raw data.
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params) 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
             log.warning("  *** Chunk size > remaining data size.")
             sino = [sino[0], sino[0] + proj.shape[1]]
+
         # Apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
+        del(proj, flat, dark)
+
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":
                 phase_pad //= pow(2, int(params.binning))
@@ -109,6 +98,8 @@ def rec(params):
                 rotation_axis_rec = data.shape[-1]-rotation_axis                               
             # double FOV by adding zeros
             data = double_fov(data,rotation_axis_rec)    
+
+        #Perform actual reconstruction
         rec = padded_rec(data, theta, rotation_axis_rec, params)
 
         # Save images
@@ -161,6 +152,29 @@ def rec(params):
         thread.join()
 
 
+def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params):
+    '''Computes a 2-element array to give starting and ending slices 
+    for this chunk.
+    '''
+    sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
+    sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
+    if sino_chunk_end > sino_end:
+        log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
+        sino_chunk_end = sino_end
+    log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
+    sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
+    # extra data for padded phase retrieval
+    if params.retrieve_phase_method == "paganin":
+        phase_pad = np.zeros(2,dtype=int)
+        if(iChunk>0):
+            phase_pad[0] = -params.retrieve_phase_pad
+        if (iChunk<chunks-1):
+            phase_pad[1] =  params.retrieve_phase_pad
+        sino += phase_pad
+        log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
+    return sino
+
+
 def _try_rec(params):
     log.info("  *** *** starting 'try' reconstruction")
     data_shape = file_io.get_dx_dims(params)
@@ -182,6 +196,7 @@ def _try_rec(params):
     # Set up the centers of rotation we will use
     # Read APS 32-BM raw data.
     proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params, True)
+    
     # Apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)
     rec = []
