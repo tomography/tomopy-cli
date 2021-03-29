@@ -3,13 +3,51 @@ from unittest import mock, TestCase, expectedFailure, skip
 import numpy as np
 import tomopy
 
-from tomopy_cli.prep import remove_stripe, cap_sinogram_values
+from tomopy_cli.prep import remove_stripe, minus_log, flat_correction, cap_sinogram_values
 
 
 def make_params():
     params = mock.MagicMock()
     return params
 
+
+class PrepTests(TestCase):
+    '''Class to test tomopy_cli/prep.py
+    '''
+    def test_minus_log(self):
+        params = mock.MagicMock()
+        params.minus_log = False
+        data = np.linspace(0.05, 1.0, 20)
+        np.testing.assert_array_equal(minus_log(data, params), data)
+        params.minus_log = True
+        ext_length_data = minus_log(data, params)
+        self.assertAlmostEqual(ext_length_data[-1], 0.0)
+        self.assertAlmostEqual(ext_length_data[9], 0.693147181)
+
+    def test_flat_normalization(self):
+        params = make_params()
+        params.flat_correction_method = 'standard'
+        params.bright_exp_ratio = 1.0
+        params.normalization_cutoff = 1.1
+        proj = np.array([10., 5.0, 10., 5.])
+        flat = np.array([10., 10., 10., 9.])
+        dark = np.array([0., 0.0, 1.0, 1.0])
+        np.testing.assert_array_almost_equal(
+                        flat_correction(proj, flat[np.newaxis,:], dark[np.newaxis,:], params),
+                        np.array([1.0, 0.5, 1.0, 0.5]))
+        params.normalization_cutoff = 0.8
+        np.testing.assert_array_almost_equal(
+                        flat_correction(proj, flat[np.newaxis,:], dark[np.newaxis,:], params),
+                        np.array([0.8, 0.5, 0.8, 0.5]))
+        params.normalization_cutoff = 1.1 
+        flat = np.array([5., 5., 5.5, 5.])
+        params.bright_exp_ratio = 0.5
+        np.testing.assert_array_almost_equal(
+                        flat_correction(proj, flat[np.newaxis,:], dark[np.newaxis,:], params),
+                        np.array([1.0, 0.5, 1.0, 0.5]))
+        params.flat_correction_method = 'dummy'
+        self.assertRaises(ValueError, flat_correction, proj, flat, dark, params)
+        
 
 class StripeRemovalTests(TestCase):
     def phantom_prj(self, size=64):
