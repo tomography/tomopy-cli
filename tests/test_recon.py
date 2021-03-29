@@ -127,17 +127,15 @@ class ReconTests(ReconTestBase):
         params = make_params()
         params.file_name = str(this_file)
         params.output_folder = "{file_name_parent}_rec/"
-        params.reconstruction_algorithm = "sirt"
         output = reconstruction_folder(params)
-        self.assertEqual(str(output), "/home/mwolf/src/tomopy-cli/tests_rec")
+        self.assertEqual(str(output), str(this_file.parent) + "_rec")
         # Check parent file name for a directory
         this_file = Path(__file__).resolve()
         params = make_params()
         params.file_name = str(this_file.parent) + '/'
         params.output_folder = "{file_name_parent}_rec/"
-        params.reconstruction_algorithm = "sirt"
         output = reconstruction_folder(params)
-        self.assertEqual(str(output), "/home/mwolf/src/tomopy-cli/tests_rec")
+        self.assertEqual(str(output), str(this_file.parent) + "_rec")
 
 
 class TryCenterTests(ReconTestBase):
