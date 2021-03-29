@@ -3,7 +3,7 @@ from unittest import mock, TestCase, expectedFailure, skip
 import numpy as np
 import tomopy
 
-from tomopy_cli.prep import remove_stripe
+from tomopy_cli.prep import remove_stripe, cap_sinogram_values
 
 
 def make_params():
@@ -88,3 +88,27 @@ class StripeRemovalTests(TestCase):
         expected[np.isnan(expected)] = 0
         result[np.isnan(result)] = 0
         np.testing.assert_array_equal(result, expected)
+
+
+class DataCorrectionTests(TestCase):
+    def test_sinogram_max_value(self):
+        params = make_params()
+        # No effect
+        data = np.array([0, 1., 2., 3.])
+        params.sinogram_max_value = np.inf
+        np.testing.assert_array_equal(cap_sinogram_values(data, params),
+                                      [0, 1., 2., 3.])
+        # Remove some values
+        data = np.array([0, 1.1, 2., np.inf])
+        params.sinogram_max_value = 1.
+        np.testing.assert_array_equal(cap_sinogram_values(data, params),
+                                      [0, 1., 1., 1.])
+        # Check float/int values
+        data = np.array([0, 1., 2., 3.])
+        params.sinogram_max_value = int(2)
+        np.testing.assert_array_equal(cap_sinogram_values(data, params),
+                                      [0, 1., 2., 2.])
+        data = np.array([0, 1., 2., 3.], dtype=int)
+        params.sinogram_max_value = 2.
+        np.testing.assert_array_equal(cap_sinogram_values(data, params),
+                                      [0, 1., 2., 2.])

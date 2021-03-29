@@ -238,7 +238,12 @@ SECTIONS['flat-correction'] = {
         'default': True,
         'help': "Minus log",
         'action': 'store_true'},
-        }
+    'sinogram-max-value': {
+        'default': float('inf'),
+        'help': "Limit the maximum value allowed in the singogram.",
+        'type': float},
+}
+
 
 SECTIONS['retrieve-phase'] = {
     'retrieve-phase-method': {

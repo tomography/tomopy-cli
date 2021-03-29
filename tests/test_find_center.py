@@ -44,6 +44,7 @@ def make_params():
     params.retrieve_phase_method = 'none'
     params.minus_log = True
     params.fix_nan_and_inf = False
+    params.sinogram_max_value = float('inf')
     return params
 
 
