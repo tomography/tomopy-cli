@@ -69,7 +69,7 @@ def rec(params):
                     "*end_row*, and *nsino_per_chunk*.")
     for iChunk in range(0, chunks):
         log.info('chunk # %i/%i' % (iChunk + 1, chunks))
-        sino = _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params) 
+        sino = _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params) 
 
         # Read APS 32-BM raw data.
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params) 
@@ -152,7 +152,7 @@ def rec(params):
         thread.join()
 
 
-def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params):
+def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params):
     '''Computes a 2-element array to give starting and ending slices 
     for this chunk.
     '''
