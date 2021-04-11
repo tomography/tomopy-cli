@@ -84,9 +84,9 @@ def rec(params):
 
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":
-                phase_pad //= pow(2, int(params.binning))
-                sino -= phase_pad                                
-                data = data[:,-phase_pad[0]:data.shape[1]-phase_pad[1]]                
+                params.phase_pad //= pow(2, int(params.binning))
+                sino -= params.phase_pad                                
+                data = data[:,-params.phase_pad[0]:data.shape[1]-params.phase_pad[1]]                
                 log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
         
         # Reconstruct: this is for "slice" and "full" methods
@@ -172,6 +172,7 @@ def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params)
             phase_pad[1] =  params.retrieve_phase_pad
         sino += phase_pad
         log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
+    params.phase_pad = phase_pad
     return sino
 
 
