@@ -72,6 +72,8 @@ def find_rotation_axis(params):
                 all_params = yaml.safe_load(fp.read())
         else:
             all_params = {}
+        # Fix None values in the dictionary
+        all_params = {k:({} if v is None else v) for k, v in all_params.items()}
         # Update previous parameters with new rotation centers
         all_params = util.update_dict(all_params, dic_centers)
         # Save YAML file containing the rotation axis
