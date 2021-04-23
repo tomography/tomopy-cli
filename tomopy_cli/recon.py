@@ -172,7 +172,7 @@ def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params)
             phase_pad[1] =  params.retrieve_phase_pad
         sino += phase_pad
         log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
-    params.phase_pad = phase_pad
+        params.phase_pad = phase_pad
     return sino
 
 
