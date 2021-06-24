@@ -1,0 +1,167 @@
+=================================
+Tutorial 1: Basic Reconstructions
+=================================
+
+This tutorial will guide you through the first simple tomography
+reconstruction. By the end, you will be able to:
+
+- Load a set of projection images
+- Produce a single reconstructed slice
+- Produce the full reconstructed volume
+- Supply command line arguments to alter the reconstruction behavior
+- Create a configuration file to stream-line reconstructions
+
+.. note::
+
+   This tutorial assumes you have a working python installation
+   (i.e. Anaconda) and have :ref:`installed tomopy-cli<Installation
+   from Source>` and it's :ref:`dependencies<Dependencies>` (both
+   tomopy and dxchange).
+
+.. warning::
+
+   This tutorial has only been tested on **GNU/Linux** operating
+   systems. Windows and MacOS support is an ongoing project.
+
+
+Preamble: Prepare Test Images
+=============================
+
+.. note::
+
+   This tutorial will use some test data known as the *Shepp-Logan
+   phantom*, which will need to be saved in a format that mimics
+   synchrotron tomography data. This step is not needed when doing
+   reconstructions on real experimental results.
+
+First, open a terminal and create an empty directory to hold our data:
+
+.. code-block:: bash
+
+   $ mkdir tomopy_cli_tutorial
+   $ cd tomopy_cli_tutorial
+
+We will also need a way to view the results of our reconstruction, so
+we'll install matplotlib:
+
+.. code-block:: bash
+
+   $ pip install matplotlib
+
+Now we will **open a python console** and use the tomopy package to
+prepare phantom test data:
+
+.. code-block:: python
+
+   >>> import tomopy, dxchange, h5py, matplotlib.pyplot as plt
+   >>> phantom = tomopy.misc.phantom.shepp3d(128)
+
+And visualize the results:
+
+.. code-block:: python
+
+   >>> fig, (axL, axR) = plt.subplots(1, 2)
+   >>> axL.imshow(phantom[64])
+   >>> axL.set_title("XY slice")
+   >>> axR.imshow(phantom[:,64])
+   >>> axR.set_title("XZ slice")
+   >>> plt.show(block=False)
+
+You should now see a plot with a horizontal (XY) slice and a vertical
+(XZ) slice of the test data:
+
+.. image:: tutorial_1_phantom_slices.png
+  :alt: Slices of the phantom test data
+
+Next, we will simulate a set of projection images from this phantom
+volume.
+
+.. code-block:: python
+
+   >>> angles = tomopy.sim.project.angles(181)
+   >>> proj = tomopy.sim.project.project(phantom, theta=angles)
+   >>> plt.imshow(proj[0])
+   >>> plt.show(block=False)
+
+You should now see the first image in a series of simulated
+projections of the phantom volume.
+   
+.. image:: tutorial_1_phantom_projection.png
+  :alt: Simulated projection of the phantom test volume.
+
+This set of projections will be used as input for reconstructions in
+the rest of this tutorial, so we will save them and then leave the
+python console for the next segment of this tutorial:
+
+.. warning::
+
+   This following commands will overwrite any existing file named
+   *phantom_projections.h5*.
+
+.. code-block::
+   
+   >>> file = h5py.File("phantom_projections.h5", mode="w")
+   >>> file.create_dataset("exchange/data", data=numpy.exp(-proj))
+   >>> file.create_dataset("exchange/data_white", data=numpy.ones(shape=(1, *proj.shape[-2:])))
+   >>> file.create_dataset("exchange/data_dark", data=numpy.zeros(shape=(1, *proj.shape[-2:])))
+   >>> file.close()
+   >>> exit()
+
+
+Perform a Single Slice Reconstruction
+=====================================
+
+Now that we have some projection data to work with, we will perform a
+simple single-slice reconstruction:
+
+.. code-block::
+
+   $ tomopy recon --file-name phantom_projections.h5 --reconstruction-type=slice --output-folder=_rec
+
+This will save reconstructions as TIFF files in the *_rec*
+folder. Single slice reconstructions are stored in
+*_rec/slice_rec*.
+
+To visualize the results, **open a python console** again and use
+matplotlib to view the reconstructed data.
+
+.. code-block:: python
+
+   >>> import matplotlib.pyplot as plt, imageio
+   >>> slc = imageio.read("_rec/slice_rec/recon_phantom_projections.tiff").get_data(0)
+   >>> plt.imshow(slc)
+   >>> plt.show(block=False)
+
+.. image:: tutorial_1_recon_slice.png
+  :alt: Single slice reconstruction
+
+Compare this reconstructed slice to the original phantom produced in
+the first section.
+
+Perform a Full Volume Reconstruction
+====================================
+
+We will now use *tomopy-cli* to reconstruct the full volume. This is
+done by changing the ``--reconstruction-type`` option:
+
+.. code-block:: bash
+
+   $ tomopy recon --file-name phantom_projections.h5 --reconstruction-type=full --output-folder=_rec --output-format=tiff_stack
+
+Reconstructions are again stored in *_rec*, but full volume
+reconstructions can be found in *_rec/phantom_projections_rec*. Again,
+**open a python console** to visualize the results:
+
+.. code-block:: python
+
+   >>> import matplotlib.pyplot as plt, dxchange
+   >>> recon = dxchange.read_tiff_stack("_rec/phantom_projections_rec/recon_00000.tiff", ind=range(0, 128))
+   >>> fig, (axL, axR) = plt.subplots(1, 2)
+   >>> axL.imshow(recon[64])
+   >>> axL.set_title("XY slice")
+   >>> axR.imshow(recon[:,92])
+   >>> axR.set_title("XZ slice")
+   >>> plt.show(block=False)
+
+.. image:: tutorial_1_recon_full.png
+  :alt: Slices from full volume reconstruction

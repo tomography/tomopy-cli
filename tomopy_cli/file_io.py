@@ -29,13 +29,14 @@ log = logging.getLogger(__name__)
 
 
 def read_tomo(sino, params, ignore_flip = False):
-    """
-    Read in the tomography data.
+    """Read in the tomography data.
+
     Parameters
     ----------
-    sino : tuple of (start_row, end_row) to be read in
-    
-    params : parameters for reconstruction
+    sino
+      tuple of (start_row, end_row) to be read in
+    params
+      parameters for reconstruction
     
     Returns
     -------
@@ -49,6 +50,7 @@ def read_tomo(sino, params, ignore_flip = False):
         1D theta in radian.
     float
         location of the rotation axis
+    
     """
     if (params.file_type == 'standard' or params.file_type == 'double_fov' or
             (params.file_type == 'flip_and_stich' and ignore_flip)):
@@ -104,7 +106,7 @@ def _read_tomo(params, sino):
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
             # Do a median filter on the first dimension
-            dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
+            dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype)
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()

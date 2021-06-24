@@ -32,6 +32,7 @@ Content
    :maxdepth: 2
 
    source/install
+   source/guides
    source/usage
    source/testing
    source/api
