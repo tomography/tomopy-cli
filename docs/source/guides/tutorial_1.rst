@@ -31,8 +31,8 @@ Preamble: Prepare Test Images
 
    This tutorial will use some test data known as the *Shepp-Logan
    phantom*, which will need to be saved in a format that mimics
-   synchrotron tomography data. This step is not needed when doing
-   reconstructions on real experimental results.
+   synchrotron tomography data. This preamble section is not needed
+   when performing reconstructions on real experimental data.
 
 First, open a terminal and create an empty directory to hold our data:
 
@@ -48,8 +48,8 @@ we'll install matplotlib:
 
    $ pip install matplotlib
 
-Now we will **open a python console** and use the tomopy package to
-prepare phantom test data:
+Now **open a python console** (``$ python``) and use the tomopy
+package to prepare phantom test data:
 
 .. code-block:: python
 
@@ -165,3 +165,4 @@ reconstructions can be found in *_rec/phantom_projections_rec*. Again,
 
 .. image:: tutorial_1_recon_full.png
   :alt: Slices from full volume reconstruction
+
