@@ -570,6 +570,12 @@ def read_pixel_size(params):
                                             '/measurement/instrument/detection_system/objective/resolution')
         log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
         return(params)
+    if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/actual_pixel_size_x'):
+        params.pixel_size = config.param_from_dxchange(params.file_name,
+                                            '/measurement/instrument/detector/actual_pixel_size_x')
+        log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
+        return(params)
     log.warning('  *** tomoScan resolution parameter not found.  Try old format')
     pixel_size = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detector/pixel_size_x')
