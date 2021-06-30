@@ -5,17 +5,20 @@ from pathlib import Path
 
 import numpy as np
 import h5py
+import yaml
 
 import tomopy
-from tomopy_cli.recon import rec
+from tomopy_cli.recon import rec, reconstruction_folder
 
-HDF_FILE = Path(__file__).resolve().parent / 'test_tomogram.h5'
-ROT_AXIS_FILE = Path(__file__).resolve().parent / 'rotation_axis.json'
-
+TEST_DIR = Path(__file__).resolve().parent
+HDF_FILE = TEST_DIR / 'test_tomogram.h5'
+YAML_FILE = TEST_DIR / 'test_tomogram.yaml'
 
 def make_params():
     params = mock.MagicMock()
     params.file_name = HDF_FILE
+    params.output_folder = "{file_name_parent}/_rec"
+    params.parameter_file = os.devnull
     params.rotation_axis = 32
     params.file_type = 'standard'
     params.file_format = 'dx'
@@ -28,14 +31,16 @@ def make_params():
     params.gridrec_filter = 'parzen'
     params.reconstruction_mask_ratio = 1.0
     params.reconstruction_type = 'slice'
+    params.scintillator_auto = False
+    params.blocked_views = False
     return params
 
 
-class ReconTests(TestCase):
+class ReconTestBase(TestCase):
     output_dir = Path(__file__).resolve().parent / '_rec'
     output_hdf = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec.hdf'
     full_tiff_dir = Path(__file__).resolve().parent / '_rec' / 'test_tomogram_rec'
-
+    
     def setUp(self):
         # Remove the temporary HDF5 file
         if HDF_FILE.exists():
@@ -57,13 +62,14 @@ class ReconTests(TestCase):
         # Remove the reconstructed output
         if self.output_dir.exists():
             shutil.rmtree(self.output_dir)
-        
+
+
+class ReconTests(ReconTestBase):
     def test_slice_reconstruction(self):
         """Check that a basic reconstruction completes and produces output tiff files."""
         params = make_params()
         params.reconstruction_type = 'slice'
         response = rec(params=params)
-        print(self.output_dir)
         self.assertTrue(self.output_dir.exists())
     
     def test_full_reconstruction(self):
@@ -104,3 +110,72 @@ class ReconTests(TestCase):
             vol = h5fp['volume']
             self.assertEqual(vol.shape, (64, 64, 64))
             self.assertFalse(np.any(np.isnan(vol)))
+
+    def test_reconstruction_folder(self):
+        params = make_params()
+        params.output_folder = "_rec"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), "_rec")
+        # Check config parameters
+        params = make_params()
+        params.output_folder = "_rec_{reconstruction_algorithm}/"
+        params.reconstruction_algorithm = "sirt"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), "_rec_sirt")
+        # Check parent file name for a file
+        this_file = Path(__file__).resolve()
+        params = make_params()
+        params.file_name = str(this_file)
+        params.output_folder = "{file_name_parent}_rec/"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), str(this_file.parent) + "_rec")
+        # Check parent file name for a directory
+        this_file = Path(__file__).resolve()
+        params = make_params()
+        params.file_name = str(this_file.parent) + '/'
+        params.output_folder = "{file_name_parent}_rec/"
+        output = reconstruction_folder(params)
+        self.assertEqual(str(output), str(this_file.parent) + "_rec")
+
+
+class TryCenterTests(ReconTestBase):
+    def test_recon_output_dir(self):
+        """Check that ``--reconstruction-type=try`` respects output
+        directory.
+        
+        """
+        params = make_params()
+        params.reconstruction_type = "try"
+        params.center_search_width = 10
+        params.output_folder = "{file_name_parent}/_rec"
+        params.parameter_file = os.devnull
+        response = rec(params=params)
+        self.assertTrue(self.output_dir.exists())
+
+
+class YamlParamsTests(ReconTestBase):
+    yaml_file = TEST_DIR / "my_files.yaml"
+    def setUp(self):
+        # Delete any old files 
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+        # Create a new YAML file
+        opts = {
+            "test_tomogram.h5": {
+                "spam": "foo",
+                "rotation-axis": 1200,
+            }
+        }
+        with open(self.yaml_file, mode='w') as fp:
+            fp.write(yaml.dump(opts))
+        super().setUp()
+    
+    def tearDown(self):
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+        super().tearDown()
+
+    def test_yaml_params(self):
+        params = make_params()
+        params.parameter_file = self.yaml_file
+        response = rec(params=params)

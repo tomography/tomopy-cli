@@ -23,16 +23,16 @@ This enable the autocompletition of all tomopy recon options. Just press tab aft
 
     $ tomopy recon --<TAB> <TAB>
     
-to select and optional parameter and show its default value.
+to select an optional parameter and show its default value.
  
-.. warning:: in some systems you are required to set omplete_tomopy.sh as executable with::
+.. warning:: in some systems you are required to set *complete_tomopy.sh* as executable with::
 
     $ chmod +x /Users/userid/complete_tomopy.sh
 
 Update
 ======
 
-**tomopy** is constantly updated to include new features. To update your locally installed version::
+**tomopy-cli** is constantly updated to include new features. To update your locally installed version::
 
     $ cd tomopy-cli
     $ git pull

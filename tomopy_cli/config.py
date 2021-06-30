@@ -1,25 +1,68 @@
 import os
 import sys
 import shutil
+from copy import copy
 from pathlib import Path
 import argparse
 import configparser
 from collections import OrderedDict
+import contextlib
 import logging
+import warnings
+import inspect
 
 import h5py
 import numpy as np
+import yaml
 
+import tomopy
 from tomopy_cli import util
 from tomopy_cli import __version__
+from tomopy_cli import recon
 
 
 log = logging.getLogger(__name__)
 
 
+def default_parameter(func, param):
+    """Get the default value for a function parameter.
+    
+    For a given function *func*, introspect the function and return
+    the default value for the function parameter named *param*.
+    
+    Return
+    ======
+    default_val
+      The default value for the parameter.
+    
+    Raises
+    ======
+    RuntimeError
+      Raised if the function *func* has no default value for the
+      requested parameter *param*.
+    
+    """
+    # Retrieve the function parameter by introspection
+    try:
+        sig = inspect.signature(func)
+        _param = sig.parameters[param]
+    except TypeError as e:
+        warnings.warn(str(e))
+        log.warning(str(e))
+        return None
+    # Check if a default value exists
+    if _param.default is _param.empty:
+        # No default is listed in the function, so throw an exception
+        msg = ("No default value given for parameter *{}* of callable {}."
+               "".format(param, func))
+        raise RuntimeError(msg)
+    else:
+        # Retrieve and return the parameter's default value
+        return _param.default
+
+
 LOGS_HOME = Path.home()/'logs'
 CONFIG_FILE_NAME = Path.home()/'tomopy.conf'
-ROTATION_AXIS_FILE_NAME = "rotation_axis.json"
 
 SECTIONS = OrderedDict()
 
@@ -35,10 +78,10 @@ SECTIONS['general'] = {
         'type': str,
         'help': "Log file directory",
         'metavar': 'FILE'},
-    'rotation-axis-file': {
-        'default': ROTATION_AXIS_FILE_NAME,
-        'type': str,
-        'help': "File name of rataion axis locations",
+    'parameter-file': {
+        'default': "extra_params.yaml",
+        'type': Path,
+        'help': 'File name of extra, per-tomogram parameters in YAML format',
         'metavar': 'FILE'},
     'verbose': {
         'default': False,
@@ -63,13 +106,14 @@ SECTIONS['find-rotation-axis'] = {
     'rotation-axis-auto': {
         'default': 'read_auto',
         'type': str,
-        'help': "How to get rotation axis: read from HDF5, auto calculate, read from json file, or take from this file",
-        'choices': ['read_auto', 'read_manual', 'manual', 'auto', 'json']},
+        'help': "How to get rotation axis: read from HDF5 ('read_auto', 'read_manual'), auto calculate ('auto'), or take from this file ('manual')",
+        'choices': ['read_auto', 'read_manual', 'manual', 'auto',]},
     'rotation-axis-flip': {
         'default': -1.0,
         'type': float,
         'help': "Location of rotation axis in a 0-360 flip and stich data collection"},
         }
+
 
 SECTIONS['file-reading'] = {
     'file-name': {
@@ -86,7 +130,7 @@ SECTIONS['file-reading'] = {
         'default': 'standard',
         'type': str,
         'help': "Input file type",
-        'choices': ['standard', 'flip_and_stich', 'mosaic']},
+        'choices': ['standard', 'flip_and_stich', 'double_fov', 'mosaic']},
     'nsino': {
         'default': 0.5,
         'type': float,
@@ -139,13 +183,13 @@ SECTIONS['dx-options'] = {
 
 SECTIONS['blocked-views'] = {
     'blocked-views-start': {
-        'type': util.positive_int,
+        'type': float,
         'default': 0,
-        'help': "Projection number of the first blocked view"},
+        'help': "Angle of the first blocked view"},
     'blocked-views-end': {
-        'type': util.positive_int,
+        'type': float,
         'default': 1,
-        'help': "Projection number of the first blocked view"},
+        'help': "Angle of the last blocked view"},
         }
 
 SECTIONS['zinger-removal'] = {
@@ -232,9 +276,24 @@ SECTIONS['remove-stripe'] = {
     'remove-stripe-method': {
         'default': 'none',
         'type': str,
-        'help': "Remove stripe method: none, fourier-wavelet, titarenko, smoothing filter",
-        'choices': ['none', 'fw', 'ti', 'sf']},
+        'help': "Remove stripe method: none, fourier-wavelet, titarenko, smoothing filter, all Vo's algorithms",
+        'choices': ['none', 'fw', 'ti', 'sf', 'vo-all']},
         }
+
+SECTIONS['vo-all'] = {
+    'vo-all-snr': {
+        'default': default_parameter(tomopy.remove_all_stripe, 'snr'),
+        'type': float,
+        'help': "Ratio used to locate large stripes. Greater is less sensitive."},
+    'vo-all-la-size': {
+        'default': default_parameter(tomopy.remove_all_stripe, 'la_size'),
+        'type': util.positive_int,
+        'help': "Window size of the median filter to remove large stripes."},
+    'vo-all-sm-size': {
+        'default': default_parameter(tomopy.remove_all_stripe, 'sm_size'),
+        'type': util.positive_int,
+        'help': "Window size of the median filter to remove small-to-medium stripes."},
+}
 
 SECTIONS['fw'] = {
     'fw-sigma': {
@@ -258,18 +317,18 @@ SECTIONS['fw'] = {
 
 SECTIONS['ti'] = {
     'ti-alpha': {
-        'default': 1.5,
+        'default': default_parameter(tomopy.remove_stripe_ti, 'alpha'),
         'type': float,
         'help': "Titarenko remove stripe damping factor"},
     'ti-nblock': {
-        'default': 0,
+        'default': default_parameter(tomopy.remove_stripe_ti, 'nblock'),
         'type': util.positive_int,
         'help': "Titarenko remove stripe number of blocks"},
     }
 
 SECTIONS['sf'] = {
     'sf-size': {
-        'default': 5,
+        'default': default_parameter(tomopy.remove_stripe_sf, 'size'),
         'type': util.positive_int,
         'help': "Smoothing filter remove stripe size"}
         }
@@ -350,7 +409,7 @@ SECTIONS['reconstruction'] = {
         'default': 'gridrec',
         'type': str,
         'help': "Reconstruction algorithm",
-        'choices': ['art', 'astrasart','astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'lprec_fbp', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
+        'choices': ['art', 'astrasart','astrasirt', 'astracgls', 'bart', 'fpb', 'gridrec', 'lprec', 'mlem', 'osem', 'ospml_hybrid', 'ospml_quad', 'pml_hybrid', 'pml_quad', 'sirt', 'tv', 'grad', 'tikh']},
     'reconstruction-mask': {
         'default': False,
         'help': "When set, applies circular mask to the reconstructed slices",
@@ -364,6 +423,13 @@ SECTIONS['reconstruction'] = {
         'type': str,
         'help': "How to save the reconstructed data. Only applies when ``reconstruction-type == 'full'``.",
         'choices': ['tiff_stack', 'hdf5'],
+        },
+    'output-folder': {
+        'default': "{file_name_parent}_rec",
+        'type': str,
+        'help': ("Where to save the reconstructed data. Can accept other parameters "
+                 "and extra tokens (file_name_parent). "
+                 "Eg: \"{file_name_parent}_rec/{reconstruction_algorithm}/\"")
         },
     }
 
@@ -379,17 +445,34 @@ SECTIONS['gridrec'] = {
         'action': 'store_true'},
     }
 
-SECTIONS['lprec-fbp'] = {
+SECTIONS['lprec'] = {
     'lprec-fbp-filter': {
         'default': 'parzen',
         'type': str,
         'help': 'Filter used for lprec-fbp reconstruction',
         'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
-    'lprec-fbp-padding': {
+    'lprec-padding': {
         'default': False,
         'help': "When set, raw data are padded/unpadded before/after reconstruction",
         'action': 'store_true'},
-    }
+    'lprec-method': {
+        'default': 'fbp',
+        'type': str,
+        'help': 'Reconstruction method applied in log-polar coordinates',
+        'choices': ['fbp', 'grad', 'cg', 'tv', 'tvl1', 'tve', 'em']},
+    'lprec-num_iter': {
+        'default': 64,
+        'type': util.positive_int,
+        'help': 'Number of requested iterations for lprec.'},        
+    'lprec-reg': {
+        'default': 0.01,
+        'type': float,
+        'help': "Regularization parameter."},            
+    'lprec-num_gpu': {
+        'default': 1,
+        'type': util.positive_int,
+        'help': 'Number of GPUs for reconstruction by  lprec.'},        
+    }        
     
 SECTIONS['astrasirt'] = {
     'astrasirt-proj-type': {
@@ -485,9 +568,9 @@ SECTIONS['convert'] = {
         'metavar': 'PATH'},
         }
 
-RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-views', 'zinger-removal', 'flat-correction', 'remove-stripe', 'fw', 
+RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-views', 'zinger-removal', 'flat-correction', 'remove-stripe', 'vo-all', 'fw', 
                 'ti', 'sf', 'retrieve-phase', 'beam-hardening', 'reconstruction', 
-                'gridrec', 'lprec-fbp', 'astrasart', 'astrasirt', 'astracgls')
+                'gridrec', 'lprec', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
 
 CONVERT_PARAMS = ('convert', )
@@ -560,7 +643,7 @@ def config_to_list(config_name=CONFIG_FILE_NAME):
     return result
 
 
-def param_from_dxchange(hdf_file, data_path, attr = None, scalar = True, char_array=False):
+def param_from_dxchange(hdf_file, data_path, attr=None, scalar=True, char_array=False):
     """
     Reads a parameter from the HDF file.
     Inputs
@@ -603,7 +686,6 @@ class Params(object):
     def get_defaults(self):
         parser = argparse.ArgumentParser()
         self.add_arguments(parser)
-
         return parser.parse_args('')
 
 
@@ -618,15 +700,15 @@ def write(config_file, args=None, sections=None):
         config.add_section(section)
         for name, opts in SECTIONS[section].items():
             if args and sections and section in sections and hasattr(args, name.replace('-', '_')):
+                # Use a value specified in *args*
                 value = getattr(args, name.replace('-', '_'))
                 if isinstance(value, list):
-                    # print(type(value), value)
                     value = ', '.join(value)
             else:
+                # Use the default value
                 value = opts['default'] if opts['default'] is not None else ''
 
             prefix = '# ' if value == '' else ''
-
             if name != 'config':
                 config.set(section, prefix + name, str(value))
 
@@ -705,23 +787,135 @@ def log_values(args):
     log.warning('tomopy-cli status end')
 
 
-def update_config(args):
+def update_config(args, is_reconstruction=True):
+    """Update the corresponding configuration file.
+    
+    If *args.config_update* is true, the original configuration file
+    is updated.
+    
+    If *args.reconstruction_type* is "full" and *is_reconstruction* is
+    true, then a new configuration file is created alongside the
+    reconstructed data, with a path determined by whether
+    *args.output_format* is "tiff_stack" or "hdf5".
 
+    Parameters
+    ==========
+    args
+      The configuration parameters from the command line argument
+      parser.
+    is_reconstruction
+      If true, an appropriate configuration file is saved alongside
+      the full reconstructed data.
+
+    """
     sections = RECON_PARAMS
-    # write(args.config, args=args, sections=sections)
+    config_file = Path(args.config).resolve()
+    data_file = Path(args.file_name).resolve()
     if (args.config_update):
         # update tomopy.conf
-        write(args.config, args=args, sections=sections)
-    if (args.reconstruction_type == "full"):
-        tail = os.sep + os.path.splitext(os.path.basename(args.file_name))[0]+ '_rec' + os.sep 
-        log_fname = os.path.dirname(args.file_name) + '_rec' + tail + os.path.split(args.config)[1]
+        write(config_file, args=args, sections=sections)
+    is_full_recon = (is_reconstruction and args.reconstruction_type == "full")
+    if is_full_recon:
+        recon_dir = recon.reconstruction_folder(args)
+        if args.output_format == "hdf5":
+            log_fname = recon_dir / "{}_rec_{}".format(data_file.stem, config_file.name)
+        else:
+            log_fname = recon_dir / "{}_rec".format(data_file.stem) / config_file.name
         try:
             write(log_fname, args=args, sections=sections)
+        except Exception as e:
+            log.error('  *** attempt to save config to %s failed' % log_fname)
+            log.error('  *** *** %s' % e)
+        else:
             log.info('  *** saved config to %s ' % (log_fname))
-            log.warning(' *** command to repeat the reconstruction: tomopy recon --config {:s}'.format(log_fname))
-        except:
-            log.error('  *** attempt to save config to %s failed' % (log_fname))
-            pass
+            rerun_msg = ' *** command to repeat the reconstruction: tomopy recon --config {}'
+            rerun_msg = rerun_msg.format(log_fname)
+            log.warning(rerun_msg)
     if(args.dx_update):
         write_hdf(args, sections)       
 
+
+def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
+    """Override config parameters on a per-sample basis.
+    
+    This can be used when processing many tomograms that differ by
+    only one or two parameters. These parameters can be saved in a
+    yaml file then loaded for the corresponding tomogram without
+    affecting the base parameters.
+    
+    The filenames listed in the YAML file can be relative to the
+    current working directory, including subdirectories, but cannot
+    use other file-system shortcuts (e.g. “..”, “~”).
+    
+    Use::
+    
+        args = ...
+        for filename in all_filenames:
+            my_args = yaml_args(args, sample=filename)
+            recon.rec(my_args)
+    
+    The yaml file is expected to be in the following example format,
+    where some first level entry should match the *sample* argument::
+    
+        tomo_file_1.h5:
+          rotation_axis: 512
+          remove_stripe_method: ti
+        tomo_file_2.h5:
+          remove_stripe_method: none
+    
+    Parameters
+    ==========
+    args
+      The base-line configuration args to be copied and modified.
+    yaml_file
+      The path to the a yaml file with overridden parameters.
+    sample
+      The name of the sample to find in the yaml file. Most likely to
+      be the name of the HDF5 file.
+    cli_args
+      A list of CLI parameters, similar to ``sys.argv``. Any
+      parameters in this list will not be overridden by the yaml file.
+    
+    Returns
+    =======
+    new_args
+      A copy of *args* with new parameters based on what was found in
+      the yaml file *yaml_file*.
+
+    """
+    sample = Path(sample)
+    yaml_file = Path(yaml_file)
+    # Check for bad files
+    if not yaml_file.exists():
+        log.warning("YAML file does not exist: %s", yaml_file)
+        return args
+    # Look for the requested key in a hierarchical manner
+    with open(yaml_file, mode='r') as fp:
+        extra_params = None
+        yaml_data = yaml.safe_load(fp)
+        if yaml_data is None:
+            log.warning("Invalid YAML file: %s", yaml_file)
+            return args
+        keys_to_check = [sample] + [sample.relative_to(a) for a in sample.parents]
+        for key in keys_to_check:
+            key = str(key)
+            if key in yaml_data.keys():
+                extra_params = yaml_data[key]
+                log.debug("  *** Found %d extra parameters for %s", len(extra_params), key)
+                break
+        if extra_params is None:
+            raise KeyError(sample)
+    # Create a copy of the args
+    new_args = copy(args)
+    # Prepare CLI parameters by only keep the "--arg" part
+    cli_args = [p.split('=')[0] for p in cli_args]
+    # Update with new values
+    new_args.file_name = Path(sample)
+    for key, value in extra_params.items():
+        params_key = "--{}".format(key.replace('_', '-'))
+        # Parameters given on the command line take precedence
+        is_in_cli = len([p for p in cli_args if p == params_key]) > 0
+        if not is_in_cli:
+            setattr(new_args, key.replace('-', '_'), value)
+    # Return the modified parameters
+    return new_args

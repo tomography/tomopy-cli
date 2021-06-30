@@ -13,7 +13,6 @@ import dxchange
 from tomopy_cli import file_io
 from tomopy_cli import config
 from tomopy_cli import prep
-from tomopy_cli import beamhardening
 from tomopy_cli import find_center
 
 
@@ -23,7 +22,8 @@ log = logging.getLogger(__name__)
 def rec(params):
     
     data_shape = file_io.get_dx_dims(params)
-
+    # Read parameters from YAML file
+    params = config.yaml_args(params, params.parameter_file, str(params.file_name))
     # Read parameters from DXchange file if requested
     params = file_io.auto_read_dxchange(params)
     if params.rotation_axis <= 0:
@@ -69,48 +69,46 @@ def rec(params):
                     "*end_row*, and *nsino_per_chunk*.")
     for iChunk in range(0, chunks):
         log.info('chunk # %i/%i' % (iChunk + 1, chunks))
-        sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
-        sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
-        if sino_chunk_end > sino_end:
-            log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
-            sino_chunk_end = sino_end
-        log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
-        sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
-        phase_pad = params.retrieve_phase_pad
-        # extra data for padded phase retrieval
-        if params.retrieve_phase_method == "paganin":
-                sino[0] -= (iChunk>0)*phase_pad
-                sino[1] += (iChunk<chunks-1)*phase_pad
-                log.info('  *** extra padding for phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
-        # extra data for padded phase retrieval
+        sino = _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params) 
+
         # Read APS 32-BM raw data.
-        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params)
+        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params) 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
             log.warning("  *** Chunk size > remaining data size.")
-            sino = (sino[0], sino[0] + proj.shape[1])
+            sino = [sino[0], sino[0] + proj.shape[1]]
 
-        # apply all preprocessing functions
+        # Apply all preprocessing functions
         data = prep.all(proj, flat, dark, params, sino)
-        del(dark)
-        del(flat)
-        del(proj)
+        del(proj, flat, dark)
+
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":
-                data = data[:,(iChunk>0)*phase_pad:-(iChunk<chunks-1)*phase_pad-(phase_pad==0)]
-                sino[0] += (iChunk>0)*phase_pad
-                sino[1] -= (iChunk<chunks-1)*phase_pad
+                phase_pad //= pow(2, int(params.binning))
+                sino -= phase_pad                                
+                data = data[:,-phase_pad[0]:data.shape[1]-phase_pad[1]]                
                 log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
- 
+        
         # Reconstruct: this is for "slice" and "full" methods
-        rec = padded_rec(data, theta, rotation_axis, params)
+        rotation_axis_rec = rotation_axis
+        if (params.file_type == 'double_fov'):                                
+            if(rotation_axis<data.shape[-1]//2):
+                #if rotation center is on the left side of the ROI
+                data = data[:,:,::-1]
+                rotation_axis_rec = data.shape[-1]-rotation_axis                               
+            # double FOV by adding zeros
+            data = double_fov(data,rotation_axis_rec)    
+
+        #Perform actual reconstruction
+        rec = padded_rec(data, theta, rotation_axis_rec, params)
+
         # Save images
+        recon_base_dir = reconstruction_folder(params)
+        fpath = Path(params.file_name).resolve()
         if params.reconstruction_type == "full":
-            fpath = Path(params.file_name).resolve()
-            recon_base_dir = fpath.parent / '_rec'
-            tail = "{}_rec".format(fpath.stem)
+            recon_dir = recon_base_dir / "{}_rec".format(fpath.stem)
             if params.output_format == 'tiff_stack':
-                fname = recon_base_dir / tail / 'recon'
+                fname = recon_dir / 'recon'
                 log.debug("Full tiff dir: %s", fname)
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
                                                 args = (rec,),
@@ -119,7 +117,7 @@ def rec(params):
                                                           'overwrite': True})
             elif params.output_format == "hdf5":
                 # HDF5 output
-                fname = recon_base_dir / "{}.hdf".format(tail)
+                fname = "{}.hdf".format(recon_dir)
                 # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
                 #                    maxsize=(sino_end, *rec.shape[1:]), overwrite=(iChunk==0))
                 ds_end = int(np.ceil(sino_end / pow(2, int(params.binning))))
@@ -141,9 +139,8 @@ def rec(params):
             strt += (sino[1] - sino[0])
         elif params.reconstruction_type == "slice":
             # Construct the path for where to save the tiffs
-            fname = Path(params.file_name)
-            fname = fname.resolve().parent / '_rec' / 'slice_rec' / 'recon_{}'.format(fname.stem)
-            dxchange.write_tiff_stack(rec, fname=str(fname), overwrite=False)
+            fname = recon_base_dir / 'slice_rec' / 'recon_{}'.format(fpath.stem)
+            dxchange.write_tiff(rec, fname=str(fname), overwrite=False)
         else:
             raise ValueError("Unknown value for *reconstruction type*: {}. "
                              "Valid options are {}"
@@ -153,6 +150,30 @@ def rec(params):
     # Wait until the all threads are done writing data
     for thread in write_threads:
         thread.join()
+
+
+def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params):
+    '''Computes a 2-element array to give starting and ending slices 
+    for this chunk.
+    '''
+    sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
+    sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
+    if sino_chunk_end > sino_end:
+        log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
+        sino_chunk_end = sino_end
+    log.info('  *** [%i, %i]' % (sino_chunk_start/pow(2, int(params.binning)), sino_chunk_end/pow(2, int(params.binning))))
+    sino = np.array((int(sino_chunk_start), int(sino_chunk_end)))
+    # extra data for padded phase retrieval
+    if params.retrieve_phase_method == "paganin":
+        phase_pad = np.zeros(2,dtype=int)
+        if(iChunk>0):
+            phase_pad[0] = -params.retrieve_phase_pad
+        if (iChunk<chunks-1):
+            phase_pad[1] =  params.retrieve_phase_pad
+        sino += phase_pad
+        log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
+    return sino
+
 
 def _try_rec(params):
     log.info("  *** *** starting 'try' reconstruction")
@@ -172,10 +193,10 @@ def _try_rec(params):
     log.info('  *** binned rows [%i, %i]' % (sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning))))
             
     sino = (int(sino_start), int(sino_end))
-
     # Set up the centers of rotation we will use
     # Read APS 32-BM raw data.
     proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params, True)
+    
     # Apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)
     rec = []
@@ -183,27 +204,38 @@ def _try_rec(params):
     # try passes an array of rotation centers and this is only supported by gridrec
     # reconstruction_algorithm_org = params.reconstruction_algorithm
     # params.reconstruction_algorithm = 'gridrec'
-
-    if (params.file_type == 'standard'):
+    if (params.file_type == 'standard' or params.file_type == 'double_fov'):
         center_search_width = params.center_search_width/np.power(2, float(params.binning))
         center_range = np.arange(rotation_axis-center_search_width, rotation_axis+center_search_width, 0.5)
         # stack = np.empty((len(center_range), data_shape[0], int(data_shape[2])))
         if (params.blocked_views):
-            blocked_views = params.blocked_views_end - params.blocked_views_start
-            stack = np.empty((len(center_range), data_shape[0]-blocked_views, int(data_shape[2])))
+            # blocked_views = params.blocked_views_end - params.blocked_views_start
+            # stack = np.empty((len(center_range), data_shape[0]-blocked_views, int(data_shape[2])))
+            st = params.blocked_views_start
+            end = params.blocked_views_end
+            #log.warning('%f %f',st,end)
+            ids = np.where(((theta-st)%np.pi<0) + ((theta-st)%np.pi>end-st))[0]
+            stack = np.empty((len(center_range), len(ids), int(data_shape[2])))
         else:
             stack = np.empty((len(center_range), data.shape[0], int(data.shape[2])))
-
         for i, axis in enumerate(center_range):
             stack[i] = data[:, 0, :]
         log.warning('  reconstruct slice [%d] with rotation axis range [%.2f - %.2f] in [%.2f] pixel steps' 
                         % (sino_start, center_range[0], center_range[-1], center_range[1] - center_range[0]))
+        center_range_rec = center_range
+        if (params.file_type == 'double_fov'):                                
+            if(rotation_axis<stack.shape[-1]//2):
+                #if rotation center is on the left side of the ROI
+                stack = stack[:,:,::-1]
+                center_range_rec = stack.shape[-1]-center_range
+            # double FOV by adding zeros
+            stack = double_fov_try(stack,center_range_rec)                
         if params.reconstruction_algorithm == 'gridrec':
-            rec = padded_rec(stack, theta, center_range, params)
+            rec = padded_rec(stack, theta, center_range_rec, params)
         else:
             log.warning("  *** Doing try_center with '%s' instead of 'gridrec' is slow.", params.reconstruction_algorithm)
             rec = []
-            for center in center_range:
+            for center in center_range_rec:
                 rec.append(padded_rec(data[:, 0:1, :], theta, center, params))
             rec = np.asarray(rec)
     else:
@@ -225,20 +257,38 @@ def _try_rec(params):
             stack[i] = stitched_data[i][:theta180.shape[0],0,:total_cols]
         del(stitched_data)
         rec = padded_rec(stack, theta180, rot_centers, params)
-
     # Save images to a temporary folder.
     fpath = Path(params.file_name).resolve()
-    fbase = fpath.parent / '_rec' / 'try_center' / fpath.stem
+    rec_dir = reconstruction_folder(params) / 'try_center' / fpath.stem
     for i,axis in enumerate(center_range):
         this_center = axis * np.power(2, float(params.binning))
-        rfname = fbase / "recon_{:.2f}.tiff".format(this_center)
+        rfname = rec_dir / "recon_{:.2f}.tiff".format(this_center)
         dxchange.write_tiff(rec[i], fname=str(rfname), overwrite=True)
     # restore original method
     # params.reconstruction_algorithm = reconstruction_algorithm_org
 
+def double_fov(data,rotation_axis):
+    # smooth the sinogram border with a smooth weigting function from 0 to 1
+    w = max(1,int(2*(data.shape[-1]-rotation_axis)))    
+    v = np.linspace(1,0,w,endpoint=False)
+    v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
+    data[:,:,-w:] *= v    
+    # double sinogram size with adding 0
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    return data
+
+def double_fov_try(data,rotation_axis):
+    # smooth the sinogram border with a smooth weigting function from 0 to 1
+    for r_axis in range(len(rotation_axis)):        
+        w = max(1,int(2*(data.shape[-1]-rotation_axis[r_axis])))    
+        v = np.linspace(1,0,w,endpoint=False)
+        v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
+        data[r_axis,:,-w:] *= v        
+    # double sinogram size with adding 0
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    return data
 
 def padded_rec(data, theta, rotation_axis, params):
-
     # original shape
     N = data.shape[2]
     # padding
@@ -249,39 +299,36 @@ def padded_rec(data, theta, rotation_axis, params):
     rec = unpadding(rec, N, params)
     # mask each reconstructed slice with a circle
     rec = mask(rec, params)
-
     return rec
 
 
 def padding(data, rotation_axis, params):
-
     log.info("  *** padding")
-    if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
-        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
-    #if(params.padding):
+    do_gridrec_padding = params.reconstruction_algorithm=='gridrec' and params.gridrec_padding
+    do_lprec_padding = params.reconstruction_algorithm=='lprec' and params.lprec_padding
+    if do_gridrec_padding or do_lprec_padding:
         log.info('  *** *** ON')
         N = data.shape[2]
         data_pad = np.zeros([data.shape[0],data.shape[1],3*N//2],dtype = "float32")
         data_pad[:,:,N//4:5*N//4] = data
         data_pad[:,:,0:N//4] = np.reshape(data[:,:,0],[data.shape[0],data.shape[1],1])
         data_pad[:,:,5*N//4:] = np.reshape(data[:,:,-1],[data.shape[0],data.shape[1],1])
-
         data = data_pad
         rot_center = rotation_axis + N//4
     else:
         log.warning('  *** *** OFF')
         data = data
         rot_center = rotation_axis
-
     return data, rot_center
 
 
 def unpadding(rec, N, params):
 
     log.info("  *** un-padding")
-    if((params.reconstruction_algorithm=='gridrec' and params.gridrec_padding)
-        or (params.reconstruction_algorithm=='lprec_fbp' and params.lprec_fbp_padding)):
-    #if(params.padding):
+    do_gridrec_padding = params.reconstruction_algorithm=='gridrec' and params.gridrec_padding
+    do_lprec_padding = params.reconstruction_algorithm=='lprec' and params.lprec_padding
+
+    if do_gridrec_padding or do_lprec_padding:
         log.info('  *** *** ON')
         rec = rec[:,N//4:5*N//4,N//4:5*N//4]
     else:
@@ -293,9 +340,9 @@ def unpadding(rec, N, params):
 def reconstruct(data, theta, rot_center, params):
 
     if(params.reconstruction_type == "try"):
-        sinogram_order = True
+        sinogram_order = True        
     else:
-        sinogram_order = False
+        sinogram_order = False        
     # Check for sane input values
     if not np.all(np.isfinite(data)):
         log.warning("  *** nan/inf found in input data. "
@@ -386,22 +433,41 @@ def reconstruct(data, theta, rot_center, params):
             rec = tomopy.recon(data, theta, init_recon=rec, algorithm=tomopy.astra, options=options)
         else:
             rec = tomopy.recon(data, theta, algorithm=tomopy.astra, options=options)
+    # gridrec                
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
-        # import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()        
+        if(params.reconstruction_type == "try"):
+            # each chunk works with 1 rotation center
+            nchunk = 1 
+        else:
+            nchunk = None
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
                             algorithm='gridrec', 
-                            filter_name=params.gridrec_filter)
-    elif params.reconstruction_algorithm == 'lprec_fbp':
+                            filter_name=params.gridrec_filter,
+                            nchunk = nchunk)
+    
+    # log-polar based method                            
+    elif params.reconstruction_algorithm == 'lprec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
+        lpmethod  = params.lprec_method
+        
+        if (lpmethod=='fbp'):           
+            filter_name = params.lprec_fbp_filter 
+        else:
+            filter_name = 'none'
         rec = tomopy.recon(data, theta, 
                             center=rot_center, 
                             sinogram_order=sinogram_order, 
                             algorithm=tomopy.lprec,
-                            lpmethod='fbp', 
-                            filter_name=params.lprec_fbp_filter)
+                            lpmethod=lpmethod,
+                            filter_name=filter_name,
+                            ncore=1,
+                            num_iter=params.lprec_num_iter,
+                            reg_par=params.lprec_reg,
+                            gpu_list=range(params.lprec_num_gpu))
     else:
         log.warning("  *** *** algorithm: %s is not supported yet" % params.reconstruction_algorithm)
         params.reconstruction_algorithm = 'gridrec'
@@ -416,7 +482,6 @@ def reconstruct(data, theta, rot_center, params):
 
 
 def mask(data, params):
-
     log.info("  *** mask")
     if(params.reconstruction_mask):
         log.info('  *** *** ON')
@@ -429,3 +494,18 @@ def mask(data, params):
     else:
         log.warning('  *** *** OFF')
     return data
+
+
+def reconstruction_folder(params):
+    """Build the path to the folder that will receive the reconstruction.
+    
+    """
+    file_path = Path(params.file_name).resolve()
+    folder_fmt = params.output_folder
+    # Format the folder name with the config parameters
+    if file_path.is_dir():
+        file_name_parent = file_path
+    else:
+        file_name_parent = file_path.parent
+    folder_fmt = folder_fmt.format(file_name_parent=file_name_parent, **params.__dict__)
+    return Path(folder_fmt)

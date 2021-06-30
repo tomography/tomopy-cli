@@ -1,5 +1,4 @@
 import os
-import json
 import logging
 import time
 
@@ -25,11 +24,11 @@ def all(proj, flat, dark, params, sino):
 
     # normalize
     data = flat_correction(proj, flat, dark, params)
+    del(proj, flat, dark)
     # remove stripes
     data = remove_stripe(data, params)
     # Perform beam hardening.  This leaves the data in pathlength.
     if params.beam_hardening_method == 'standard':
-        #import pdb; pdb.set_trace()
         data = beamhardening_correct(data, params, sino)
     else:
         # phase retrieval
@@ -83,11 +82,15 @@ def flat_correction(proj, flat, dark, params):
     log.info('  *** normalization')
     time_start_flat = time.time()
     if(params.flat_correction_method == 'standard'):
+<<<<<<< HEAD
         #import pdb; pdb.set_trace()
         data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff / params.bright_exp_ratio)
+=======
+>>>>>>> 8f9b646b7465a9baf77f9cb46e69407590992632
         try:
-            if params.bright_exp_ratio != 1:
-                data *= params.bright_exp_ratio
+            data = tomopy.normalize(proj, flat, dark, 
+                                cutoff=params.normalization_cutoff / params.bright_exp_ratio)
+            data *= params.bright_exp_ratio
         except AttributeError:
             log.warning('  *** *** No bright_exp_ratio found.  Ignore')
         log.info('  *** *** ON %f cut-off' % params.normalization_cutoff)
@@ -126,6 +129,11 @@ def remove_stripe(data, params):
         log.info('  *** *** smoothing filter')
         data = tomopy.remove_stripe_sf(data,  size=params.sf_size)
         log.info('  *** ***  *** sf size %d ' % params.sf_size)
+    elif(params.remove_stripe_method == 'vo-all'):
+        log.info('  *** *** Vo\'s algorithms: all')
+        data = tomopy.remove_all_stripe(data, snr=params.vo_all_snr,
+                                        la_size=params.vo_all_la_size,
+                                        sm_size=params.vo_all_sm_size)
     elif(params.remove_stripe_method == 'none'):
         log.warning('  *** *** OFF')
     log.debug('  *** total time for prep.remove_stripe = {0:6.4f}'.format(
@@ -172,15 +180,16 @@ def beamhardening_correct(data, params, sino):
     log.info("  *** correct beam hardening")
     time_start_bh = time.time()
     data_dtype = data.dtype
-    #Correct for centerline of fan
-    data = beamhardening.fcorrect_as_pathlength_centerline(data)
-    #Make an array of correction factors
-    beamhardening.center_row = params.center_row
-    log.info("  *** *** Beam hardening center row = {:f}".format(beamhardening.center_row))
-    angles = np.abs(np.arange(sino[0], sino[1])- beamhardening.center_row).astype(data_dtype)
-    angles *= beamhardening.pixel_size / beamhardening.d_source
+    # Correct for centerline of fan
+    softener = beamhardening.BeamSoftener(params)
+    data = softener.fcorrect_as_pathlength_centerline(data)
+    # Make an array of correction factors
+    softener.center_row = params.center_row
+    log.info("  *** *** Beam hardening center row = {:f}".format(softener.center_row))
+    angles = np.abs(np.arange(sino[0], sino[1])- softener.center_row).astype(data_dtype)
+    angles *= softener.pixel_size / softener.d_source
     log.info("  *** *** angles from {0:f} to {1:f} urad".format(angles[0], angles[-1]))
-    correction_factor = beamhardening.angular_spline(angles).astype(data_dtype)
+    correction_factor = softener.angular_spline(angles).astype(data_dtype)
     if len(data.shape) == 2:
         output = data* correction_factor[:,None]
     else:
