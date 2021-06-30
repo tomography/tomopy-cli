@@ -39,6 +39,7 @@ def all(proj, flat, dark, params, sino):
     data = remove_nan_neg_inf(data, params)
     log.debug('  *** total time for prep.all = {0:6.4f}'.format(
                 time.time() - time_start_all))
+    data = cap_sinogram_values(data, params)
     return data
 
 
@@ -51,11 +52,16 @@ def remove_nan_neg_inf(data, params):
         data = tomopy.remove_nan(data, val=params.fix_nan_and_inf_value)
         data = tomopy.remove_neg(data, val= 0.0)
         data[np.isinf(data)] = params.fix_nan_and_inf_value
-        data[data > params.fix_nan_and_inf_value] = params.fix_nan_and_inf_value
     else:
         log.warning('  *** *** OFF')
     log.debug('  *** total time for prep.remove_nan_neg_inf = {0:6.4f}'.format(
                 time.time() - time_start_remove_nan))
+    return data
+
+
+def cap_sinogram_values(data, params):
+    log.info('  *** cap sinogram max value: %f', params.sinogram_max_value)
+    data[data > params.sinogram_max_value] = params.sinogram_max_value
     return data
 
 
@@ -82,11 +88,6 @@ def flat_correction(proj, flat, dark, params):
     log.info('  *** normalization')
     time_start_flat = time.time()
     if(params.flat_correction_method == 'standard'):
-<<<<<<< HEAD
-        #import pdb; pdb.set_trace()
-        data = tomopy.normalize(proj, flat, dark, cutoff=params.normalization_cutoff / params.bright_exp_ratio)
-=======
->>>>>>> 8f9b646b7465a9baf77f9cb46e69407590992632
         try:
             data = tomopy.normalize(proj, flat, dark, 
                                 cutoff=params.normalization_cutoff / params.bright_exp_ratio)

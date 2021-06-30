@@ -69,7 +69,7 @@ def rec(params):
                     "*end_row*, and *nsino_per_chunk*.")
     for iChunk in range(0, chunks):
         log.info('chunk # %i/%i' % (iChunk + 1, chunks))
-        sino = _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params) 
+        sino = _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params) 
 
         # Read APS 32-BM raw data.
         proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params) 
@@ -84,9 +84,9 @@ def rec(params):
 
         # unpad after phase retrieval
         if params.retrieve_phase_method == "paganin":
-                phase_pad //= pow(2, int(params.binning))
-                sino -= phase_pad                                
-                data = data[:,-phase_pad[0]:data.shape[1]-phase_pad[1]]                
+                params.phase_pad //= pow(2, int(params.binning))
+                sino -= params.phase_pad                                
+                data = data[:,-params.phase_pad[0]:data.shape[1]-params.phase_pad[1]]                
                 log.info('  *** unpadding after phase retrieval gives slices [%i,%i] ' % (sino[0],sino[1]))
         
         # Reconstruct: this is for "slice" and "full" methods
@@ -152,7 +152,7 @@ def rec(params):
         thread.join()
 
 
-def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params):
+def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params):
     '''Computes a 2-element array to give starting and ending slices 
     for this chunk.
     '''
@@ -172,6 +172,7 @@ def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, params):
             phase_pad[1] =  params.retrieve_phase_pad
         sino += phase_pad
         log.info('  *** extra padding for phase retrieval gives slices [%i,%i] to be read from memory ' % (sino[0],sino[1]))
+        params.phase_pad = phase_pad
     return sino
 
 
@@ -274,7 +275,7 @@ def double_fov(data,rotation_axis):
     v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
     data[:,:,-w:] *= v    
     # double sinogram size with adding 0
-    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])),'constant')    
     return data
 
 def double_fov_try(data,rotation_axis):
@@ -283,9 +284,9 @@ def double_fov_try(data,rotation_axis):
         w = max(1,int(2*(data.shape[-1]-rotation_axis[r_axis])))    
         v = np.linspace(1,0,w,endpoint=False)
         v = v**5*(126-420*v+540*v**2-315*v**3+70*v**4)     
-        data[r_axis,:,-w:] *= v        
+        data[r_axis,:,-w:] *= v
     # double sinogram size with adding 0
-    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])))    
+    data = np.pad(data,((0,0),(0,0),(0,data.shape[-1])),'constant')    
     return data
 
 def padded_rec(data, theta, rotation_axis, params):

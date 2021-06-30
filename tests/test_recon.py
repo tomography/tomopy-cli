@@ -33,6 +33,7 @@ def make_params():
     params.reconstruction_type = 'slice'
     params.scintillator_auto = False
     params.blocked_views = False
+    params.sinogram_max_value = float('inf')
     return params
 
 
