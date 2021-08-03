@@ -164,6 +164,14 @@ SECTIONS['file-reading'] = {
         'default': -1,
         'type': int,
         'help': 'Row on which to end reconstruction.  Negative values = last row of projection data.'},
+    'start-proj': {
+        'default': 0,
+        'type': int,
+        'help': 'Projection on which to start reconstructions'},
+    'end-proj': {
+        'default': -1,
+        'type': int,
+        'help': 'Projection on which to end reconstruction'},        
     'scintillator-auto': {
         'default': False,
         'help': "When set, read scintillator properties from the HDF file",
