@@ -53,7 +53,7 @@ package to prepare phantom test data:
 
 .. code-block:: python
 
-   >>> import tomopy, dxchange, h5py, matplotlib.pyplot as plt
+   >>> import tomopy, dxchange, numpy, h5py, matplotlib.pyplot as plt
    >>> phantom = tomopy.misc.phantom.shepp3d(128)
 
 And visualize the results:
@@ -80,6 +80,7 @@ volume.
 
    >>> angles = tomopy.sim.project.angles(181)
    >>> proj = tomopy.sim.project.project(phantom, theta=angles)
+   >>> plt.figure()
    >>> plt.imshow(proj[0])
    >>> plt.show(block=False)
 
@@ -111,7 +112,7 @@ python console for the next segment of this tutorial:
 Perform a Single Slice Reconstruction
 =====================================
 
-Now that we have some projection data to work with, we will perform a
+Now that we have some projection data work with, we will perform a
 simple single-slice reconstruction:
 
 .. code-block::
@@ -129,6 +130,7 @@ matplotlib to view the reconstructed data.
 
    >>> import matplotlib.pyplot as plt, imageio
    >>> slc = imageio.read("_rec/slice_rec/recon_phantom_projections.tiff").get_data(0)
+   >>> plt.figure()
    >>> plt.imshow(slc)
    >>> plt.show(block=False)
 
