@@ -168,3 +168,52 @@ reconstructions can be found in *_rec/phantom_projections_rec*. Again,
 .. image:: tutorial_1_recon_full.png
   :alt: Slices from full volume reconstruction
 
+
+Modify Reconstruction Behavior
+==============================
+
+Now we will use some of tomopy-cli's command line options to modify
+the reconstruction behavior. We will add four features to our
+reconstruction:
+
+1. Downsample (bin) the data by a factor of 2
+2. Manually specify the rotation center
+3. Remove any NaN or infinity values
+
+.. code-block:: bash
+
+    $ tomopy recon --file-name phantom_projections.h5 --reconstruction-type=slice --output-folder=_rec --binning=1 --rotation-axis-auto=manual --rotation-axis=91.5 --fix-nan-and-inf --fix-nan-and-inf-value=34.05
+
+Now we will visualize the new reconstruction. **Open a python
+console** again and use matplotlib to view the reconstructed data.
+
+.. note::
+
+   If you ran the previous slice reconstruction command more than
+   once, you may have to modify the file name in the example below,
+   since each time tomopy is run, a new tiff file is saved.
+
+   In this case, if the previous command was run twice, this would
+   create files *recon_phantom_projections.tiff* and
+   *recon_phantom_projections-1.tiff*, so we would now need to replace
+   the file name with *recon_phantom_projections-2.tiff*
+
+
+.. code-block:: python
+
+   >>> import matplotlib.pyplot as plt, imageio
+   >>> slc = imageio.read("_rec/slice_rec/recon_phantom_projections-1.tiff").get_data(0)
+   >>> plt.figure()
+   >>> plt.imshow(slc)
+   >>> plt.show(block=False)
+
+Comparing this reconstruction with the previous versions, the major
+difference is the lower resolution and noise resulting from the
+``--binning=1`` option. Since we are using well-behaved test data, the
+other options have no noticeable effect.
+
+Details for these options and many more can be seen by running
+``tomopy recon --help`` from the command line.
+
+.. image:: tutorial_1_recon_slice_binning1.png
+  :alt: Single slice reconstruction with binning level 1.
