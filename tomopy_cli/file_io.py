@@ -30,7 +30,6 @@ log = logging.getLogger(__name__)
 
 def read_tomo(sino, params, ignore_flip = False):
     """Read in the tomography data.
-
     Parameters
     ----------
     sino

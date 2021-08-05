@@ -102,9 +102,18 @@ def _find_rotation_axis(params):
     sino_end = sino_start + pow(2, int(params.binning)) 
 
     sino = (int(sino_start), int(sino_end))
-
+    
+    if(params.start_proj):
+        sproj = params.start_proj
+    else:    
+        sproj = 0
+    if(params.end_proj or params.end_proj<0):
+        eproj = params.end_proj
+    else:    
+        eproj = data_shape[0]        
+    pproj = (sproj, eproj)        
     # Read APS 32-BM raw data
-    proj, flat, dark, theta, params_rotation_axis_ignored = file_io.read_tomo(sino, params, True)
+    proj, flat, dark, theta, params_rotation_axis_ignored = file_io.read_tomo(sino, pproj, params, True)
         
     # apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)

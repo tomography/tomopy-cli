@@ -54,6 +54,16 @@ def rec(params):
         ssino = int(data_shape[1] * params.nsino)
         sino_start = ssino
         sino_end = sino_start + pow(2, int(params.binning)) 
+    
+    if(params.start_proj):
+        sproj = params.start_proj
+    else:    
+        sproj = 0
+    if(params.end_proj or params.end_proj<0):
+        eproj = params.end_proj
+    else:    
+        eproj = data_shape[0]        
+    pproj = (sproj, eproj)        
 
     log.info("  *** reconstructing [%d] slices from slice [%d] to [%d] in [%d] chunks of [%d] slices each" % (
         (sino_end - sino_start) / pow(2, int(params.binning)),
@@ -62,6 +72,7 @@ def rec(params):
         chunks, nSino_per_chunk/pow(2, int(params.binning))))
     
     strt = sino_start
+
     write_threads = []
     if chunks == 0:
         log.warning("  *** 0 chunks selected for reconstruction, "
@@ -72,7 +83,7 @@ def rec(params):
         sino = _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params) 
 
         # Read APS 32-BM raw data.
-        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params) 
+        proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, pproj, params) 
         # What if sino overruns the size of data?
         if sino[1] - sino[0] > proj.shape[1]:
             log.warning("  *** Chunk size > remaining data size.")
@@ -194,9 +205,20 @@ def _try_rec(params):
     log.info('  *** binned rows [%i, %i]' % (sino_start/pow(2, int(params.binning)), sino_end/pow(2, int(params.binning))))
             
     sino = (int(sino_start), int(sino_end))
+
+    if(params.start_proj):
+        sproj = params.start_proj
+    else:    
+        sproj = 0
+    if(params.end_proj or params.end_proj<0):
+        eproj = params.end_proj
+    else:    
+        eproj = data_shape[0]        
+    pproj = (sproj, eproj)        
+    
     # Set up the centers of rotation we will use
-    # Read APS 32-BM raw data.
-    proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, params, True)
+    # Read APS 32-BM raw data.    
+    proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, pproj, params, True)
     
     # Apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)
