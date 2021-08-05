@@ -577,7 +577,10 @@ SECTIONS['correct'] = {
     'nproj-per-chunk': {     
         'type': int,
         'default': 128,
-        'help': "Number of projections per chunk. Use larger numbers with computers with larger memory.",},    
+        'help': "Number of projections per chunk. Use larger numbers with computers with larger memory.",}, 
+    'average-shift-per-chunk': {             
+        'default': False,
+        'help': "Average shifts per chunk (in case if shifts seem constant).",},    
     'flat-region-startx': {
         'default': 0,
         'type': int,

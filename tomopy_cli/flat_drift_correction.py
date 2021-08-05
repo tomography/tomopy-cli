@@ -96,8 +96,10 @@ def flat_drift_correction(params):
     ys = params.flat_region_starty
     ye = params.flat_region_endy
     proj_chunk = params.nproj_per_chunk
+    average_shift = params.average_shift_per_chunk
     log.info(f'file name {file_name}')
     log.info(f'flat region x:({xs}-{xe}), y:({ys}-{ye})')
+    log.info(f'average shift per chunk:{average_shift}')
     
     file_out_name = str(file_name)[:-3]+'_corr.h5'
     log.info(f'create a new h5 file {file_out_name}')  
@@ -142,6 +144,10 @@ def flat_drift_correction(params):
                 data_part = data[ids, ys:ye, xs:xe][:].astype('float32')                          
                 # register shifts             
                 shifts = register_shift_sift(data_part-dark_median_part, flat_shift_median_part-dark_median_part)
+                if(average_shift):
+                    ashift = np.median(shifts,axis=0)
+                    log.info(f'average shift  {ashift}')
+                    shifts[:] = ashift
                 # read chunk of projections                   
                 data_chunk = data[ids][:].astype('float32')
                 # apply shifts'                       
