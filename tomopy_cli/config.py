@@ -563,6 +563,39 @@ SECTIONS['astracgls'] = {
         'action': 'store_true',},
     }
 
+SECTIONS['correct'] = {
+    'file-name': {
+        'default': 'None',
+        'type': Path,
+        'help': "Name of the hdf file ",
+        'metavar': 'PATH'},
+    'file-format': {
+        'default': 'dx',
+        'type': str,
+        'help': "see from https://dxchange.readthedocs.io/en/latest/source/demo.html",
+        'choices': ['dx', 'anka', 'australian', 'als', 'elettra', 'esrf', 'aps1id', 'aps2bm', 'aps5bm', 'aps7bm', 'aps8bm', 'aps13bm', 'aps32id', 'petraP05', 'tomcat', 'xradia']},
+    'nproj-per-chunk': {     
+        'type': int,
+        'default': 128,
+        'help': "Number of projections per chunk. Use larger numbers with computers with larger memory.",},    
+    'flat-region-startx': {
+        'default': 0,
+        'type': int,
+        'help': 'Start of the flat rectangular region in horizontal direction'},
+    'flat-region-starty': {
+        'default': 0,
+        'type': int,
+        'help': 'Start of the flat rectangular region in vertical direction'},
+    'flat-region-endx': {
+        'default': 128,
+        'type': int,
+        'help': 'End of the flat rectangular region in horizontal direction'},
+    'flat-region-endy': {
+        'default': 128,
+        'type': int,
+        'help': 'End of the flat rectangular region in vertical direction'},
+    }
+
 SECTIONS['convert'] = {
     'old-projection-file-name': {
         'default': '.',
@@ -586,12 +619,13 @@ RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-vie
                 'gridrec', 'lprec', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
 
+CORRECT_PARAMS = ('correct', )
 CONVERT_PARAMS = ('convert', )
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'dx-options', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 
-                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert')
+                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert', 'Corre')
 
 def get_config_name():
     """Get the command line --config option."""

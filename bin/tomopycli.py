@@ -15,6 +15,7 @@ from tomopy_cli import recon
 from tomopy_cli import find_center
 from tomopy_cli import file_io
 from tomopy_cli import post
+from tomopy_cli import flat_drift_correction
 from tomopy_cli.auto_complete import create_complete_tomopy
 from tomopy_cli.logging import log_exception
 
@@ -48,6 +49,15 @@ def run_find_center(args):
         log.error("  *** %s is not a supported file format" % args.file_format)
         exit()
 
+def run_flat_drift_correction(args):
+    if (str(args.file_format) in KNOWN_FORMATS):
+        log.warning('flat drift correction start')
+        args = flat_drift_correction.flat_drift_correction(args)
+        log.warning('flat drift correction end')       
+    else:
+        log.error("  *** %s is not a supported file format" % args.file_format)
+        exit()
+        
 def run_seg(args):
 
     log.warning('segmentation start')
@@ -132,6 +142,7 @@ def main():
     tomo_params = config.RECON_PARAMS
     find_center_params = config.RECON_PARAMS
     convert_params = config.CONVERT_PARAMS
+    flat_drift_correction_params = config.CORRECT_PARAMS
 
     cmd_parsers = [
         ('init',        init,            (),                             "Create configuration file"),
@@ -139,7 +150,8 @@ def main():
         ('status',      run_status,      tomo_params,                    "Show the tomographic reconstruction status"),
         ('segment',     run_seg,         tomo_params,                    "Run segmentation on reconstured data"),
         ('find_center', run_find_center, find_center_params,             "Find rotation axis location for all hdf files in a directory"),
-        ('convert',     run_convert,     convert_params,                 "Convert pre-2015 (proj, dark, white) hdf files in a single data exchange h5 file"),
+        ('flat_drift_correction', run_flat_drift_correction, flat_drift_correction_params,             "Fix drift of flat field during data acquistion"),
+        ('convert',     run_convert,     convert_params,                 "Convert pre-2015 (proj, dark, white) hdf files in a single data exchange h5 file"),        
     ]
 
     subparsers = parser.add_subparsers(title="Commands", metavar='')
