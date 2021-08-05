@@ -28,15 +28,14 @@ __all__ = ['read_tomo',]
 log = logging.getLogger(__name__)
 
 
-def read_tomo(sino, proj, params, ignore_flip = False):
-    """
-    Read in the tomography data.
+def read_tomo(sino, params, ignore_flip = False):
+    """Read in the tomography data.
     Parameters
     ----------
-    sino : tuple of (start_row, end_row) rows to be read in
-    proj : tuple of (start_proj, end_proj) projections to be read in
-    
-    params : parameters for reconstruction
+    sino
+      tuple of (start_row, end_row) to be read in
+    params
+      parameters for reconstruction
     
     Returns
     -------
@@ -50,15 +49,16 @@ def read_tomo(sino, proj, params, ignore_flip = False):
         1D theta in radian.
     float
         location of the rotation axis
+    
     """
     if (params.file_type == 'standard' or params.file_type == 'double_fov' or
             (params.file_type == 'flip_and_stich' and ignore_flip)):
         # Read APS 32-BM raw data.
         log.info("  *** loading a stardard data set: %s" % params.file_name)
-        proj, flat, dark, theta = _read_tomo(params, sino=sino, proj=proj)
+        proj, flat, dark, theta = _read_tomo(params, sino=sino)
     elif params.file_type == 'flip_and_stich':
         log.info("   *** loading a 360 deg flipped data set: %s" % params.file_name)
-        proj360, flat360, dark360, theta360 = _read_tomo(params, sino=sino, proj=proj)
+        proj360, flat360, dark360, theta360 = _read_tomo(params, sino=sino)
         proj, flat, dark = flip_and_stitch(params, proj360, flat360, dark360)
         theta = theta360[:len(theta360)//2] # take first half
     else: # params.file_type == 'mosaic':
@@ -87,7 +87,7 @@ def _read_theta_size(params):
     return theta_size
 
 
-def _read_tomo(params, sino, proj):
+def _read_tomo(params, sino):
 
     if (str(params.file_format) in {'dx', 'aps2bm', 'aps7bm', 'aps32id'}):
         # temporary work around
@@ -95,7 +95,7 @@ def _read_tomo(params, sino, proj):
         #print('flat fields are taken from:', flat_file)
 #        proj_bad, flat, dark, theta_bad = dxchange.read_aps_32id(flat_file, sino=sino)
 #        proj, flat_bad, dark_bad, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
-        proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino, proj=proj)
+        proj, flat, dark, theta = dxchange.read_aps_32id(params.file_name, sino=sino)
         log.info("  *** %s is a valid dx file format" % params.file_name)
         # Check if the flat and dark fields are single images or sets
         if len(flat.shape) == len(proj.shape):
@@ -105,7 +105,7 @@ def _read_tomo(params, sino, proj):
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
             # Do a median filter on the first dimension
-            dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype) 
+            dark = np.median(dark, axis=0, keepdims=True).astype(dark.dtype)
     else:
         log.error("  *** %s is not a supported file format" % params.file_format)
         exit()
