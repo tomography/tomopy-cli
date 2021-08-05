@@ -79,7 +79,7 @@ def register_shift_sift(data, flat):
         #print(
             #f'number of matched points for data {id}: {len(good)}, found shifts:{shifts[id]}')
         if(len(good)==0):
-            print(f'set shift to 0')
+            log.warning(f'no feature matches, set shift to 0')
             shifts[id] = 0
 
     return shifts
@@ -87,7 +87,8 @@ def register_shift_sift(data, flat):
 def flat_drift_correction(params):
     """
     Fix drift of flat field during data acquistion 
-    by using a small region not containing the sample
+    by using a small region not containing the sample.
+    Note: the method may not work if the region contains a part of the sample
     """ 
     file_name = params.file_name
     xs = params.flat_region_startx
@@ -99,50 +100,57 @@ def flat_drift_correction(params):
     log.info(f'flat region x:({xs}-{xe}), y:({ys}-{ye})')
     
     file_out_name = str(file_name)[:-3]+'_corr.h5'
-    log.info(f'create a new h5 file {file_out_name}')
-    str_copy = f'cp {file_name} {file_out_name}'    
-    os.system(str_copy)
-    log.info('copy done')
-    file_fid = h5py.File(file_name, 'r')
-    data = file_fid['exchange/data']
-    flat = file_fid['exchange/data_white'][:].astype('float32')
-    dark = file_fid['exchange/data_dark'][:].astype('float32')
+    log.info(f'create a new h5 file {file_out_name}')  
+    
+    with  h5py.File(file_name, 'r') as file_fid:
+        with  h5py.File(file_out_name, 'w') as file_out_fid:
+    
+            data = file_fid['exchange/data']
+            flat = file_fid['exchange/data_white'][:].astype('float32')
+            dark = file_fid['exchange/data_dark'][:].astype('float32')
 
-    file_out_id = h5py.File(file_out_name, 'r+')
-    del file_out_id["/exchange/data"]
-    data_corr = file_out_id.create_dataset("/exchange/data", data.shape,
-                                    chunks=(1, data.shape[1], data.shape[2]), dtype='f')
-    flat_corr = file_out_id['exchange/data_white']
-    dark_corr = file_out_id['exchange/data_dark']
-    flat_corr[:] = 1
-    dark_corr[:] = 0
-    
-    log.info(f'register flat fields')
-    dark_median = np.median(dark, axis=0)
-    dark_median_part = dark_median[ys:ye, xs:xe] 
-    flat_part = flat[:, ys:ye, xs:xe]   
-    shifts = register_shift_sift(flat_part-dark_median_part,np.median(flat_part-dark_median_part, axis=0))
-    flat_shift = apply_shift(flat, -shifts)  
-    flat_shift_median = np.median(flat_shift, axis=0)
-    flat_shift_median_part = flat_shift_median[ys:ye, xs:xe]
-       
-    
-    for ids in chunk(range(data.shape[0]),proj_chunk):
-        # find flat field shifts w.r.t. each projection by using small parts without sample
-        log.info(f'processing projections {ids[0]}-{ids[-1]}')
-        # read data part
-        data_part = data[ids, ys:ye, xs:xe].astype('float32')                          
-        # register shifts             
-        shifts = register_shift_sift(data_part-dark_median_part, flat_shift_median_part-dark_median_part)
-        # read chunk of projections                   
-        data_chunk = data[ids].astype('float32')
-        # apply shifts'                       
-        flat_shift_median_shift = apply_shift(np.tile(flat_shift_median,[data_chunk.shape[0],1,1]), shifts)
-        dark_median_shift = apply_shift(np.tile(dark_median,[data_chunk.shape[0],1,1]), shifts)        
-        # apply flat field correction                           
-        data_corr_chunk = (data_chunk-dark_median)/(flat_shift_median_shift-dark_median_shift+1e-5)
-        data_corr[ids] = data_corr_chunk
-    log.info(f'data is saved to {file_out_name}')
-        
-        
-        
+            for a in file_fid.attrs:
+                file_out_fid.attrs[a] = file_fid.attrs[a]
+            for d in file_fid:
+                if 'exchange' == d:
+                    file_out_fid.create_group('exchange')
+                    for dd in file_fid[d]:
+                        if 'data' != dd:
+                            file_fid.copy('exchange/'+dd,file_out_fid['exchange'])
+                else:
+                    file_fid.copy(d,file_out_fid)
+            data_corr = file_out_fid.create_dataset("/exchange/data", data.shape,
+                                            chunks=(1, data.shape[1], data.shape[2]), dtype='float')
+            flat_corr = file_out_fid['exchange/data_white']
+            dark_corr = file_out_fid['exchange/data_dark']
+            flat_corr[:] = 1
+            dark_corr[:] = 0
+            
+            log.info(f'register flat fields')
+            dark_median = np.median(dark, axis=0)
+            dark_median_part = dark_median[ys:ye, xs:xe] 
+            flat_part = flat[:, ys:ye, xs:xe]   
+            shifts = register_shift_sift(flat_part-dark_median_part,np.median(flat_part-dark_median_part, axis=0))
+            flat_shift = apply_shift(flat, -shifts)  
+            flat_shift_median = np.median(flat_shift, axis=0)
+            flat_shift_median_part = flat_shift_median[ys:ye, xs:xe]            
+            
+            for ids in chunk(range(data.shape[0]),proj_chunk):
+                # find flat field shifts w.r.t. each projection by using small parts without sample
+                log.info(f'processing projections {ids[0]}-{ids[-1]}')
+                # read data part
+                data_part = data[ids, ys:ye, xs:xe][:].astype('float32')                          
+                # register shifts             
+                shifts = register_shift_sift(data_part-dark_median_part, flat_shift_median_part-dark_median_part)
+                # read chunk of projections                   
+                data_chunk = data[ids][:].astype('float32')
+                # apply shifts'                       
+                flat_shift_median_shift = apply_shift(np.tile(flat_shift_median,[data_chunk.shape[0],1,1]), shifts)
+                dark_median_shift = apply_shift(np.tile(dark_median,[data_chunk.shape[0],1,1]), shifts)        
+                # apply flat field correction                           
+                data_corr_chunk = (data_chunk-dark_median)/(flat_shift_median_shift-dark_median_shift+1e-5)
+                data_corr[ids] = data_corr_chunk
+            log.info(f'data is saved to {file_out_name}')
+                
+                
+                
