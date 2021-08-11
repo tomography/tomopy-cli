@@ -2,7 +2,6 @@ import numpy as np
 import h5py
 import sys
 import os
-import cv2
 from itertools import islice
 from scipy import ndimage
 import logging
@@ -36,6 +35,8 @@ def find_min_max(flat):
 
 def register_shift_sift(data, flat):
     """Find shifts via SIFT detecting features"""
+    import cv2
+
     mmin, mmax = find_min_max(flat)
     sift = cv2.SIFT_create()
     shifts = np.zeros([data.shape[0], 2], dtype='float32')
