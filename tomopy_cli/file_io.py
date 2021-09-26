@@ -125,7 +125,7 @@ def blocked_view(proj, theta, params):
         st = params.blocked_views_start
         end = params.blocked_views_end
         log.warning('%f %f',st,end)
-        ids = np.where(((theta-st)%np.pi<0) + ((theta-st)%np.pi>end-st))[0]
+        ids = np.where(((theta)%np.pi<st) + ((theta-st)%np.pi>end-st))[0]
         proj = proj[ids]
         theta = theta[ids]
         print(theta)
