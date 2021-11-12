@@ -144,21 +144,6 @@ class ReconTests(ReconTestBase):
         self.assertEqual(str(output), str(this_file.parent) + "_rec")
 
 
-class TryCenterTests(ReconTestBase):
-    def test_recon_output_dir(self):
-        """Check that ``--reconstruction-type=try`` respects output
-        directory.
-        
-        """
-        params = make_params()
-        params.reconstruction_type = "try"
-        params.center_search_width = 10
-        params.output_folder = "{file_name_parent}/_rec"
-        params.parameter_file = os.devnull
-        response = rec(params=params)
-        self.assertTrue(self.output_dir.exists())
-
-
 class YamlParamsTests(ReconTestBase):
     yaml_file = TEST_DIR / "my_files.yaml"
     def setUp(self):
@@ -185,3 +170,87 @@ class YamlParamsTests(ReconTestBase):
         params = make_params()
         params.parameter_file = self.yaml_file
         response = rec(params=params)
+
+
+class TryCenterTests(ReconTestBase):
+    yaml_file = TEST_DIR / "my_files.yaml"
+    
+    def setUp(self):
+        # Delete any old files 
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+        super().setUp()
+    
+    def tearDown(self):
+        if self.yaml_file.exists():
+            os.remove(self.yaml_file)
+        super().tearDown()
+
+    def test_recon_output_dir(self):
+        """Check that ``--reconstruction-type=try`` respects output
+        directory.
+        
+        """
+        params = make_params()
+        params.reconstruction_type = "try"
+        params.center_search_width = 10
+        params.output_folder = "{file_name_parent}/_rec"
+        params.parameter_file = os.devnull
+        response = rec(params=params)
+        self.assertTrue(self.output_dir.exists())
+
+    def test_extra_args_no_file(self):
+        """Check for behavior if the file is or isn't present in the
+        extra_args yaml file.
+        
+        """
+        params = make_params()
+        params.reconstruction_type = "try"
+        params.center_search_width = 10
+        params.output_folder = "{file_name_parent}/_rec"
+        params.parameter_file = self.yaml_file
+        # Create the YAML file
+        opts = {
+            "other_tomogram.h5": {
+                "spam": "foo",
+                "rotation-axis": 1200,
+            }
+        }
+        with open(self.yaml_file, mode='w') as fp:
+            fp.write(yaml.dump(opts))
+        response = rec(params=params)
+        self.assertTrue(self.output_dir.exists())
+    
+    def test_extra_args_no_rotation_axis(self):
+        """Check for behavior if the file is or isn't present in the
+        extra_args yaml file.
+        
+        """
+        params = make_params()
+        params.reconstruction_type = "try"
+        params.center_search_width = 10
+        params.output_folder = "{file_name_parent}/_rec"
+        params.parameter_file = self.yaml_file
+        # Create the YAML file
+        opts = {
+            "test_tomogram.h5": {
+                "spam": "foo",
+            }
+        }
+        with open(self.yaml_file, mode='w') as fp:
+            fp.write(yaml.dump(opts))
+        response = rec(params=params)
+        self.assertTrue(self.output_dir.exists())
+
+    def test_extra_args_no_file(self):
+        """Check for behavior if the file is or isn't present in the
+        extra_args yaml file.
+        
+        """
+        params = make_params()
+        params.reconstruction_type = "try"
+        params.center_search_width = 10
+        params.output_folder = "{file_name_parent}/_rec"
+        params.parameter_file = "/tmp/gweoiuwerw"
+        response = rec(params=params)
+        self.assertTrue(self.output_dir.exists())
