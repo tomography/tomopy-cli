@@ -22,6 +22,8 @@ def make_params():
     params.file_name = HDF_FILE
     params.parameter_file = YAML_FILE
     params.nsino = 0.5
+    params.start_proj = 0
+    params.end_proj = -1
     params.pixel_size_auto = False
     params.filter_1_material = None
     params.filter_1_auto = False

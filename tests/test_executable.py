@@ -6,8 +6,8 @@ import sys
 # Import the tomopy executable file
 from importlib.util import spec_from_loader, module_from_spec
 from importlib.machinery import SourceFileLoader 
-bin_dir = str(Path(__file__).parent.parent / "bin" / "tomopy")
-spec = spec_from_loader("tomopy", SourceFileLoader("tomopy", bin_dir))
+bin_dir = str(Path(__file__).parent.parent / "bin" / "tomopycli.py")
+spec = spec_from_loader("tomopycli", SourceFileLoader("tomopycli", bin_dir))
 tomopy_bin = module_from_spec(spec)
 spec.loader.exec_module(tomopy_bin)
 sys.modules['tomopy_bin'] = tomopy_bin

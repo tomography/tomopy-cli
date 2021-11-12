@@ -937,14 +937,14 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
     yaml_file = Path(yaml_file)
     # Check for bad files
     if not yaml_file.exists():
-        log.warning("YAML file does not exist: %s", yaml_file)
+        log.warning("  *** YAML file does not exist: %s", yaml_file)
         return args
     # Look for the requested key in a hierarchical manner
     with open(yaml_file, mode='r') as fp:
         extra_params = None
         yaml_data = yaml.safe_load(fp)
         if yaml_data is None:
-            log.warning("Invalid YAML file: %s", yaml_file)
+            log.warning("  *** Invalid YAML file: %s", yaml_file)
             return args
         keys_to_check = [sample] + [sample.relative_to(a) for a in sample.parents]
         for key in keys_to_check:
