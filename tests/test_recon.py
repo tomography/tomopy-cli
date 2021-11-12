@@ -26,6 +26,8 @@ def make_params():
     params.end_row = -1
     params.binning = 0
     params.nsino_per_chunk = 256
+    params.start_proj = 0
+    params.end_proj = -1
     params.flat_correction_method = 'standard'
     params.reconstruction_algorithm = 'gridrec'
     params.gridrec_filter = 'parzen'
@@ -49,12 +51,15 @@ class ReconTestBase(TestCase):
         # Prepare some dummy data
         phantom = tomopy.misc.phantom.shepp3d(size=64)
         phantom = np.exp(-phantom)
+        theta = np.linspace(0, np.pi, num=64)
+        proj = tomopy.sim.project.project(phantom, theta, pad=False)
         flat = np.ones((2, *phantom.shape[1:]))
         dark = np.zeros((2, *phantom.shape[1:]))
         with h5py.File(HDF_FILE, mode='w-') as fp:
-            fp.create_dataset('/exchange/data', data=phantom)
+            fp.create_dataset('/exchange/data', data=proj)
             fp.create_dataset('/exchange/data_white', data=flat)
             fp.create_dataset('/exchange/data_dark', data=dark)
+            fp.create_dataset('/exchange/theta', data=theta)
     
     def tearDown(self):
         # Remove the temporary HDF5 file
