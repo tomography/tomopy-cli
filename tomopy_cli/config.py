@@ -164,6 +164,14 @@ SECTIONS['file-reading'] = {
         'default': -1,
         'type': int,
         'help': 'Row on which to end reconstruction.  Negative values = last row of projection data.'},
+    'start-proj': {
+        'default': 0,
+        'type': int,
+        'help': 'Projection on which to start reconstructions'},
+    'end-proj': {
+        'default': -1,
+        'type': int,
+        'help': 'Projection on which to end reconstruction'},        
     'scintillator-auto': {
         'default': False,
         'help': "When set, read scintillator properties from the HDF file",
@@ -555,6 +563,42 @@ SECTIONS['astracgls'] = {
         'action': 'store_true',},
     }
 
+SECTIONS['correct'] = {
+    'file-name': {
+        'default': 'None',
+        'type': Path,
+        'help': "Name of the hdf file ",
+        'metavar': 'PATH'},
+    'file-format': {
+        'default': 'dx',
+        'type': str,
+        'help': "see from https://dxchange.readthedocs.io/en/latest/source/demo.html",
+        'choices': ['dx', 'anka', 'australian', 'als', 'elettra', 'esrf', 'aps1id', 'aps2bm', 'aps5bm', 'aps7bm', 'aps8bm', 'aps13bm', 'aps32id', 'petraP05', 'tomcat', 'xradia']},
+    'nproj-per-chunk': {     
+        'type': int,
+        'default': 128,
+        'help': "Number of projections per chunk. Use larger numbers with computers with larger memory.",}, 
+    'average-shift-per-chunk': {             
+        'default': False,
+        'help': "Average shifts per chunk (in case if shifts seem constant).",},    
+    'flat-region-startx': {
+        'default': 0,
+        'type': int,
+        'help': 'Start of the flat rectangular region in horizontal direction'},
+    'flat-region-starty': {
+        'default': 0,
+        'type': int,
+        'help': 'Start of the flat rectangular region in vertical direction'},
+    'flat-region-endx': {
+        'default': 128,
+        'type': int,
+        'help': 'End of the flat rectangular region in horizontal direction'},
+    'flat-region-endy': {
+        'default': 128,
+        'type': int,
+        'help': 'End of the flat rectangular region in vertical direction'},
+    }
+
 SECTIONS['convert'] = {
     'old-projection-file-name': {
         'default': '.',
@@ -578,12 +622,13 @@ RECON_PARAMS = ('find-rotation-axis', 'file-reading', 'dx-options', 'blocked-vie
                 'gridrec', 'lprec', 'astrasart', 'astrasirt', 'astracgls')
 FIND_CENTER_PARAMS = ('file-reading', 'find-rotation-axis', 'dx-options')
 
+CORRECT_PARAMS = ('correct', )
 CONVERT_PARAMS = ('convert', )
 # PREPROC_PARAMS = ('flat-correction', 'remove-stripe', 'retrieve-phase')
 
 NICE_NAMES = ('General', 'Find rotation axis', 'File reading', 'dx-options', 'Missing angles', 'Zinger removal', 'Flat correction', 'Retrieve phase', 
               'Remove stripe','Fourier wavelet', 'Titarenko', 'Smoothing filter', 'Beam hardening', 'Reconstruction', 
-                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert')
+                'Gridrec', 'LPRec FBP', 'ASTRA SART (GPU)', 'ASTRA SIRT (GPU)', 'ASTRA CGLS (GPU)', 'Convert', 'Correct')
 
 def get_config_name():
     """Get the command line --config option."""
@@ -892,14 +937,14 @@ def yaml_args(args, yaml_file, sample, cli_args=sys.argv):
     yaml_file = Path(yaml_file)
     # Check for bad files
     if not yaml_file.exists():
-        log.warning("YAML file does not exist: %s", yaml_file)
+        log.warning("  *** YAML file does not exist: %s", yaml_file)
         return args
     # Look for the requested key in a hierarchical manner
     with open(yaml_file, mode='r') as fp:
         extra_params = None
         yaml_data = yaml.safe_load(fp)
         if yaml_data is None:
-            log.warning("Invalid YAML file: %s", yaml_file)
+            log.warning("  *** Invalid YAML file: %s", yaml_file)
             return args
         keys_to_check = [sample] + [sample.relative_to(a) for a in sample.parents]
         for key in keys_to_check:
