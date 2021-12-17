@@ -6,7 +6,8 @@ API reference
 .. toctree::
 
    api/file_io
-
+   api/find_center
+   
 .. automodule:: tomopy_cli
    :members:
    :undoc-members:
