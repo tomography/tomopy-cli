@@ -6,6 +6,9 @@ from itertools import islice
 from scipy import ndimage
 import logging
 
+__all__ = ['chunk', 'apply_shift', 'find_min_max', 'register_shift_sift', 'flat_drift_correction']
+
+
 log = logging.getLogger(__name__)
 
 def chunk(iterable, size):

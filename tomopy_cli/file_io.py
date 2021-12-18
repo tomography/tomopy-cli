@@ -22,7 +22,11 @@ __author__ = "Francesco De Carlo, Viktor Nikitin, Alan Kastengren, Mark Wolfman"
 __credits__ = "Pavel Shevchenko"
 __copyright__ = "Copyright (c) 2020, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['read_tomo',]
+__all__ = ['read_tomo', 'blocked_view', 'binning', 'flip_and_stitch', 'patch_projection', 
+           'get_dx_dims', 'file_base_name', 'path_base_name', 'auto_read_dxchange', 'read_rot_center', 
+           'read_filter_materials', 'read_filter_materials_tomoscan', 'read_pixel_size', 
+           'read_scintillator', 'read_bright_ratio', 'check_item_exists_hdf', 'convert', 
+           'write_hdf5', 'yaml_file_list']
 
 
 log = logging.getLogger(__name__)
@@ -31,6 +35,7 @@ log = logging.getLogger(__name__)
 def read_tomo(sino, proj, params, ignore_flip = False):
     """
     Read in the tomography data.
+
     Parameters
     ----------
     sino : tuple of (start_row, end_row) rows to be read in
@@ -139,6 +144,7 @@ def blocked_view(proj, theta, params):
 def binning(proj, flat, dark, params):
     """
     Bin the tomography data.
+
     Parameters
     ----------
     proj : projection data, 3D Numpy array
@@ -180,6 +186,7 @@ def _binning(data, params):
 def flip_and_stitch(params, img360, flat360, dark360):
     """
     Stitch together data for flip-and-stitch (0-360 degree offset center) scan.
+
     Parameters
     ----------
     params : dict of reconstruction parameters
@@ -269,6 +276,7 @@ def patch_projection(data, miss_angles):
 def get_dx_dims(params):
     """
     Read array size of a specific group of Data Exchange file.
+
     Parameters
     ----------
     fname : str

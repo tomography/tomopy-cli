@@ -16,6 +16,7 @@ from tomopy_cli import file_io
 from tomopy_cli import util
 from tomopy_cli.logging import log_exception
 
+__all__ = ['find_rotation_axis',]
 
 log = logging.getLogger(__name__)
 
