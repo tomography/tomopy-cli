@@ -453,9 +453,9 @@ SECTIONS['gridrec'] = {
         'help': 'Filter used for gridrec reconstruction',
         'choices': ['none', 'shepp', 'cosine', 'hann', 'hamming', 'ramlak', 'parzen', 'butterworth']},
     'gridrec-padding': {
-        'default': False,
-        'help': "When set, raw data are padded/unpadded before/after reconstruction",
-        'action': 'store_true'},
+        'default': True,
+        'help': "Set to True then raw data are padded/unpadded before/after reconstruction",
+        'choices': ['True', 'False']},
     }
 
 SECTIONS['lprec'] = {
