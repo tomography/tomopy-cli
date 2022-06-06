@@ -29,6 +29,11 @@ to select an optional parameter and show its default value.
 
     $ chmod +x /Users/userid/complete_tomopy.sh
 
+Windows 
+-------
+
+To installat tomopy-cli under Windows watch `this video <https://anl.box.com/s/182dsmpnxx25o2xsy6n1ozgj8rx5omjg>`_.
+
 Update
 ======
 

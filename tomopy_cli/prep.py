@@ -10,6 +10,9 @@ from tomopy_cli import file_io
 from tomopy_cli import beamhardening
 from tomopy_cli import config
 
+__all__ = ['all', 'remove_nan_neg_inf', 'cap_sinogram_values', 'zinger_removal', 'flat_correction', 
+           'remove_stripe', 'phase_retrieval', 'minus_log', 'beamhardening_correct']
+
 
 log = logging.getLogger(__name__)
 

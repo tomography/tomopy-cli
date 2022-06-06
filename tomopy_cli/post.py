@@ -4,6 +4,7 @@ import logging
 import tomopy
 import numpy as np
 
+__all__ = ['segment',]
 
 log = logging.getLogger(__name__)
 
