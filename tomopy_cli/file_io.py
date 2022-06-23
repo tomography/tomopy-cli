@@ -574,7 +574,7 @@ def read_scintillator(params):
                 break
         log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
         possible_names = ['/measurement/instrument/detection_system/scintillator/name',
-                        '/measurements/instrument/detection_system/scintillator/type',
+                        '/measurement/instrument/detection_system/scintillator/type',
                         '/measurement/instrument/detection_system/scintillator/description']
         scint_material_string = ''
         for pn in possible_names:
