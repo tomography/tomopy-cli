@@ -562,28 +562,29 @@ def read_scintillator(params):
     '''
     if params.scintillator_auto:
         log.info('  *** auto reading scintillator params')
-        dataset_name = '/measurement/instrument/detection_system/scintillator/scintillating_thickness'
-        val = config.param_from_dxchange(params.file_name,
-                                         dataset_name, attr=None,
+        possible_names = ['/measurement/instrument/detection_system/scintillator/scintillating_thickness',
+                        '/measurements/instrument/detection_system/scintillator/active_thickness']
+        for pn in possible_names:
+            if check_item_exists_hdf(params.file_name, pn):
+                val = config.param_from_dxchange(params.file_name,
+                                         pn, attr=None,
                                          scalar=True,
                                          char_array=False)
-        params.scintillator_thickness = float(val)
+                params.scintillator_thickness = float(val)
+                break
         log.info('  *** *** scintillator thickness = {:f}'.format(params.scintillator_thickness))
-        tomoscan_path = '/measurement/instrument/detection_system/scintillator/name'
+        possible_names = ['/measurement/instrument/detection_system/scintillator/name',
+                        '/measurements/instrument/detection_system/scintillator/type',
+                        '/measurement/instrument/detection_system/scintillator/description']
         scint_material_string = ''
-        try:
-            scint_material_string = config.param_from_dxchange(params.file_name,
-                                            tomoscan_path, scalar = False, char_array = True)
-        except KeyError:
-            log.warning('  *** *** scintillator material not in tomoscan form.  Try old format')
-        if not scint_material_string: 
-            old_path = '/measurement/instrument/detection_system/scintillator/description'
-            try:
+        for pn in possible_names:
+            if check_item_exists_hdf(params.file_name, pn):
                 scint_material_string = config.param_from_dxchange(params.file_name,
-                                            old_path, scalar = False, char_array = True)
-            except KeyError:
-                log.warning('  *** *** no scintillator material found')
-                return(params)
+                                            pn, scalar = False, char_array = True)
+                break
+        else:
+            log.warning('  *** *** no scintillator material found')
+            return(params)
         if scint_material_string.lower().startswith('luag'):
             params.scintillator_material = 'LuAG_Ce'
         elif scint_material_string.lower().startswith('lyso'):
@@ -593,10 +594,6 @@ def read_scintillator(params):
         else:
             log.warning('  *** *** scintillator {:s} not recognized!'.format(scint_material_string))
         log.info('  *** *** using scintillator {:s}'.format(params.scintillator_material))
-    # Run the initialization for beam hardening.  Needed in case
-    # rotation_axis must be computed later.
-    # if params.beam_hardening_method.lower() == 'standard':
-    #     beamhardening.initialize(params)
     return params 
 
 
@@ -610,24 +607,25 @@ def read_bright_ratio(params):
         return params
     log.info('  *** *** Find bright exposure ratio params from the HDF file')
     try:
-        if check_item_exists_hdf(params.file_name,
-                                '/measurement/instrument/detector/different_flat_exposure'):
-            diff_bright_exp = config.param_from_dxchange(params.file_name,
-                                '/measurement/instrument/detector/different_flat_exposure',
+        possible_names = ['/measurement/instrument/detector/different_flat_exposure',
+                        '/process/acquisition/flat_fields/different_flat_exposure']
+        for pn in possible_names:
+            if check_item_exists_hdf(params.file_name, pn):
+                diff_bright_exp = config.param_from_dxchange(params.file_name, pn,
                                     attr = None, scalar = False, char_array = True)
-            if diff_bright_exp.lower() == 'same':
-                log.error('  *** *** used same flat and data exposures')
-                params.bright_exp_ratio = 1
-                return params
-        if check_item_exists_hdf(params.file_name,
-                                '/measurement/instrument/detector/exposure_time_flat'):
-            bright_exp = config.param_from_dxchange(params.file_name,
-                                    '/measurement/instrument/detector/exposure_time_flat',
+                break
+        if diff_bright_exp.lower() == 'same':
+            log.error('  *** *** used same flat and data exposures')
+            params.bright_exp_ratio = 1
+            return params
+        possible_names = ['/measurement/instrument/detector/exposure_time_flat',
+                        '/process/acquisition/flat_fields/flat_exposure_time',
+                        '/measurement/instrument/detector/brightfield_exposure_time']
+        for pn in possible_names:
+            if check_item_exists_hdf(params.file_name, pn):
+                bright_exp = config.param_from_dxchange(params.file_name, pn,
                                     attr = None, scalar = True, char_array = False)
-        else: 
-            bright_exp = config.param_from_dxchange(params.file_name,
-                                    '/measurement/instrument/detector/brightfield_exposure_time',
-                                    attr = None, scalar = True, char_array = False)
+                break    
         log.info('  *** *** %f' % bright_exp)
         norm_exp = config.param_from_dxchange(params.file_name,
                                     '/measurement/instrument/detector/exposure_time',
