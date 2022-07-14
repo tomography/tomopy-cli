@@ -373,7 +373,7 @@ SECTIONS['beam-hardening']= {
         'default': 'Fe',
         'type': str,
         'help': 'Sample material for beam hardening',
-        'choices': ['Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['Air','Al','Al2O3','Be','Bi','Cu','Fe','Ge','Inconel625','LLZTO','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-1-auto': {
         'default': False,
         'help': 'If True, read filter 1 from HDF meta data',},
@@ -381,7 +381,7 @@ SECTIONS['beam-hardening']= {
         'default': 'none',
         'type': str,
         'help': 'Filter 1 material for beam hardening',
-        'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['auto', 'none','Air','Al','Al2O3','Be','Bi','Cu','Fe','Ge','Inconel625','LLZTO','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-1-thickness': {
         'default': 0.0,
         'type': float,
@@ -393,7 +393,7 @@ SECTIONS['beam-hardening']= {
         'default': 'none',
         'type': str,
         'help': 'Filter 2 material for beam hardening',
-        'choices': ['auto','none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['auto', 'none','Air','Al','Al2O3','Be','Bi','Cu','Fe','Ge','Inconel625','LLZTO','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-2-thickness': {
         'default': 0.0,
         'type': float,
@@ -405,7 +405,7 @@ SECTIONS['beam-hardening']= {
         'default': 'none',
         'type': str,
         'help': 'Filter 3 material for beam hardening',
-        'choices': ['none','Al','Be','Cu','Fe','Ge','Inconel625','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
+        'choices': ['none','Air','Al','Al2O3','Be','Bi','Cu','Fe','Ge','Inconel625','LLZTO','LuAG_Ce','LYSO_Ce','Mo','Pb','Si','SS316','Ta','Ti_6_4','W','YAG_Ce']},
     'filter-3-thickness': {
         'default': 0.0,
         'type': float,
