@@ -109,6 +109,9 @@ def flat_correction(proj, flat, dark, params):
                          "Valid options are {}"
                          "".format(params.flat_correction_method,
                                    config.SECTIONS['flat-correction']['flat-correction-method']['choices']))
+    #Convert 16-bit floats to 32-bit floats
+    if data.dtype == np.float16:
+        data = data.astype(np.float32, copy=False)
     log.debug('  *** total time for prep.flat_correction = {0:6.4f}'.format(
                 time.time() - time_start_flat))
     return data
@@ -165,7 +168,7 @@ def phase_retrieval(data, params):
 def minus_log(data, params):
 
     log.info("  *** minus log")
-    if(params.minus_log):
+    if(params.minus_log == 'True'):
         log.info('  *** *** ON')
         data = tomopy.minus_log(data)
     else:
