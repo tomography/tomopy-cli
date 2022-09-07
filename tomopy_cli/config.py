@@ -180,6 +180,18 @@ SECTIONS['file-reading'] = {
         'default': False,
         'help': "When set, read effective pixel size from the HDF file",
         'action': 'store_true'},
+    'correct-camera-nonlinearity': {
+        'default': False,
+        'help': "When set, use a spline fit to correct for camera nonlinearities",
+        'action': 'store_true'},
+    'camera-signal': {
+        'default': "",
+        'type': str,
+        'help': "String used to build a list for forming correction spline"},
+    'corrected-signal': {
+        'default': "",
+        'type': str,
+        'help': "String used to build a list for forming correction spline"},
        }
 
 SECTIONS['dx-options'] = {
@@ -317,7 +329,7 @@ SECTIONS['fw'] = {
         'default': 'sym16',
         'type': str,
         'help': "Fourier-Wavelet remove stripe filter",
-        'choices': ['haar', 'db5', 'sym5', 'sym16']},
+        'choices': ['haar', 'db5', 'sym5', 'sym16', 'db10', 'db16', 'db20', 'db30']},
     'fw-level': {
         'type': util.positive_int,
         'default': 7,
