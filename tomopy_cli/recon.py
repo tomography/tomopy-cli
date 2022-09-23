@@ -141,7 +141,7 @@ def rec(params):
                 write_thread = threading.Thread(target=file_io.write_hdf5,
                                                 args = (rec,),
                                                 kwargs = {'fname': str(fname),
-                                                          'dname': '/exchange/recon',
+                                                          'dname': '/exchange/data',
                                                           'dest_idx': slice(strt, strt+rec.shape[0]),
                                                           'maxsize': (ds_end, *rec.shape[1:]),
                                                           'overwrite': iChunk==0})
