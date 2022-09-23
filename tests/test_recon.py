@@ -105,7 +105,7 @@ class ReconTests(ReconTestBase):
         # Test with multiple chunks to ensure they're all written
         params = make_params()
         params.reconstruction_type = 'full'
-        params.save_format = 'hdf5'
+        params.save_format = 'h5'
         params.nsino_per_chunk = 16 # 4 chunks
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
