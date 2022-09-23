@@ -47,9 +47,20 @@ Update
 Dependencies
 ============
 
-Install the following package::
+Install `tomopy <https://tomopy.readthedocs.io/en/stable/>`_ 
+
+::
 
     $ conda install -c conda-forge tomopy
+
+
+install `meta <https://github.com/xray-imaging/meta>`_ 
+
+::
+
+    $ git clone https://github.com/xray-imaging/meta.git
+    $ cd meta
+    $ python setup install meta
 
 Optionally, *dxchange* may be needed for file I/O::
 
