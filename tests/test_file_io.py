@@ -54,7 +54,7 @@ class FlipAndStitchTests(unittest.TestCase):
 
 
 class ReadParamTests(unittest.TestCase):
-F    test_hdf_file = TESTDIR / 'filter-tests.hdf5'
+    test_hdf_file = TESTDIR / 'filter-tests.hdf5'
     params_file = TESTDIR / 'extra_params.yaml'
     # Sample filters from 7-BM-B for 'open' and 'Cu_1000um' filters
     filter_open = np.array([[79, 112, 101, 110,] + [0,] * 252], dtype='int8')
