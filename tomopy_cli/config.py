@@ -443,13 +443,13 @@ SECTIONS['reconstruction'] = {
         'default': 1.0,
         'type': float,
         'help': "Ratio of the mask’s diameter in pixels to the smallest edge size along given axis"},
-    'output-format': {
-        'default': 'tiff_stack',
+    'save-format': {
+        'default': 'tiff',
         'type': str,
         'help': "How to save the reconstructed data. Only applies when ``reconstruction-type == 'full'``.",
-        'choices': ['tiff_stack', 'hdf5'],
+        'choices': ['tiff', 'h5'],
         },
-    'output-folder': {
+    'save-folder': {
         'default': "{file_name_parent}_rec",
         'type': str,
         'help': ("Where to save the reconstructed data. Can accept other parameters "
@@ -858,7 +858,7 @@ def update_config(args, is_reconstruction=True):
     If *args.reconstruction_type* is "full" and *is_reconstruction* is
     true, then a new configuration file is created alongside the
     reconstructed data, with a path determined by whether
-    *args.output_format* is "tiff_stack" or "hdf5".
+    *args.save_format* is "tiff" or "h5".
 
     Parameters
     ==========
@@ -879,7 +879,7 @@ def update_config(args, is_reconstruction=True):
     is_full_recon = (is_reconstruction and args.reconstruction_type == "full")
     if is_full_recon:
         recon_dir = recon.reconstruction_folder(args)
-        if args.output_format == "hdf5":
+        if args.save_format == "h5":
             log_fname = recon_dir / "{}_rec_{}".format(data_file.stem, config_file.name)
         else:
             log_fname = recon_dir / "{}_rec".format(data_file.stem) / config_file.name

@@ -23,7 +23,7 @@ def make_params():
     params.filter_3_material = "none"
     params.file_name = HDF_FILE
     # params.file_name = HDF_FILE
-    # params.output_folder = "{file_name_parent}/_rec"
+    # params.save_folder = "{file_name_parent}/_rec"
     # params.parameter_file = os.devnull
     # params.rotation_axis = 32
     # params.file_type = 'standard'
