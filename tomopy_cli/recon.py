@@ -214,16 +214,15 @@ def _try_rec(params):
         sproj = params.start_proj
     else:    
         sproj = 0
-    if(params.end_proj or params.end_proj<0):
+    if(params.end_proj):
         eproj = params.end_proj
-    else:    
-        eproj = data_shape[0]        
+    if not params.end_proj or params.end_proj == -1:
+        eproj = data_shape[0] + 1        
     pproj = (sproj, eproj)        
-    
+
     # Set up the centers of rotation we will use
     # Read APS 32-BM raw data.    
     proj, flat, dark, theta, rotation_axis = file_io.read_tomo(sino, pproj, params, True)
-    
     # Apply all preprocessing functions
     data = prep.all(proj, flat, dark, params, sino)
     rec = []
@@ -274,11 +273,12 @@ def _try_rec(params):
         #Loop through the assumed rotation centers
         for i, rot_center in enumerate(center_range): 
             params.rotation_axis_flip = rot_center
-            stitched_data.append(file_io.flip_and_stitch(params, data, np.ones_like(data[0,...]),
-                                                                np.zeros_like(data[0,...]))[0])
+            temp = file_io.flip_and_stitch(params, data, np.ones_like(data[0,...]),
+                                                                np.zeros_like(data[0,...]), theta)
+            stitched_data.append(temp[0])
+            theta180 = temp[3]
             rot_centers[i] = params.rotation_axis
         total_cols = np.min([i.shape[2] for i in stitched_data])
-        theta180 = theta[:len(theta)//2] # take first half
         stack = np.empty((len(center_range), theta180.shape[0], total_cols))
         for i in range(center_range.shape[0]):
             stack[i] = stitched_data[i][:theta180.shape[0],0,:total_cols]
@@ -291,8 +291,6 @@ def _try_rec(params):
         this_center = axis * np.power(2, float(params.binning))
         rfname = rec_dir / "recon_{:.2f}.tiff".format(this_center)
         dxchange.write_tiff(rec[i], fname=str(rfname), overwrite=True)
-    # restore original method
-    # params.reconstruction_algorithm = reconstruction_algorithm_org
 
 def double_fov(data,rotation_axis):
     # smooth the sinogram border with a smooth weigting function from 0 to 1
@@ -463,7 +461,6 @@ def reconstruct(data, theta, rot_center, params):
     # gridrec                
     elif params.reconstruction_algorithm == 'gridrec':
         log.warning("  *** *** sinogram_order: %s" % sinogram_order)
-        # import pdb; pdb.set_trace()        
         if(params.reconstruction_type == "try"):
             # each chunk works with 1 rotation center
             nchunk = 1 
