@@ -107,6 +107,8 @@ def _read_tomo(params, sino, proj):
             log.info('  *** median filter flat images')
             # Do a median filter on the first dimension
             flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
+        if dark is None:
+            dark = np.zeros_like(proj[0,...])
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
             # Do a median filter on the first dimension
@@ -569,7 +571,7 @@ def read_scintillator(params):
     if params.scintillator_auto:
         log.info('  *** auto reading scintillator params')
         possible_names = ['/measurement/instrument/detection_system/scintillator/scintillating_thickness',
-                        '/measurements/instrument/detection_system/scintillator/active_thickness']
+                        '/measurement/instrument/detection_system/scintillator/active_thickness']
         for pn in possible_names:
             if check_item_exists_hdf(params.file_name, pn):
                 val = config.param_from_dxchange(params.file_name,

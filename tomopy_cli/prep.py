@@ -168,7 +168,7 @@ def phase_retrieval(data, params):
 def minus_log(data, params):
 
     log.info("  *** minus log")
-    if(params.minus_log == 'True'):
+    if(params.minus_log):
         log.info('  *** *** ON')
         data = tomopy.minus_log(data)
     else:
