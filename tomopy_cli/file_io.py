@@ -11,6 +11,7 @@ import dxchange
 import dxchange.reader as dxreader
 import dxfile.dxtomo as dx
 import numpy as np
+from scipy.interpolate import LSQUnivariateSpline
 import yaml
 
 from tomopy_cli import __version__
@@ -69,6 +70,14 @@ def read_tomo(sino, proj, params, ignore_flip = False):
     else: # params.file_type == 'mosaic':
         log.error("   *** loading a mosaic data set is not supported yet")
         exit()
+
+    if params.correct_camera_nonlinearity:
+        log.info("  *** correcting camera nonlinearity in flat fields")
+        flat = camera_nonlinearity_correct(flat, params)
+        log.info("  *** correcting camera nonlinearity in dark fields")
+        dark = camera_nonlinearity_correct(dark, params)
+        log.info("  *** correcting camera nonlinearity in projection fields")
+        proj = camera_nonlinearity_correct(proj, params)
 
     if params.reverse:
         log.info("  *** correcting for 180-0 data collection")
@@ -762,3 +771,27 @@ def yaml_file_list(file_path: Path)->List[Path]:
         yaml_data = yaml.safe_load(fp.read())
     file_list = [Path(k) for k in yaml_data.keys()]
     return file_list
+
+
+def camera_nonlinearity_correct(data, params):
+    '''Corrects for nonlinearity in the camera
+    Takes data from params to form a spline fit, then uses the spline
+    fit to correct for the camera nonlinearity.
+    Inputs:
+    data: numpy array of camera data
+    params: parameters from config file and command line
+    '''
+    log.info('*** correcting for camera nonlinearity')
+    #Parse the params.camera_signal and params.corrected_signal
+    camera_signal = np.array([float(i) for i in params.camera_signal.split(",")])
+    corrected_signal = np.array([float(i) for i in params.corrected_signal.split(",")])
+    knots = np.linspace(camera_signal[1], camera_signal[-2], len(camera_signal)//2)
+    spline_obj = LSQUnivariateSpline(
+                                    camera_signal,
+                                    corrected_signal,
+                                    knots,
+                                    check_finite = True)
+    temp = spline_obj(data)
+    temp[temp > np.iinfo(data.dtype).max] = np.iinfo(data.dtype).max
+    temp[temp < 0] = 0
+    return temp.astype(data.dtype)
