@@ -8,6 +8,8 @@ import logging
 import numpy as np
 import tomopy
 import dxchange
+import h5py
+import meta
 
 from tomopy_cli import file_io
 from tomopy_cli import config
@@ -122,7 +124,7 @@ def rec(params):
         fpath = Path(params.file_name).resolve()
         if params.reconstruction_type == "full":
             recon_dir = recon_base_dir / "{}_rec".format(fpath.stem)
-            if params.output_format == 'tiff_stack':
+            if params.save_format == 'tiff':
                 fname = recon_dir / 'recon'
                 log.debug("Full tiff dir: %s", fname)
                 write_thread = threading.Thread(target=dxchange.write_tiff_stack,
@@ -130,7 +132,7 @@ def rec(params):
                                                 kwargs = {'fname': str(fname),
                                                           'start': strt,
                                                           'overwrite': True})
-            elif params.output_format == "hdf5":
+            elif params.save_format == "h5":
                 # HDF5 output
                 fname = "{}.hdf".format(recon_dir)
                 # file_io.write_hdf5(rec, fname=str(fname), dest_idx=slice(strt, strt+rec.shape[0]),
@@ -139,11 +141,12 @@ def rec(params):
                 write_thread = threading.Thread(target=file_io.write_hdf5,
                                                 args = (rec,),
                                                 kwargs = {'fname': str(fname),
+                                                          'dname': '/exchange/data',
                                                           'dest_idx': slice(strt, strt+rec.shape[0]),
                                                           'maxsize': (ds_end, *rec.shape[1:]),
                                                           'overwrite': iChunk==0})
             else:
-                log.error("  *** Unknown output_format '%s'", params.output_format)
+                log.error("  *** Unknown save_format '%s'", params.save_format)
                 fname = "<Not saved (bad output-format)>"
                 write_thread = None
             # Save the data to disk
@@ -166,6 +169,18 @@ def rec(params):
     for thread in write_threads:
         thread.join()
 
+    if params.save_format == "h5":
+        log.info('adding meta data from the raw to the recon hdf file')
+        log.info("  *** raw hdf: %s" % params.file_name)
+        log.info("  *** rec hdf: %s" % fname)
+        tree, meta_dict = meta.read_hdf(params.file_name)
+
+        with h5py.File(fname, 'a') as hf:
+            for key, value in meta_dict.items():
+                # print(key, value)
+                dset = hf.create_dataset(key, data=value[0])
+                if value[1] is not None:
+                    dset.attrs['units'] = value[1]
 
 def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params):
     '''Computes a 2-element array to give starting and ending slices 
@@ -525,7 +540,7 @@ def reconstruction_folder(params):
     
     """
     file_path = Path(params.file_name).resolve()
-    folder_fmt = params.output_folder
+    folder_fmt = params.save_folder
     # Format the folder name with the config parameters
     if file_path.is_dir():
         file_name_parent = file_path

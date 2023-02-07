@@ -17,7 +17,7 @@ YAML_FILE = TEST_DIR / 'test_tomogram.yaml'
 def make_params():
     params = mock.MagicMock()
     params.file_name = HDF_FILE
-    params.output_folder = "{file_name_parent}/_rec"
+    params.save_folder = "{file_name_parent}/_rec"
     params.parameter_file = os.devnull
     params.rotation_axis = 32
     params.file_type = 'standard'
@@ -82,7 +82,7 @@ class ReconTests(ReconTestBase):
         """Check that a basic reconstruction completes and produces output tiff files."""
         params = make_params()
         params.reconstruction_type = 'full'
-        params.output_format = 'tiff_stack'
+        params.save_format = 'tiff'
         response = rec(params=params)
         # import pdb; pdb.set_trace()
         self.assertTrue(self.full_tiff_dir.exists())
@@ -90,7 +90,7 @@ class ReconTests(ReconTestBase):
     def test_hdf_output(self):
         params = make_params()
         params.reconstruction_type = 'full'
-        params.output_format = "hdf5"
+        params.save_format = "h5"
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
         # Check that tiffs are not saved and HDF5 file is saved
@@ -105,7 +105,7 @@ class ReconTests(ReconTestBase):
         # Test with multiple chunks to ensure they're all written
         params = make_params()
         params.reconstruction_type = 'full'
-        params.output_format = 'hdf5'
+        params.save_format = 'h5'
         params.nsino_per_chunk = 16 # 4 chunks
         response = rec(params=params)
         expected_hdf5path = self.output_hdf
@@ -119,12 +119,12 @@ class ReconTests(ReconTestBase):
 
     def test_reconstruction_folder(self):
         params = make_params()
-        params.output_folder = "_rec"
+        params.save_folder = "_rec"
         output = reconstruction_folder(params)
         self.assertEqual(str(output), "_rec")
         # Check config parameters
         params = make_params()
-        params.output_folder = "_rec_{reconstruction_algorithm}/"
+        params.save_folder = "_rec_{reconstruction_algorithm}/"
         params.reconstruction_algorithm = "sirt"
         output = reconstruction_folder(params)
         self.assertEqual(str(output), "_rec_sirt")
@@ -132,14 +132,14 @@ class ReconTests(ReconTestBase):
         this_file = Path(__file__).resolve()
         params = make_params()
         params.file_name = str(this_file)
-        params.output_folder = "{file_name_parent}_rec/"
+        params.save_folder = "{file_name_parent}_rec/"
         output = reconstruction_folder(params)
         self.assertEqual(str(output), str(this_file.parent) + "_rec")
         # Check parent file name for a directory
         this_file = Path(__file__).resolve()
         params = make_params()
         params.file_name = str(this_file.parent) + '/'
-        params.output_folder = "{file_name_parent}_rec/"
+        params.save_folder = "{file_name_parent}_rec/"
         output = reconstruction_folder(params)
         self.assertEqual(str(output), str(this_file.parent) + "_rec")
 
@@ -194,7 +194,7 @@ class TryCenterTests(ReconTestBase):
         params = make_params()
         params.reconstruction_type = "try"
         params.center_search_width = 10
-        params.output_folder = "{file_name_parent}/_rec"
+        params.save_folder = "{file_name_parent}/_rec"
         params.parameter_file = os.devnull
         response = rec(params=params)
         self.assertTrue(self.output_dir.exists())
@@ -207,7 +207,7 @@ class TryCenterTests(ReconTestBase):
         params = make_params()
         params.reconstruction_type = "try"
         params.center_search_width = 10
-        params.output_folder = "{file_name_parent}/_rec"
+        params.save_folder = "{file_name_parent}/_rec"
         params.parameter_file = self.yaml_file
         # Create the YAML file
         opts = {
@@ -229,7 +229,7 @@ class TryCenterTests(ReconTestBase):
         params = make_params()
         params.reconstruction_type = "try"
         params.center_search_width = 10
-        params.output_folder = "{file_name_parent}/_rec"
+        params.save_folder = "{file_name_parent}/_rec"
         params.parameter_file = self.yaml_file
         # Create the YAML file
         opts = {
@@ -250,7 +250,7 @@ class TryCenterTests(ReconTestBase):
         params = make_params()
         params.reconstruction_type = "try"
         params.center_search_width = 10
-        params.output_folder = "{file_name_parent}/_rec"
+        params.save_folder = "{file_name_parent}/_rec"
         params.parameter_file = "/tmp/gweoiuwerw"
         response = rec(params=params)
         self.assertTrue(self.output_dir.exists())

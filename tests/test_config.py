@@ -19,7 +19,7 @@ def make_params():
     params.reconstruction_type = "full"
     params.file_name = HDF_FILE
     params.config = Path("test_recon.conf")
-    params.output_folder = "{file_name_parent}/_rec"
+    params.save_folder = "{file_name_parent}/_rec"
     return params
 
 
@@ -27,7 +27,7 @@ class TestUpdateConfig(TestCase):
     def test_full_recon_config_hdf(self):
         """Test that the config file is saved for an HDF file."""
         params = make_params()
-        params.output_format = "hdf5"
+        params.save_format = "h5"
         output_dir = HDF_FILE.parent / "_rec"
         os.makedirs(output_dir)
         expected_config = output_dir / "test_tomogram_rec_test_recon.conf"
@@ -41,7 +41,7 @@ class TestUpdateConfig(TestCase):
     def test_full_recon_config_tiff_stack(self):
         """Test that the config file is saved for a stack of TIFFs."""
         params = make_params()
-        params.output_format = "tiff_stack"
+        params.save_format = "tiff"
         base_dir = HDF_FILE.parent / "_rec"
         os.makedirs(base_dir)
         output_dir = base_dir / "test_tomogram_rec"
