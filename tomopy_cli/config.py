@@ -169,7 +169,7 @@ SECTIONS['file-reading'] = {
         'type': int,
         'help': 'Projection on which to start reconstructions'},
     'end-proj': {
-        'default': -1,
+        'default': 0,
         'type': int,
         'help': 'Projection on which to end reconstruction'},        
     'scintillator-auto': {
