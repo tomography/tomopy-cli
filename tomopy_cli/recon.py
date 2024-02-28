@@ -186,8 +186,8 @@ def _compute_sino(iChunk, sino_start, sino_end, nSino_per_chunk, chunks, params)
     '''Computes a 2-element array to give starting and ending slices 
     for this chunk.
     '''
-    sino_chunk_start = np.int(sino_start + nSino_per_chunk*iChunk)
-    sino_chunk_end = np.int(sino_start + nSino_per_chunk*(iChunk+1))
+    sino_chunk_start = int(sino_start + nSino_per_chunk*iChunk)
+    sino_chunk_end = int(sino_start + nSino_per_chunk*(iChunk+1))
     if sino_chunk_end > sino_end:
         log.warning('  *** asking to go to row {0:d}, but our end row is {1:d}'.format(sino_chunk_end, sino_end))
         sino_chunk_end = sino_end
