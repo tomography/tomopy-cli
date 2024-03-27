@@ -65,8 +65,7 @@ def read_tomo(sino, proj, params, ignore_flip = False):
     elif params.file_type == 'flip_and_stich':
         log.info("   *** loading a 360 deg flipped data set: %s" % params.file_name)
         proj360, flat360, dark360, theta360 = _read_tomo(params, sino=sino, proj=proj)
-        proj, flat, dark = flip_and_stitch(params, proj360, flat360, dark360)
-        theta = theta360[:len(theta360)//2] # take first half
+        proj, flat, dark, theta = flip_and_stitch(params, proj360, flat360, dark360, theta360)
     else: # params.file_type == 'mosaic':
         log.error("   *** loading a mosaic data set is not supported yet")
         exit()
@@ -116,6 +115,8 @@ def _read_tomo(params, sino, proj):
             log.info('  *** median filter flat images')
             # Do a median filter on the first dimension
             flat = np.median(flat, axis=0, keepdims=True).astype(flat.dtype) 
+        if dark is None:
+            dark = np.zeros_like(proj[0,...])
         if len(dark.shape) == len(proj.shape):
             log.info('  *** median filter dark images')
             # Do a median filter on the first dimension
@@ -192,7 +193,7 @@ def _binning(data, params):
     return data
 
 
-def flip_and_stitch(params, img360, flat360, dark360):
+def flip_and_stitch(params, img360, flat360, dark360, theta360):
     """
     Stitch together data for flip-and-stitch (0-360 degree offset center) scan.
 
@@ -214,8 +215,11 @@ def flip_and_stitch(params, img360, flat360, dark360):
         2D binned flat field data stitched together, 0-180 degree domain
     ndarray
         2D binned dark field data stitched together, 0-180 degree domain
+    ndarray
+        1D array of valid theta values, 0-180 degree domain
     """
-    num_stitched_angles = img360.shape[0]//2 
+    theta_0_180, good_0_180, good_180_360 = reconcile_flip_and_stitch_angles(theta360) 
+    num_stitched_angles = np.sum(good_0_180)
     new_width = int(2 * np.max([img360.shape[2] - params.rotation_axis_flip - 0.5,
                             params.rotation_axis_flip + 0.5]))
     log.info('  *** *** new image width = {:d}, rotation_axis_flip = {:f}'.format(
@@ -229,20 +233,20 @@ def flip_and_stitch(params, img360, flat360, dark360):
     wedge = np.arange(img360.shape[2], 0, -1)
     # Take care of case where rotation axis is on the left edge of the image
     if params.rotation_axis_flip < img360.shape[2] - 1:
-        img[:,:,:img360.shape[2]] = img360[num_stitched_angles:num_stitched_angles * 2,:,::-1] * wedge
+        img[:,:,:img360.shape[2]] = img360[good_180_360,:,::-1] * wedge
         flat[:,:,:img360.shape[2]] = flat360[...,::-1] * wedge
         dark[:,:,:img360.shape[2]] = dark360[...,::-1] * wedge
         weight[0,0,:img360.shape[2]] += wedge
-        img[:,:,-img360.shape[2]:] += img360[:num_stitched_angles,:,:] * wedge[::-1]
+        img[:,:,-img360.shape[2]:] += img360[good_0_180,:,:] * wedge[::-1]
         flat[:,:,-img360.shape[2]:] += flat360 * wedge[::-1]
         dark[:,:,-img360.shape[2]:] += dark360 * wedge[::-1]
         weight[0,0,-img360.shape[2]:] += wedge[::-1]
     else:
-        img[:,:,:img360.shape[2]] = img360[:num_stitched_angles,:,:] * wedge
+        img[:,:,:img360.shape[2]] = img360[good_0_180,:,:] * wedge
         flat[:,:,:img360.shape[2]] = flat360 * wedge
         dark[:,:,:img360.shape[2]] = dark360 * wedge
         weight[0,0,:img360.shape[2]] += wedge
-        img[:,:,-img360.shape[2]:] += img360[num_stitched_angles:num_stitched_angles * 2,:,::-1] * wedge[::-1]
+        img[:,:,-img360.shape[2]:] += img360[good_180_360,:,::-1] * wedge[::-1]
         flat[:,:,-img360.shape[2]:] += flat360[...,::-1] * wedge[::-1]
         dark[:,:,-img360.shape[2]:] += dark360[...,::-1] * wedge[::-1]
         weight[-img360.shape[2]:] += wedge[::-1]
@@ -254,9 +258,27 @@ def flip_and_stitch(params, img360, flat360, dark360):
 
     params.rotation_axis = img.shape[2]/2 - 0.5
 
-    return img, flat, dark
+    return img, flat, dark, theta_0_180
 
 
+def reconcile_flip_and_stitch_angles(theta360):
+    """
+    Figure out the valid angles where we have images from both 0-180 and 180-360
+    This is necessary in case their are missing angles.
+    """
+    theta360deg = np.degrees(theta360)
+    good_180_360 = np.full((theta360deg.shape[0]), False, dtype=np.bool_)
+    good_0_180 = np.full((theta360deg.shape[0]), False, dtype=np.bool_)
+    #Loop across the entries from 0 to 180 degrees from the start point
+    for i in theta360deg[(theta360deg - theta360deg[0]) <= 180]:
+        #If there is a match between 0-180 and 180-360, indicate this is good
+        comparison_array = np.abs(theta360deg - i - 180.)
+        if np.min(comparison_array) < 0.001:
+            good_0_180[np.argmin(np.abs(theta360deg - i))] = True
+            good_180_360[np.argmin(comparison_array)] = True
+    return theta360[good_0_180], good_0_180, good_180_360
+
+            
 def patch_projection(data, miss_angles):
 
     fdatanew = np.fft.fft(data,axis=2)
@@ -546,6 +568,12 @@ def read_pixel_size(params):
                                             '/measurement/instrument/detection_system/objective/resolution')
         log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
         return(params)
+    if check_item_exists_hdf(params.file_name,
+                                '/measurement/instrument/detector/actual_pixel_size_x'):
+        params.pixel_size = config.param_from_dxchange(params.file_name,
+                                            '/measurement/instrument/detector/actual_pixel_size_x')
+        log.info('  *** *** effective pixel size = {:6.4e} microns'.format(params.pixel_size))
+        return(params)
     log.warning('  *** tomoScan resolution parameter not found.  Try old format')
     pixel_size = config.param_from_dxchange(params.file_name,
                                             '/measurement/instrument/detector/pixel_size_x')
@@ -572,7 +600,7 @@ def read_scintillator(params):
     if params.scintillator_auto:
         log.info('  *** auto reading scintillator params')
         possible_names = ['/measurement/instrument/detection_system/scintillator/scintillating_thickness',
-                        '/measurements/instrument/detection_system/scintillator/active_thickness']
+                        '/measurement/instrument/detection_system/scintillator/active_thickness']
         for pn in possible_names:
             if check_item_exists_hdf(params.file_name, pn):
                 val = config.param_from_dxchange(params.file_name,
